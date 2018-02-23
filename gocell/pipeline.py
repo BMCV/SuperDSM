@@ -14,9 +14,9 @@ class Stage(object):
     def __call__(self, data, cfg, out=None):
         out = aux.Output.get(out)
         input_data = {}
-        for data_key, input_data_key self.inputs.items():
+        for data_key, input_data_key in self.inputs.items():
             input_data[input_data_key] = data[data_key]
-        output_data = self.process(input_data, config.get_value(cfg, self.cfg_key))
+        output_data = self.process(input_data, config.get_value(cfg, self.cfg_key, {}))
         assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
         for output_data_key, data_key in self.outputs.items():
             data[data_key] = output_data[output_data_key]
@@ -66,10 +66,17 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
 
 
-def create_default_pipeline():
-    from preprocessing import *
-    from superpixels   import *
+def create_default_pipeline(backend):
+    from preprocessing  import Preprocessing
+    from superpixels    import Seeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
+    from candidates     import ComputeCandidates, FilterUniqueCandidates, ProcessCandidates, AnalyzeCandidates
+    from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy
+    from postprocessing import Postprocessing
+
+    if isinstance(backend, (int, long)): backend = modelfit.fork_based_backend(num_forks=backend)
+
     pipeline = Pipeline()
+
     pipeline.append(Preprocessing())
     pipeline.append(Seeds())
     pipeline.append(Superpixels())
@@ -77,6 +84,11 @@ def create_default_pipeline():
     pipeline.append(SuperpixelsDiscard())
     pipeline.append(ComputeCandidates())
     pipeline.append(FilterUniqueCandidates())
-    pipeline.append(ProcessCandidates())
+    pipeline.append(ProcessCandidates(backend))
+    pipeline.append(AnalyzeCandidates())
+    pipeline.append(MaxSetPackWeights())
+    pipeline.append(MaxSetPackGreedy())
+    pipeline.append(Postprocessing())
+
     return pipeline
 

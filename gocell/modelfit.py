@@ -1,6 +1,11 @@
 import aux
 import mapper
 import cvxopt
+import surface
+import modelfit_base
+import numpy as np
+
+from skimage.filter import threshold_otsu
 
 
 class Frame:
@@ -17,8 +22,31 @@ class Frame:
         for key in self.options: cvxopt.solvers.options[key] = self.options[key]
 
 
-def process_candidate():
-    assert False, 'not implemented yet'
+def create_region(g, region_mask):
+    """Creates region of model activity at `region_mask` for image `g`.
+    """
+    return surface.Surface(g.model.shape, g.model)
+
+
+def modelfit(region, r_sigma, kappa, w_sigma_factor, averaging=True):
+    labels = modelfit_base.ThresholdedLabels(region, threshold_otsu(region.model[region.mask]))
+    y_map  = labels.get_map()
+    w_map  = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor, normalize=averaging)
+    region.mask = np.logical_or(region.mask, y_map < 0)
+    J = modelfit_base.Energy(y_map, region, w_map, r_map=None, kappa=kappa)
+    assert np.allclose(w_map.sum(), 1)
+    return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, np.random.randn(6)).solve()['x']))
+
+
+def process_candidate(cidx, g, g_superpixels, candidate, modelfit_kwargs):
+    region = create_region(g, candidate.get_mask(g_superpixels))
+    J, result = modelfit(region, **modelfit_kwargs)
+    return {
+        'cidx':   cidx,
+        'region': region,
+        'energy': J(result),
+        'result': result
+    }
 
 
 def fork_based_backend(num_forks):

@@ -78,13 +78,19 @@ def count_binary_holes(mask):
 
 class Candidate:
     def __init__(self):
-        self.result              = None
-        self.superpixels         = {}
-        self.covered_superpixels = {}
-        self.energy              = np.NaN
+        self.result      = None
+        self.superpixels = set()
+        self.energy      = np.NaN
     
     def get_mask(self, g_superpixels):
         return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
+
+    def copy(self):
+        c = Candidate()
+        if self.result is not None: c.result = self.result.copy()
+        c.superpixels = set(self.superpixels)
+        c.energy      = self.energy
+        return c
 
 
 class ComputeCandidates(pipeline.Stage):
@@ -162,7 +168,7 @@ class ProcessCandidates(pipeline.Stage):
 
     def __init__(self, backend):
         super(ProcessCandidates, self).__init__('process_candidates',
-                                                inputs=['unique_candidates'], outputs=[])
+                                                inputs=['unique_candidates'], outputs=['processed_candidates'])
         self.backend = backend
 
     def process(self, input_data, cfg, out):
@@ -172,27 +178,50 @@ class ProcessCandidates(pipeline.Stage):
 
         g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
         g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
-        unique_candidate_rois = [None] * len(unique_candidates)
+        candidates = [c.copy() for c in unique_candidates]
 
         modelfit_kwargs = {
             'r_sigma': 9,  ## currently not used
             'kappa':   0,  ## currently not used
-            'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor', 2.)
+            'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',   2.),
+            'averaging':      config.get_value(cfg, 'averaging'     , True)
         }
 
-        self.modelfit(g, unique_candidates, unique_candidate_rois, g_superpixels, modelfit_kwargs, out=out)
-        out.write('Processed candidates: %d' % len(unique_candidates))
+        self.modelfit(g, candidates, g_superpixels, modelfit_kwargs, out=out)
+        out.write('Processed candidates: %d' % len(candidates))
 
         return {
-            'g': g,
-            'unique_candidate_rois': unique_candidate_rois
+            'processed_candidates': candidates
         }
 
-    def modelfit(self, g, unique_candidates, unique_candidate_rois, g_superpixels, modelfit_kwargs, out):
+    def modelfit(self, g, candidates, g_superpixels, modelfit_kwargs, out):
         with modelfit.Frame() as batch:
             batch['show_progress'] = False
-            for ret_idx, ret in enumerate(self.backend(g, unique_candidates, g_superpixels, modelfit_kwargs, out=out)):
-                unique_candidates[ret['cidx']].result = ret['result']
-                unique_candidates[ret['cidx']].energy = ret['energy']
-                unique_candidate_rois[ret['cidx']]    = ret['roi'   ]
+            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, modelfit_kwargs, out=out)):
+                candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
+                candidates[ret['cidx']].energy = ret['energy']
+
+
+class AnalyzeCandidates(pipeline.Stage):
+
+    def __init__(self):
+        super(AnalyzeCandidates, self).__init__('analyze_candidates',
+                                                inputs=['g', 'g_superpixels', 'processed_candidates'],
+                                                outputs=['superpixels_covered_by'])
+        self.backend = backend
+
+    def process(self, input_data, cfg, out):
+        g, g_superpixels, candidates = input_data['g'], input_data['g_superpixels'], input_data['processed_candidates']
+        superpixels_covered_by = {}
+
+        x_map = g.get_map(normalized=False)
+        for cidx, candidate in enumerate(candidates):
+            model_fg = (candidate.result.s(x_map) > 0)
+            superpixels_covered_by[candidate] = candidate.superpixels & set(g_superpixels[model_fg])
+            out.intermediate('Analyzed candidate %d / %d' % (cidx + 1, len(candidates)))
+        out.write('Analyzed %d candidates' % len(candidates))
+
+        return {
+            'superpixels_covered_by': superpixels_covered_by
+        }
 
