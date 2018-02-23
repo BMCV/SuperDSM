@@ -3,7 +3,7 @@ import config
 import aux
 import numpy as np
 
-from math import sqrt
+from math import sqrt, pi
 
 from scipy                 import ndimage
 from scipy.ndimage.filters import gaussian_laplace, gaussian_filter
@@ -41,7 +41,7 @@ def remove_dark_spots(g, radius, max_radius, rel_tolerance=0.2, smooth=2., out=N
     for label_idx, label in enumerate(spot_labels):
         cc = (g_spots == label)
         cc_radius  = sqrt(cc.sum() / (2 * pi))
-        cc_dilated = morphology.dilation(cc, morphology.disk(max([1, cc_radius.round() - 1]))).astype(bool)
+        cc_dilated = morphology.dilation(cc, morphology.disk(max([1, round(cc_radius) - 1]))).astype(bool)
         g_sample0  = g[cc]
         g_sample1  = g[cc_dilated]
         h[cc] = g_sample1[g_sample1 > threshold_otsu(g_sample1)].mean() - g_sample0.mean()

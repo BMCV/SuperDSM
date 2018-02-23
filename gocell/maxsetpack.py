@@ -6,11 +6,11 @@ class MaxSetPackWeights(pipeline.Stage):
 
     def __init__(self):
         super(MaxSetPackWeights, self).__init__('max_setpack_weights',
-                                                inputs=['analyzed_candidates', 'superpixels_covered_by'],
-                                                outputs=['max_setpack_weights'])
+                                                inputs  = ['processed_candidates', 'superpixels_covered_by'],
+                                                outputs = ['max_setpack_weights'])
 
     def process(self, input_data, cfg, out):
-        candidates, superpixels_covered_by = input_data['analyzed_candidates'], input_data['superpixels_covered_by']
+        candidates, superpixels_covered_by = input_data['processed_candidates'], input_data['superpixels_covered_by']
         alpha = float(config.get_value(cfg, 'alpha', 1.  ))
         beta  = float(config.get_value(cfg, 'beta' , 1e-8))
 
@@ -31,11 +31,11 @@ class MaxSetPackGreedy(pipeline.Stage):
 
     def __init__(self):
         super(MaxSetPackGreedy, self).__init__('max_setpack_greedy',
-                                               inputs=['analyzed_candidates', 'max_setpack_weights'],
-                                               outputs=[''])
+                                               inputs  = ['processed_candidates', 'max_setpack_weights'],
+                                               outputs = ['accepted_candidates'])
 
     def process(self, input_data, cfg, out):
-        candidates, weights = input_data['analyzed_candidates'], input_data['max_setpack_weights']
+        candidates, weights = input_data['processed_candidates'], input_data['max_setpack_weights']
         accepted_candidates = []
 
         while len(weights) > 0:
@@ -45,7 +45,7 @@ class MaxSetPackGreedy(pipeline.Stage):
             accepted_candidates.append(best_candidate)
 
             # discard conflicting candidates
-            for s in best_candidate.covered_superpixels:
+            for s in best_candidate.superpixels:
                 weights = dict([(c, w) for c, w in weights.items() if len(c.superpixels & best_candidate.superpixels) == 0])
 
             out.intermediate('Greedy MAXSETPACK - Remaining candidates: %d' % len(weights))

@@ -17,7 +17,7 @@ from scipy.ndimage.filters import gaussian_filter
 class SuperpixelAdjacenciesGraph:
     def __init__(self, g_superpixels, out=None):
         out = aux.Output.get(out)
-        self.adjacencies, se = {}, disk(1)
+        self.adjacencies, se = {}, morphology.disk(1)
         for l0 in xrange(1, g_superpixels.max() + 1):
             cc = (g_superpixels == l0)
             cc_dilated = np.logical_and(morphology.binary_dilation(cc, se), np.logical_not(cc))
@@ -41,7 +41,7 @@ class SuperpixelCombinationsFactory:
             if new_combination not in self.discovered_combinations:
                 new_combinations.append(new_combination)
                 self.discovered_combinations |= {new_combination}
-        return new_combination
+        return new_combinations
     
     def find_superpixels_within_distance(self, root_superpixel, max_distance):
         """Performs breadth first search to find all superpixels within `max_distance` of `root_superpixel`.
@@ -56,7 +56,7 @@ class SuperpixelCombinationsFactory:
                 result |= neighbors
         return result
     
-    def create_local_combinations(self, pivot_superpixel, accept_superpixel, max_depth=inf):
+    def create_local_combinations(self, pivot_superpixel, accept_superpixel, max_depth=np.inf):
         if max_depth >= 0 and not np.isinf(max_depth):
             region = self.find_superpixels_within_distance(pivot_superpixel, max_depth)
             accept_superpixel0 = accept_superpixel
@@ -97,8 +97,8 @@ class ComputeCandidates(pipeline.Stage):
 
     def __init__(self):
         super(ComputeCandidates, self).__init__('compute_candidates',
-                                                inputs=['seeds', 'g_superpixels', 'g_superpixel_seeds', 'min_roi_size'],
-                                                outputs=['candidates'])
+                                                inputs  = ['seeds', 'g_superpixels', 'g_superpixel_seeds', 'min_region_size'],
+                                                outputs = ['candidates'])
 
     def process(self, input_data, cfg, out):
         candidates = []
@@ -109,7 +109,7 @@ class ComputeCandidates(pipeline.Stage):
         seeds              = input_data['seeds']
         g_superpixels      = input_data['g_superpixels']
         g_superpixel_seeds = input_data['g_superpixel_seeds']
-        min_roi_size       = input_data['min_roi_size']
+        min_region_size    = input_data['min_region_size']
 
         superpixel_adjacencies_graph = SuperpixelAdjacenciesGraph(g_superpixels, out=out)
         for seed_label, seed in enumerate(seeds, start=1):
@@ -125,7 +125,7 @@ class ComputeCandidates(pipeline.Stage):
                 candidate = Candidate()
                 candidate.superpixels = superpixels
                 candidate_mask = candidate.get_mask(g_superpixels)
-                if candidate_mask.sum() < min_roi_size: continue
+                if candidate_mask.sum() < min_region_size: continue
                 if count_binary_holes(candidate_mask) > 0: continue
                 candidates.append(candidate)
 
@@ -168,12 +168,13 @@ class ProcessCandidates(pipeline.Stage):
 
     def __init__(self, backend):
         super(ProcessCandidates, self).__init__('process_candidates',
-                                                inputs=['unique_candidates'], outputs=['processed_candidates'])
+                                                inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
+                                                outputs = ['g', 'processed_candidates'])
         self.backend = backend
 
     def process(self, input_data, cfg, out):
-        g_raw, g_superpixels, unique_candidates = input_data['g_raw'],
-                                                  input_data['g_superpixels'],
+        g_raw, g_superpixels, unique_candidates = input_data['g_raw'], \
+                                                  input_data['g_superpixels'], \
                                                   input_data['unique_candidates']
 
         g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
@@ -184,13 +185,15 @@ class ProcessCandidates(pipeline.Stage):
             'r_sigma': 9,  ## currently not used
             'kappa':   0,  ## currently not used
             'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',   2.),
-            'averaging':      config.get_value(cfg, 'averaging'     , True)
+            'averaging':      config.get_value(cfg, 'averaging'     , True),
+            'bg_radius':      config.get_value(cfg, 'bg_radius',      100 )
         }
 
         self.modelfit(g, candidates, g_superpixels, modelfit_kwargs, out=out)
         out.write('Processed candidates: %d' % len(candidates))
 
         return {
+            'g': g,
             'processed_candidates': candidates
         }
 
@@ -206,9 +209,8 @@ class AnalyzeCandidates(pipeline.Stage):
 
     def __init__(self):
         super(AnalyzeCandidates, self).__init__('analyze_candidates',
-                                                inputs=['g', 'g_superpixels', 'processed_candidates'],
-                                                outputs=['superpixels_covered_by'])
-        self.backend = backend
+                                                inputs  = ['g', 'g_superpixels', 'processed_candidates'],
+                                                outputs = ['superpixels_covered_by'])
 
     def process(self, input_data, cfg, out):
         g, g_superpixels, candidates = input_data['g'], input_data['g_superpixels'], input_data['processed_candidates']

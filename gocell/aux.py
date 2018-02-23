@@ -1,4 +1,7 @@
+import sys
+
 from skimage.filter.rank import median as median_filter
+from IPython.display     import clear_output
 
 
 def set2str(S, delim=','):

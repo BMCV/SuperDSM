@@ -1,11 +1,13 @@
 import aux
+import labels
 import mapper
-import cvxopt
+import cvxopt, cvxopt.solvers
 import surface
 import modelfit_base
 import numpy as np
 
 from skimage.filter import threshold_otsu
+from scipy          import ndimage
 
 
 class Frame:
@@ -18,21 +20,23 @@ class Frame:
         cvxopt.solvers.options[key] = value
 
     def __exit__(self, *args):
-        for key in cvxopt.solvers.options: del cvxopt.solvers.options[k]
-        for key in self.options: cvxopt.solvers.options[key] = self.options[key]
+        cvxopt.solvers.options.clear()
+        cvxopt.solvers.options.update(self.options)
 
 
 def create_region(g, region_mask):
     """Creates region of model activity at `region_mask` for image `g`.
     """
-    return surface.Surface(g.model.shape, g.model)
+    return surface.Surface(g.model.shape, g.model, mask=region_mask)
 
 
-def modelfit(region, r_sigma, kappa, w_sigma_factor, averaging=True):
-    labels = modelfit_base.ThresholdedLabels(region, threshold_otsu(region.model[region.mask]))
-    y_map  = labels.get_map()
-    w_map  = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor, normalize=averaging)
-    region.mask = np.logical_or(region.mask, y_map < 0)
+def modelfit(region, r_sigma, kappa, w_sigma_factor, averaging, bg_radius):
+    y_map = labels.ThresholdedLabels(region, threshold_otsu(region.model[region.mask])).get_map()
+    w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
+    bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
+    region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
+    w_map[~region.mask] = 0
+    if averaging: w_map /= float(w_map.sum())
     J = modelfit_base.Energy(y_map, region, w_map, r_map=None, kappa=kappa)
     assert np.allclose(w_map.sum(), 1)
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, np.random.randn(6)).solve()['x']))

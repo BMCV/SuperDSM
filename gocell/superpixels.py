@@ -3,10 +3,12 @@ import config
 import aux
 import numpy as np
 import warnings
+import math
 
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
 
-from skimage import morphology
+from skimage.feature import peak_local_max
+from skimage         import morphology
 
 
 class Seeds(pipeline.Stage):
@@ -24,9 +26,9 @@ class Seeds(pipeline.Stage):
         if smooth_amount > 0: g_src = gaussian_filter(g_src, smooth_amount)
 
         seeds = peak_local_max(g_src,
-                               threshold_rel  = config.get_value(cfg, 'rel_threshold' , 1e-3),
-                               num_peaks      = config.get_value(cfg, 'max_count'     ,  inf),
-                               exclude_border = config.get_value(cfg, 'exclude_border', True))
+                               threshold_rel  = config.get_value(cfg, 'rel_threshold' ,   1e-3),
+                               num_peaks      = config.get_value(cfg, 'max_count'     , np.inf),
+                               exclude_border = config.get_value(cfg, 'exclude_border',   True))
 
         return {
             'g_src': g_src,
@@ -78,9 +80,9 @@ class SuperpixelsEntropy(pipeline.Stage):  # It is not really the entropy we com
         g_superpixels_entropy = np.zeros(g_superpixels.shape)
         superpixels_entropies = []
 
-        for l in xrange(1, g_superpixels.shape):
+        for l in xrange(1, g_superpixels.max() + 1):
             superpixel = (g_superpixels == l)
-            entropy    = sqrt(np.square(g_grad_magnitude[superpixel]).sum()) / (1 + g_src[superpixel].mean())
+            entropy    = math.sqrt(np.square(g_grad_magnitude[superpixel]).sum()) / (1 + g_src[superpixel].mean())
             g_superpixels_entropy[superpixel] = entropy
             superpixels_entropies.append(entropy)
 
@@ -94,17 +96,17 @@ class SuperpixelsDiscard(pipeline.Stage):
 
     def __init__(self):
         super(SuperpixelsDiscard, self).__init__('superpixels_discard',
-                                                 inputs  = ['seeds', 'g_superpixels', 'min_roi_size',
+                                                 inputs  = ['seeds', 'g_superpixels', 'min_region_size',
                                                             'superpixels_entropies', 'g_superpixels_entropy'],
                                                  outputs = ['g_superpixels'])
 
     def process(self, input_data, cfg, out):
-        seeds, g_superpixels, min_roi_size = input_data['seeds'], input_data['g_superpixels'], input_data['min_roi_size']
+        seeds, g_superpixels, min_region_size = input_data['seeds'], input_data['g_superpixels'], input_data['min_region_size']
 
         log_superpixels_entropies = np.log(input_data['superpixels_entropies'])
         entropies_abs_threshold = config.get_value(cfg, 'entropies_abs_threshold', 1e-4)
         entropies_rel_tolerance = config.get_value(cfg, 'entropies_rel_tolerance',  0.4)
-        entropies_rel_threshold = exp(log_superpixels_entropies.mean() -
+        entropies_rel_threshold = math.exp(log_superpixels_entropies.mean() -
                                       entropies_rel_tolerance * log_superpixels_entropies.std())
 
         min_superpixel_entropy = max([entropies_abs_threshold, entropies_rel_threshold])
@@ -114,12 +116,12 @@ class SuperpixelsDiscard(pipeline.Stage):
         for seed_idx, seed in enumerate(seeds):
             
             seed_label = seed_idx + 1
-            if data['g_superpixels_entropy'][tuple(seed)] < min_superpixel_entropy:
+            if input_data['g_superpixels_entropy'][tuple(seed)] < min_superpixel_entropy:
                 cc = (g_superpixels == seed_label)
                 
                 # Never discard superpixels which are too small to form a ROI by themselfes, because
                 # we cannot know whether a non-interesting superpixel belongs to foreground or background:
-                if cc.sum() < min_roi_size / 2: continue
+                if cc.sum() < min_region_size / 2: continue
 
                 g_superpixels[cc] = 0
                 discarded_superpixels_count += 1

@@ -18,7 +18,7 @@ def rasterize_regions(regions, background_label=None, radius=3):
 
 def render_regions_over_image(img, regions, background_label=None, bg=(0.6, 1, 0.6, 0.3), **kwargs):
     assert img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1), 'image has wrong dimensions'
-    result = zeros((img.shape[0], img.shape[1], 3))
+    result = np.zeros((img.shape[0], img.shape[1], 3))
     for i in xrange(3): result[:, :, i] = img
     borders, background = rasterize_regions(regions, background_label, **kwargs)
     borders = borders.astype(int)
@@ -36,25 +36,25 @@ def normalize_image(img):
 
 def fetch_image_from_data(data, normalize_img=True):
     img = data['g_raw']
-    if normalize_img: img = normalize_img(img)
+    if normalize_img: img = normalize_image(img)
     return img
 
 
-def render_superpixels(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=1):
+def render_superpixels(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2):
     img = fetch_image_from_data(data, normalize_img)
-    return render_regions_over_image(img / img.max(), data['g_superpixels'] > 0,
-                                     background_label=0, bg=discarded_color, radius=border_radius)
+    regions = data['g_superpixels'] > 0 if discarded_only else data['g_superpixels']
+    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius)
 
 
 def rasterize_activity_regions(data, candidates_key='postprocessed_candidates'):
-    regions = zeros(data['g_raw'].shape, 'uint16')
-    for candidate, label in enumerate(data[candidates_key], start=1):
+    regions = np.zeros(data['g_raw'].shape, 'uint16')
+    for label, candidate in enumerate(data[candidates_key], start=1):
         mask = candidate.get_mask(data['g_superpixels'])
         regions[mask] = label
     return regions
 
 
-def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0.1), border_radius=1, **kwargs):
+def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0.1), border_radius=2, **kwargs):
     img = fetch_image_from_data(data, normalize_img)
     regions = rasterize_activity_regions(data, **kwargs)
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
@@ -64,13 +64,13 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
-    g = surface.Surface(fetch_image_from_data(data, normalize_img))
+    g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img))
     models = [candidate.result for candidate in data[candidates_key]]
 
     if is_legal == True: is_legal = lambda m: True
     x_maps = override_xmaps if override_xmaps is not None else g.get_map(normalized=False)
     if isinstance(x_maps, np.ndarray): x_maps = [x_maps] * len(models)
-    assert len(xmaps) == len(models), 'number of `xmaps` and `models` mismatch'
+    assert len(x_maps) == len(models), 'number of `x_maps` and `models` mismatch'
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
     for i in xrange(3): img[:, :, i] = g.model * g.mask

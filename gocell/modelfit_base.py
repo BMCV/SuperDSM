@@ -1,6 +1,7 @@
 import surface
 import numpy as np
 import cvxopt
+import sys
 
 from math         import sqrt
 from scipy.linalg import orth
@@ -14,11 +15,11 @@ class PolynomialModelType:
     
     def compute_derivatives(self, x_map):
         derivatives = [None] * 6
-        derivatives[0] = np.square(x_map[0, :, :])
-        derivatives[1] = np.square(x_map[1, :, :])
-        derivatives[2] = 2 * np.prod([x_map[i, :, :] for i in xrange(2)], axis=0)
-        derivatives[3] = 2 * x_map[0, :, :]
-        derivatives[4] = 2 * x_map[1, :, :]
+        derivatives[0] = np.square(x_map[0])
+        derivatives[1] = np.square(x_map[1])
+        derivatives[2] = 2 * np.prod([x_map[i] for i in xrange(2)], axis=0)
+        derivatives[3] = 2 * x_map[0]
+        derivatives[4] = 2 * x_map[1]
         derivatives[5] = 1
         return derivatives
 
@@ -37,7 +38,7 @@ class PolynomialModel:
             self.a = np.array([1, 1, 0]) if len(args) < 1 else args[0].flat[np.array([0, 3, 1])]
             self.b =         np.zeros(2) if len(args) < 2 else args[1].astype(float)
             self.c =                   0 if len(args) < 3 else float(args[2])
-            self.array = concatenate([self.a, self.b, np.array([self.c])])
+            self.array = np.concatenate([self.a, self.b, np.array([self.c])])
 
     def copy(self):
         return PolynomialModel(self.array.copy())
@@ -103,16 +104,15 @@ def get_fg_measures(y_map, roi):
 
 def render_gaussian(shape, center, std):
     x_map = surface.get_pixel_map(shape, normalized=False)
-    return np.exp(-np.square(x_map - array(center)[:, None, None]).sum(axis=0) / (2 * np.square(std)))
+    return np.exp(-np.square(x_map - np.array(center)[:, None, None]).sum(axis=0) / (2 * np.square(std)))
 
 
-def get_roi_weights(y_map, roi, std_factor=1, normalize=True):
+def get_roi_weights(y_map, roi, std_factor=1):
     if np.isinf(std_factor):
-        w_map = roi.mask.astype(float)
+        return ones(roi.mask.shape)
     else:
         fg_center, fg_std = get_fg_measures(y_map, roi)
-        w_map = render_gaussian(roi.model.shape, fg_center, fg_std * std_factor) * roi.mask
-    return w_map / w_map.sum() if normalize else w_map
+        return render_gaussian(roi.model.shape, fg_center, fg_std * std_factor)
 
 
 class Energy:
@@ -121,10 +121,10 @@ class Energy:
         self.kappa = kappa if r_map is not None else 0
         self.roi   = roi
         self.p     = None
-        self.x_map = self.roi.get_map()
-        self.w_map = w_map
-        self.r_map = r_map if r_map is not None else zeros(w_map.shape, 'uint8')
-        self.y_map = y_map * self.roi.mask
+        self.x_map = self.roi.get_map()[:, roi.mask]
+        self.w_map = w_map[roi.mask]
+        self.r_map = (r_map if r_map is not None else np.zeros(w_map.shape, 'uint8'))[roi.mask]
+        self.y_map = y_map[roi.mask]
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.model_type = model_type
@@ -136,28 +136,27 @@ class Energy:
         self.t_map = self.y_map * params.s(self.x_map)
         self.theta = None # invalidate
         
-        valid_t_mask = self.t_map >= -log(sys.float_info.max)
-        self.h_map   = empty_like(self.t_map)
-        self.h_map[  valid_t_mask] = self.roi.mask[valid_t_mask] * exp(-self.t_map[valid_t_mask])
-        self.h_map[~ valid_t_mask] = NaN
-        self.h_map[~self.roi.mask] = 0
+        valid_t_mask = self.t_map >= -np.log(sys.float_info.max)
+        self.h_map   = np.empty_like(self.t_map)
+        self.h_map[  valid_t_mask] = np.exp(-self.t_map[valid_t_mask])
+        self.h_map[~ valid_t_mask] = np.NaN
         
         self.rs_map = self.r_map * params.s(self.x_map)
     
     def update_theta(self):
         if self.theta is None:
-            valid_h_mask = ~isnan(self.h_map)
-            self.theta = -ones_like(self.t_map)
+            valid_h_mask = ~np.isnan(self.h_map)
+            self.theta = -np.ones_like(self.t_map)
             self.theta[valid_h_mask] = self.h_map[valid_h_mask] / (1 + self.h_map[valid_h_mask])
     
     def __call__(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
-        valid_h_mask = ~isnan(self.h_map)
-        phi = zeros_like(self.t_map)
-        phi[ valid_h_mask] = self.roi.mask[ valid_h_mask] * log(1 + self.h_map[valid_h_mask])
-        phi[~valid_h_mask] = self.roi.mask[~valid_h_mask] * -self.t_map[~valid_h_mask]
-        return inner(self.w_map.flat, phi.flat) + self.kappa * inner(self.w_map.flat, square(self.rs_map).flat)
+        valid_h_mask = ~np.isnan(self.h_map)
+        phi = np.zeros_like(self.t_map)
+        phi[ valid_h_mask] = np.log(1 + self.h_map[valid_h_mask])
+        phi[~valid_h_mask] = -self.t_map[~valid_h_mask]
+        return np.inner(self.w_map.flat, phi.flat) + self.kappa * np.inner(self.w_map.flat, np.square(self.rs_map).flat)
     
     def grad(self, params):
         params = self.model_type.get_model(params)
@@ -165,18 +164,24 @@ class Energy:
         self.update_theta()
         f_maps = [None] * len(self.q)
         for i in xrange(len(f_maps)): f_maps[i] = -self.theta * self.y_map * self.q[i]
-        grad = array(map(lambda f_map: inner(self.w_map.flat, f_map.flat), f_maps))
+        grad = np.array(map(lambda f_map: np.inner(self.w_map.flat, f_map.flat), f_maps))
         for i in xrange(len(grad)):
-            grad[i] += self.kappa * inner(self.w_map.flat, (2 * self.rs_map * self.r_map * self.q[i]).flat)
+            grad[i] += self.kappa * np.inner(self.w_map.flat, (2 * self.rs_map * self.r_map * self.q[i]).flat)
         return grad
     
     def hessian(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        gamma = square(self.y_map) * (self.theta - square(self.theta)) + 2 * self.kappa * square(self.r_map)
-        H = empty((len(self.q), len(self.q)))
-        for i in ndindex(H.shape): H[i] = inner(self.w_map.flat, (gamma * self.q[i[0]] * self.q[i[1]]).flat)
+        gamma = np.square(self.y_map) * (self.theta - np.square(self.theta)) + 2 * self.kappa * np.square(self.r_map)
+        H = np.empty((len(self.q), len(self.q)))
+        H_ik = lambda i, k: np.inner(self.w_map.flat, (gamma * self.q[i] * self.q[k]).flat)
+        for i in xrange(H.shape[0]):
+            H[i, i] = H_ik(i, i)
+            for k in xrange(i + 1, H.shape[1]):
+                value = H_ik(i, k)
+                H[i, k] = value
+                H[k, i] = value
         return H
 
 
