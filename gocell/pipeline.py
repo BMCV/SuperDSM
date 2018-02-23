@@ -76,7 +76,7 @@ def create_default_pipeline(backend):
     from preprocessing  import Preprocessing
     from superpixels    import Seeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
     from candidates     import ComputeCandidates, FilterUniqueCandidates, ProcessCandidates, AnalyzeCandidates
-    from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy
+    from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
     from postprocessing import Postprocessing
 
     if isinstance(backend, (int, long)): backend = modelfit.fork_based_backend(num_forks=backend)
@@ -94,6 +94,7 @@ def create_default_pipeline(backend):
     pipeline.append(AnalyzeCandidates())
     pipeline.append(MaxSetPackWeights())
     pipeline.append(MaxSetPackGreedy())
+    pipeline.append(MaxSetPackCheck())
     pipeline.append(Postprocessing())
 
     return pipeline

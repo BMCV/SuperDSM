@@ -10,20 +10,6 @@ from skimage.filter import threshold_otsu
 from scipy          import ndimage
 
 
-class Frame:
-
-    def __enter__(self):
-        self.options = aux.copy_dict(cvxopt.solvers.options)
-        return self
-
-    def __setitem__(self, key, value):
-        cvxopt.solvers.options[key] = value
-
-    def __exit__(self, *args):
-        cvxopt.solvers.options.clear()
-        cvxopt.solvers.options.update(self.options)
-
-
 def create_region(g, region_mask):
     """Creates region of model activity at `region_mask` for image `g`.
     """

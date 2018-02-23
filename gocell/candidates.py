@@ -198,7 +198,7 @@ class ProcessCandidates(pipeline.Stage):
         }
 
     def modelfit(self, g, candidates, g_superpixels, modelfit_kwargs, out):
-        with modelfit.Frame() as batch:
+        with aux.CvxoptFrame() as batch:
             batch['show_progress'] = False
             for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, modelfit_kwargs, out=out)):
                 candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])

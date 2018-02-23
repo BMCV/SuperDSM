@@ -1,5 +1,8 @@
 import pipeline
+import aux
 import config
+import cvxopt, cvxopt.solvers
+import numpy as np
 
 
 class MaxSetPackWeights(pipeline.Stage):
@@ -36,7 +39,24 @@ class MaxSetPackGreedy(pipeline.Stage):
 
     def process(self, input_data, cfg, out):
         candidates, weights = input_data['processed_candidates'], input_data['max_setpack_weights']
-        accepted_candidates = []
+        accepted_candidates = []  ## primal variable
+#        superpixel_charges  = {}  ## dual variables used to compute the accuracy of the approximation
+#
+#        while len(weights) > 0:
+#            
+#            # choose the best remaining candidate
+#            best_candidate = max(weights, key=weights.get)
+#            accepted_candidates.append(best_candidate)
+#
+#            # update dual variable
+#            superpixel_charges[list(best_candidate.superpixels)[0]] = weights[best_candidate]
+#
+#            # discard conflicting candidates
+#            conflicting = [c for c in weights.keys() if len(c.superpixels & best_candidate.superpixels) > 0]
+#            for c in sorted(conflicting, key=weights.get, revert=True):
+#                if not any(s in superpixel_charges for s in c.superpixels):
+#                    superpixel_charges[list(c.superpixels)[0]] = weights[c]
+#            weights = dict([(c, w) for c, w in weights.items() if c not in conflicting)
 
         while len(weights) > 0:
             
@@ -45,8 +65,7 @@ class MaxSetPackGreedy(pipeline.Stage):
             accepted_candidates.append(best_candidate)
 
             # discard conflicting candidates
-            for s in best_candidate.superpixels:
-                weights = dict([(c, w) for c, w in weights.items() if len(c.superpixels & best_candidate.superpixels) == 0])
+            weights = dict([(c, w) for c, w in weights.items() if len(c.superpixels & best_candidate.superpixels) == 0])        
 
             out.intermediate('Greedy MAXSETPACK - Remaining candidates: %d' % len(weights))
         out.write('Greedy MAXSETPACK - Accepted candidates: %d' % len(accepted_candidates))
@@ -54,4 +73,48 @@ class MaxSetPackGreedy(pipeline.Stage):
         return {
             'accepted_candidates': accepted_candidates
         }
+
+
+class MaxSetPackCheck(pipeline.Stage):
+
+    def __init__(self):
+        super(MaxSetPackCheck, self).__init__('max_setpack_check',
+                                              inputs  = ['g_superpixels', 'processed_candidates', 'accepted_candidates', 'max_setpack_weights'],
+                                              outputs = ['max_setpack_min_accuracy'])
+
+    def process(self, input_data, cfg, out):
+        accepted_candidates = input_data['accepted_candidates']
+        max_setpack_weights = input_data['max_setpack_weights']
+
+        apx_primal = sum(max_setpack_weights[c] for c in accepted_candidates)
+        opt_dual   = self.solve_dual_lp_relaxation(input_data)
+
+        assert apx_primal <= opt_dual
+
+        min_accuracy = apx_primal / opt_dual if opt_dual > 0 else 0.
+        out.write('Minimum accuracy of MAXSETPACK solution: %5.2f %%' % (100 * min_accuracy))
+
+        return {
+            'max_setpack_min_accuracy': min_accuracy
+        }
+
+    def solve_dual_lp_relaxation(self, input_data):
+        superpixels = list(set(input_data['g_superpixels'].flatten()) - {0})
+        max_setpack_weights = input_data['max_setpack_weights']
+        G = [ -np.eye(len(superpixels))]
+        h = [np.zeros(len(superpixels))]
+        for c in input_data['processed_candidates']:
+            G_row = np.zeros((1, len(superpixels)))
+            for s in c.superpixels:
+                i = superpixels.index(s)
+                G_row[0, i] = -1
+            G.append(G_row)
+            h.append(np.array([-max_setpack_weights[c]]))
+        G = cvxopt.matrix(np.concatenate(G, axis=0))
+        h = cvxopt.matrix(np.concatenate(h, axis=0))
+        with aux.CvxoptFrame() as batch:
+            batch['show_progress'] = False
+            solution = cvxopt.solvers.lp(cvxopt.matrix(np.ones(len(superpixels))), G, h)
+        assert solution['status'] == 'optimal'
+        return solution['primal objective']
 

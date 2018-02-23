@@ -1,3 +1,4 @@
+import cvxopt, cvxopt.solvers
 import sys
 
 from skimage.filter.rank import median as median_filter
@@ -71,4 +72,18 @@ def medianf(img, selem):
     img_max = img.max()
     img /= img_max
     return median_filter((img * 256).round().astype('uint8'), selem) * img_max / 256. + img_min
+
+
+class CvxoptFrame:
+
+    def __enter__(self):
+        self.options = copy_dict(cvxopt.solvers.options)
+        return self
+
+    def __setitem__(self, key, value):
+        cvxopt.solvers.options[key] = value
+
+    def __exit__(self, *args):
+        cvxopt.solvers.options.clear()
+        cvxopt.solvers.options.update(self.options)
 
