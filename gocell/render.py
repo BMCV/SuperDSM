@@ -1,7 +1,9 @@
 import surface
 import numpy as np
+import warnings
 
 from skimage import morphology
+from scipy   import ndimage
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -85,4 +87,53 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
             img[border  .astype(bool), ch]  = (1 if ch == colorchannel else 0)
 
     return (255 * img).clip(0, 255).astype('uint8')
+
+
+def rasterize_objects(data, candidates_key):
+    models = [candidate.result for candidate in data[candidates_key]]
+    x_map = data['g'].get_map(normalized=False)
+    for model in models:
+        yield model.s(x_map) > 0
+
+
+def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf):
+    objects = [obj for obj in rasterize_objects(data, candidates_key)]
+
+    # First, we determine which objects overlap sufficiently
+    merge_list = []
+    merge_mask = [False] * len(objects)
+    for i1, i2 in ((i1, i2) for i1, obj1 in enumerate(objects) for i2, obj2 in enumerate(objects[:i1])):
+        obj1, obj2 = objects[i1], objects[i2]
+        overlap = np.logical_and(obj1, obj2).sum() / (0. + min([obj1.sum(), obj2.sum()]))
+        if overlap > merge_overlap_threshold:
+            merge_list.append((i1, i2))  # i2 is always smaller than i1
+            merge_mask[i1] = True
+
+    # Next, we associate a (potentially non-unique) label to each object
+    labels, obj_indices_by_label = range(1, 1 + len(objects)), {}
+    for label, obj_idx in zip(labels, xrange(len(objects))): obj_indices_by_label[label] = [obj_idx]
+    for merge_idx, merge_data in enumerate(merge_list):
+        assert merge_data[1] < merge_data[0], 'inconsistent merge data'
+        merge_label0  = len(objects) + 1 + merge_idx         # the new label for the merged objects
+        merge_labels  = [labels[idx] for idx in merge_data]  # two labels of the objects to be merged
+        if merge_labels[0] == merge_labels[1]: continue      # this can occur due to transitivity
+        merge_indices = obj_indices_by_label[merge_labels[0]] + obj_indices_by_label[merge_labels[1]]
+        for obj_idx in merge_indices: labels[obj_idx] = merge_label0
+        obj_indices_by_label[merge_label0] = merge_indices
+        for label in merge_labels: del obj_indices_by_label[label]
+    del labels, merge_list, merge_mask
+
+    # Finally, we merge the rasterized objects
+    objects_by_label = dict((i[0], [objects[k] for k in i[1]]) for i in obj_indices_by_label.items())
+    objects  = [(np.sum(same_label_objects, axis=0) > 0) for same_label_objects in objects_by_label.values()]
+    overlaps = (np.sum(objects, axis=0) > 1)
+    result   = np.zeros(overlaps.shape, 'uint16')
+    for l, obj in enumerate(objects, 1): result[obj] = l
+    background = (result == 0).copy()
+    result[overlaps] = 0
+    dist = ndimage.morphology.distance_transform_edt(result == 0)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', FutureWarning)
+        result = morphology.watershed(dist, result, mask=np.logical_not(background))
+    return result
 
