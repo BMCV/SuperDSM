@@ -1,0 +1,17 @@
+name: kostrykin2017
+channels:
+ - anaconda
+ - conda-forge
+dependencies:
+  - python=2.7
+  - ipython
+  - jupyter
+  - numpy
+  - scipy
+  - scikit-image=0.10.1
+  - tifffile
+  - matplotlib<=1.5.3
+  - pillow
+  - scikit-learn
+  - ipyparallel
+  - cvxopt
