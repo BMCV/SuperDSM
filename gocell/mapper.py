@@ -65,19 +65,20 @@ class fork: # namespace
         assert processes >= 1, 'number of processes must be at least 1'
         assert not fork._forked, 'process was already forked before'
 
+        run_parallel = processes >= 2 and not fork.DEBUG
         n, real_args = _get_args_chain(args)
         real_args = list(zip(*real_args))
     
         # we need to ensure that SIGINT is handled correctly,
         # see for reference: http://stackoverflow.com/a/35134329/1444073
-        if not fork.DEBUG:
+        if run_parallel:
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             pool = multiprocessing.Pool(processes=processes)
             signal.signal(signal.SIGINT, original_sigint_handler)
         
         fork._forked = True
         try:
-            if not fork.DEBUG:
+            if run_parallel:
                 chunksize = int(round(float(n) / processes))
                 result = pool.map(UnrollArgs(f), real_args, chunksize)
                 pool.close()
@@ -85,7 +86,7 @@ class fork: # namespace
             else:
                 return map(UnrollArgs(f), real_args)
         except:
-            if not fork.DEBUG: pool.terminate()
+            if run_parallel: pool.terminate()
             raise
         finally:
             fork._forked = False
@@ -99,13 +100,14 @@ class fork: # namespace
         assert processes >= 1, 'number of processes must be at least 1'
         assert not fork._forked, 'process was already forked before'
 
+        run_parallel = processes >= 2 and not fork.DEBUG
         n, real_args = _get_args_chain(args)
         real_args = list(zip(*real_args))
     
-        if not fork.DEBUG: pool = multiprocessing.Pool(processes=processes)
+        if run_parallel: pool = multiprocessing.Pool(processes=processes)
         fork._forked = True
         try:
-            if not fork.DEBUG:
+            if run_parallel:
                 chunksize = int(round(float(n) / processes)) if kwargs.get('use_chunks') else 1
                 for result in pool.imap_unordered(UnrollArgs(f), real_args, chunksize):
                     yield result
@@ -114,7 +116,7 @@ class fork: # namespace
                 for result in itertools.imap(UnrollArgs(f), real_args):
                     yield result
         except:
-            if not fork.DEBUG: pool.terminate()
+            if run_parallel: pool.terminate()
             raise
         finally:
             fork._forked = False

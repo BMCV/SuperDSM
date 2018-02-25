@@ -24,7 +24,6 @@ def modelfit(region, r_sigma, kappa, w_sigma_factor, averaging, bg_radius):
     w_map[~region.mask] = 0
     if averaging: w_map /= float(w_map.sum())
     J = modelfit_base.Energy(y_map, region, w_map, r_map=None, kappa=kappa)
-    assert np.allclose(w_map.sum(), 1)
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, np.random.randn(6)).solve()['x']))
 
 
