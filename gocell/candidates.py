@@ -1,10 +1,11 @@
 import pipeline
 import config
 import aux
-import numpy as np
-import collections
 import surface
 import modelfit
+import labels
+import numpy as np
+import collections
 
 from preprocessing import remove_dark_spots_using_cfg
 
@@ -85,6 +86,10 @@ class Candidate:
     def get_mask(self, g_superpixels):
         return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
 
+    def get_region(self, g, g_superpixels):
+        region_mask = self.get_mask(g_superpixels)
+        return surface.Surface(g.model.shape, g.model, mask=region_mask)
+
     def copy(self):
         c = Candidate()
         if self.result is not None: c.result = self.result.copy()
@@ -164,43 +169,70 @@ class FilterUniqueCandidates(pipeline.Stage):
         }
 
 
+class IntensityModels(pipeline.Stage):
+
+    def __init__(self):
+        super(IntensityModels, self).__init__('intensity_models',
+                                              inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
+                                              outputs = ['intensity_thresholds', 'g'])
+
+    def process(self, input_data, cfg, out):
+        g_raw, g_superpixels, unique_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['unique_candidates']
+
+        g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
+        g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
+
+        intensity_thresholds = []
+        for cidx, candidate in enumerate(unique_candidates):
+            region    = candidate.get_region(g, g_superpixels)
+            threshold = labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
+                                                                           bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
+                                                                           samples_count = config.get_value(cfg, 'samples_count',   100 ))
+            intensity_thresholds.append(threshold)
+
+            out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
+        out.write('Computed %d intensity models' % len(unique_candidates))
+
+        return {
+            'intensity_thresholds': intensity_thresholds,
+            'g': g
+        }
+
+
 class ProcessCandidates(pipeline.Stage):
 
     def __init__(self, backend):
         super(ProcessCandidates, self).__init__('process_candidates',
-                                                inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
-                                                outputs = ['g', 'processed_candidates'])
+                                                inputs  = ['g', 'g_superpixels', 'unique_candidates', 'intensity_thresholds'],
+                                                outputs = ['processed_candidates'])
         self.backend = backend
 
     def process(self, input_data, cfg, out):
-        g_raw, g_superpixels, unique_candidates = input_data['g_raw'], \
-                                                  input_data['g_superpixels'], \
-                                                  input_data['unique_candidates']
-
-        g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
-        g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
-        candidates = [c.copy() for c in unique_candidates]
+        g, g_superpixels, unique_candidates, intensity_thresholds = input_data['g'], \
+                                                                    input_data['g_superpixels'], \
+                                                                    input_data['unique_candidates'], \
+                                                                    input_data['intensity_thresholds']
 
         modelfit_kwargs = {
             'r_sigma': 9,  ## currently not used
             'kappa':   0,  ## currently not used
-            'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',   2.),
-            'averaging':      config.get_value(cfg, 'averaging'     , True),
-            'bg_radius':      config.get_value(cfg, 'bg_radius',      100 )
+            'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',     2.),
+            'averaging':      config.get_value(cfg, 'averaging'     ,  True ),
+            'bg_radius':      config.get_value(cfg, 'bg_radius'     ,   100 )
         }
 
-        self.modelfit(g, candidates, g_superpixels, modelfit_kwargs, out=out)
+        candidates = [c.copy() for c in unique_candidates]
+        self.modelfit(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)
         out.write('Processed candidates: %d' % len(candidates))
 
         return {
-            'g': g,
             'processed_candidates': candidates
         }
 
-    def modelfit(self, g, candidates, g_superpixels, modelfit_kwargs, out):
+    def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
         with aux.CvxoptFrame() as batch:
             batch['show_progress'] = False
-            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, modelfit_kwargs, out=out)):
+            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
                 candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
                 candidates[ret['cidx']].energy = ret['energy']
 
