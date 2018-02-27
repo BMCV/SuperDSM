@@ -49,11 +49,11 @@ class ThresholdedLabels:
 
         h = np.linspace(-1, +1, samples)
         z = np.exp(kde.score_samples(h[:, None]))
-        z_minima = [t for t in peak_local_max(z.max() - z) if h[t] > 0]
+        z_minima = [t for t in peak_local_max(z.max() - z) if X_mean + h[t] * X_std > 0]
 
 #        from matplotlib import pyplot as plt
 #        plt.figure()
-#        plt.hist(X[np.logical_and(X >= -1, X <= +1)])
+#        plt.hist(X[np.logical_and(X >= -1, X <= +1)], bins=50)
 #        plt.gca().twinx().plot(h, z, 'r', lw=2)
 #        for t in z_minima: plt.vlines(h[t], plt.ylim()[0], plt.ylim()[1], 'r', lw=2)
 #        plt.show()
