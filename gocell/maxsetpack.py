@@ -101,7 +101,7 @@ class MaxSetPackCheck(pipeline.Stage):
         apx_primal = sum(max_setpack_weights[c] for c in accepted_candidates)
         opt_dual   = self.solve_dual_lp_relaxation(input_data)
 
-        assert apx_primal <= opt_dual or abs(apx_primal - opt_dual) < 1e-8 * opt_dual
+        assert apx_primal <= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
         apx_primal = min((apx_primal, opt_dual))
 
         min_accuracy = apx_primal / opt_dual if opt_dual > 0 else 0.
