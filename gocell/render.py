@@ -89,15 +89,18 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     return (255 * img).clip(0, 255).astype('uint8')
 
 
-def rasterize_objects(data, candidates_key):
+def rasterize_objects(data, candidates_key, dilate=0):
     models = [candidate.result for candidate in data[candidates_key]]
     x_map = data['g'].get_map(normalized=False)
     for model in models:
-        yield model.s(x_map) > 0
+        fg = (model.s(x_map) > 0)
+        if dilate > 0:
+            fg = morphology.dilation(fg, morphology.disk(dilate))
+        yield fg
 
 
-def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf):
-    objects = [obj for obj in rasterize_objects(data, candidates_key)]
+def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0):
+    objects = [obj for obj in rasterize_objects(data, candidates_key, dilate)]
 
     # First, we determine which objects overlap sufficiently
     merge_list = []
