@@ -127,6 +127,7 @@ class Energy:
         self.r = (r_map if r_map is not None else np.zeros(w_map.shape, 'uint8'))[roi.mask]
         self.y = y_map[roi.mask]
 
+        assert epsilon > 0, 'epsilon must be strictly positive'
         self.epsilon = epsilon
 
         # pre-compute common terms occuring in the computation of the derivatives
@@ -144,7 +145,8 @@ class Energy:
         self.h[  valid_t_mask] = np.exp(-self.t[valid_t_mask])
         self.h[~ valid_t_mask] = np.NaN
         
-        self.rs = self.r * params.s(self.x)
+        self.rs  = self.r * params.s(self.x)
+        self.bft = np.sqrt(np.square(self.rs) + self.epsilon)
     
     def update_theta(self):
         if self.theta is None:
@@ -159,7 +161,7 @@ class Energy:
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
-        return np.inner(self.w.flat, phi.flat) + self.kappa * np.inner(self.w.flat, np.square(self.rs).flat)
+        return np.inner(self.w.flat, phi.flat) + self.kappa * np.inner(self.w.flat, self.bft.flat)
     
     def grad(self, params):
         params = self.model_type.get_model(params)
@@ -169,14 +171,14 @@ class Energy:
         for i in xrange(len(f)): f[i] = -self.theta * self.y * self.q[i]
         grad = np.array(map(lambda f: np.inner(self.w.flat, f.flat), f))
         for i in xrange(len(grad)):
-            grad[i] += self.kappa * np.inner(self.w.flat, (2 * self.rs * self.r * self.q[i]).flat)
+            grad[i] += self.kappa * np.inner(self.w.flat, (self.rs * self.r * self.q[i] / self.bft).flat)
         return grad
     
     def hessian(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        gamma = np.square(self.y) * (self.theta - np.square(self.theta)) + 2 * self.kappa * np.square(self.r)
+        gamma = np.square(self.y) * (self.theta - np.square(self.theta)) + self.kappa * self.epsilon * np.square(self.r) / np.power(self.bft, 3)
         H = np.empty((len(self.q), len(self.q)))
         H_ik = lambda i, k: np.inner(self.w.flat, (gamma * self.q[i] * self.q[k]).flat)
         for i in xrange(H.shape[0]):

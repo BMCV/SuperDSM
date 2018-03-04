@@ -17,6 +17,7 @@ class MaxSetPackWeights(pipeline.Stage):
         candidates, superpixels_covered_by = input_data['processed_candidates'], input_data['superpixels_covered_by']
         alpha = float(config.get_value(cfg, 'alpha',  1.  ))
         beta  = float(config.get_value(cfg, 'beta' ,  1e-8))
+        gamma = float(config.get_value(cfg, 'gamma',  1.  ))
         form  =       config.get_value(cfg, 'form' , 'add')
 
         energies = [candidate.energy for candidate in candidates]
@@ -28,7 +29,7 @@ class MaxSetPackWeights(pipeline.Stage):
             if form == 'add':
                 weights.append(candidate.energy + high_energy * alpha / (beta + len(superpixels_covered_by[candidate])))
             elif form == 'mult':
-                weights.append(candidate.energy / math.pow(beta + len(superpixels_covered_by[candidate]), alpha))
+                weights.append(candidate.energy / math.pow(beta + gamma * len(superpixels_covered_by[candidate]), alpha))
             else:
                 raise ValueError('unknown "form" parameter: %s' % form)
 
