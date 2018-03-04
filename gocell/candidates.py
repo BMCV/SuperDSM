@@ -214,8 +214,8 @@ class ProcessCandidates(pipeline.Stage):
                                                                     input_data['intensity_thresholds']
 
         modelfit_kwargs = {
-            'r_sigma': 9,  ## currently not used
-            'kappa':   0,  ## currently not used
+            'r_sigma':        config.get_value(cfg, 'r_sigma'       ,     9.),
+            'kappa':          config.get_value(cfg, 'kappa'         ,     0 ),
             'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',     2.),
             'averaging':      config.get_value(cfg, 'averaging'     ,  True ),
             'bg_radius':      config.get_value(cfg, 'bg_radius'     ,   100 )
