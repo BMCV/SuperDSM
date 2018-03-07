@@ -7,7 +7,7 @@ import labels
 import numpy as np
 import collections
 
-from preprocessing import remove_dark_spots_using_cfg
+from preprocessing import remove_dark_spots_using_cfg, subtract_background_using_cfg
 
 from skimage import morphology, measure
 from scipy   import ndimage
@@ -179,7 +179,8 @@ class IntensityModels(pipeline.Stage):
     def process(self, input_data, cfg, out):
         g_raw, g_superpixels, unique_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['unique_candidates']
 
-        g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
+        g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
+        g_raw = subtract_background_using_cfg(g_raw, cfg, out)
         g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
 
         intensity_thresholds = []
