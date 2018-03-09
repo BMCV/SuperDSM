@@ -25,7 +25,12 @@ class Seeds(pipeline.Stage):
         if median_radius > 0: g_src = aux.medianf(g_src, morphology.disk(median_radius))
         if smooth_amount > 0: g_src = gaussian_filter(g_src, smooth_amount)
 
+        min_distance = config.get_value(cfg, 'min_distance', 10)
+        footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
+
         seeds = peak_local_max(g_src,
+                               min_distance   = min_distance,
+                               footprint      = footprint,
                                threshold_rel  = config.get_value(cfg, 'rel_threshold' ,   1e-3),
                                num_peaks      = config.get_value(cfg, 'max_count'     , np.inf),
                                exclude_border = config.get_value(cfg, 'exclude_border',   True))

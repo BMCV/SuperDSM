@@ -117,65 +117,70 @@ def get_roi_weights(y_map, roi, std_factor=1):
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, r_map=None, kappa=5, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, r_map=None, kappa=5, epsilon=1e-4, model_type=PolynomialModel.TYPE):
         self.kappa = kappa if r_map is not None else 0
         self.roi   = roi
         self.p     = None
-        self.x_map = self.roi.get_map()[:, roi.mask]
-        self.w_map = w_map[roi.mask]
-        self.r_map = (r_map if r_map is not None else np.zeros(w_map.shape, 'uint8'))[roi.mask]
-        self.y_map = y_map[roi.mask]
+
+        self.x = self.roi.get_map()[:, roi.mask]
+        self.w = w_map[roi.mask]
+        self.r = (r_map if r_map is not None else np.zeros(w_map.shape, 'uint8'))[roi.mask]
+        self.y = y_map[roi.mask]
+
+        assert epsilon > 0, 'epsilon must be strictly positive'
+        self.epsilon = epsilon
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.model_type = model_type
-        self.q = model_type.compute_derivatives(self.x_map)
+        self.q = model_type.compute_derivatives(self.x)
     
     def update_maps(self, params):
         if self.p is not None and all(self.p.array == params.array): return
         self.p     = params
-        self.t_map = self.y_map * params.s(self.x_map)
+        self.t     = self.y * params.s(self.x)
         self.theta = None # invalidate
         
-        valid_t_mask = self.t_map >= -np.log(sys.float_info.max)
-        self.h_map   = np.empty_like(self.t_map)
-        self.h_map[  valid_t_mask] = np.exp(-self.t_map[valid_t_mask])
-        self.h_map[~ valid_t_mask] = np.NaN
+        valid_t_mask = self.t >= -np.log(sys.float_info.max)
+        self.h   = np.empty_like(self.t)
+        self.h[  valid_t_mask] = np.exp(-self.t[valid_t_mask])
+        self.h[~ valid_t_mask] = np.NaN
         
-        self.rs_map = self.r_map * params.s(self.x_map)
+        self.rs  = self.r * params.s(self.x)
+        self.bft = np.sqrt(np.square(self.rs) + self.epsilon)
     
     def update_theta(self):
         if self.theta is None:
-            valid_h_mask = ~np.isnan(self.h_map)
-            self.theta = -np.ones_like(self.t_map)
-            self.theta[valid_h_mask] = self.h_map[valid_h_mask] / (1 + self.h_map[valid_h_mask])
+            valid_h_mask = ~np.isnan(self.h)
+            self.theta = -np.ones_like(self.t)
+            self.theta[valid_h_mask] = self.h[valid_h_mask] / (1 + self.h[valid_h_mask])
     
     def __call__(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
-        valid_h_mask = ~np.isnan(self.h_map)
-        phi = np.zeros_like(self.t_map)
-        phi[ valid_h_mask] = np.log(1 + self.h_map[valid_h_mask])
-        phi[~valid_h_mask] = -self.t_map[~valid_h_mask]
-        return np.inner(self.w_map.flat, phi.flat) + self.kappa * np.inner(self.w_map.flat, np.square(self.rs_map).flat)
+        valid_h_mask = ~np.isnan(self.h)
+        phi = np.zeros_like(self.t)
+        phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
+        phi[~valid_h_mask] = -self.t[~valid_h_mask]
+        return np.inner(self.w.flat, phi.flat) + self.kappa * np.inner(self.w.flat, self.bft.flat)
     
     def grad(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        f_maps = [None] * len(self.q)
-        for i in xrange(len(f_maps)): f_maps[i] = -self.theta * self.y_map * self.q[i]
-        grad = np.array(map(lambda f_map: np.inner(self.w_map.flat, f_map.flat), f_maps))
+        f = [None] * len(self.q)
+        for i in xrange(len(f)): f[i] = -self.theta * self.y * self.q[i]
+        grad = np.array(map(lambda f: np.inner(self.w.flat, f.flat), f))
         for i in xrange(len(grad)):
-            grad[i] += self.kappa * np.inner(self.w_map.flat, (2 * self.rs_map * self.r_map * self.q[i]).flat)
+            grad[i] += self.kappa * np.inner(self.w.flat, (self.rs * self.r * self.q[i] / self.bft).flat)
         return grad
     
     def hessian(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        gamma = np.square(self.y_map) * (self.theta - np.square(self.theta)) + 2 * self.kappa * np.square(self.r_map)
+        gamma = np.square(self.y) * (self.theta - np.square(self.theta)) + self.kappa * self.epsilon * np.square(self.r) / np.power(self.bft, 3)
         H = np.empty((len(self.q), len(self.q)))
-        H_ik = lambda i, k: np.inner(self.w_map.flat, (gamma * self.q[i] * self.q[k]).flat)
+        H_ik = lambda i, k: np.inner(self.w.flat, (gamma * self.q[i] * self.q[k]).flat)
         for i in xrange(H.shape[0]):
             H[i, i] = H_ik(i, i)
             for k in xrange(i + 1, H.shape[1]):

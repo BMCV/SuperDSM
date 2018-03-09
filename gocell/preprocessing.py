@@ -9,7 +9,7 @@ from scipy                 import ndimage
 from scipy.ndimage.filters import gaussian_laplace, gaussian_filter
 
 from skimage        import morphology
-from skimage.filter import threshold_otsu
+from skimage.filter import threshold_otsu, rank
 
 
 def find_dark_spots(g, radius, max_radius, rel_tolerance=0.2):
@@ -60,6 +60,23 @@ def remove_dark_spots_using_cfg(g_raw, cfg, out):
     return g_raw
 
 
+def subtract_background(g_raw, smooth_amount, radius):
+    g_smooth = gaussian_filter(g_raw, smooth_amount)
+    g_smooth = (g_smooth * 255).round().astype('uint8')
+    g_bg = rank.minimum(g_smooth, morphology.disk(radius))
+    g_bg = g_bg / 255.
+    return g_raw - g_bg
+
+
+def subtract_background_using_cfg(g_raw, cfg, out):
+    cfg = config.get_value(cfg, 'subtract_bg', False)
+    if cfg == True: cfg = {}
+    if isinstance(cfg, dict):
+        return subtract_background(g_raw, config.get_value(cfg, 'smooth_amount', 1.), config.get_value(cfg, 'radius', 50))
+    else:
+        return g_raw
+
+
 class Preprocessing(pipeline.Stage):
 
     def __init__(self):
@@ -67,7 +84,8 @@ class Preprocessing(pipeline.Stage):
 
     def process(self, input_data, cfg, out):
         g_raw = input_data['g_raw']
-        g_raw = remove_dark_spots_using_cfg(g_raw, cfg, out)
+        g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
+        g_raw = subtract_background_using_cfg(g_raw, cfg, out)
         return {
             'g_raw': g_raw
         }

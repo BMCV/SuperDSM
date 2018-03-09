@@ -75,7 +75,7 @@ class Pipeline:
 def create_default_pipeline(backend):
     from preprocessing  import Preprocessing
     from superpixels    import Seeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
-    from candidates     import ComputeCandidates, FilterUniqueCandidates, ProcessCandidates, AnalyzeCandidates
+    from candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
     from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
     from postprocessing import Postprocessing
 
@@ -90,6 +90,7 @@ def create_default_pipeline(backend):
     pipeline.append(SuperpixelsDiscard())
     pipeline.append(ComputeCandidates())
     pipeline.append(FilterUniqueCandidates())
+    pipeline.append(IntensityModels())
     pipeline.append(ProcessCandidates(backend))
     pipeline.append(AnalyzeCandidates())
     pipeline.append(MaxSetPackWeights())

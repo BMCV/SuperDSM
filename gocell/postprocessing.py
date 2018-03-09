@@ -30,15 +30,27 @@ class Postprocessing(pipeline.Stage):
 
     def process(self, input_data, cfg, out):
         g_superpixels, accepted_candidates = input_data['g_superpixels'], input_data['accepted_candidates']
+        self.rejection_causes = {}
 
         energy_threshold = threshold_accepted_energies(accepted_candidates, config.get_value(cfg, 'energy_threshold', {}))
-        postprocessed_candidates = [c for c in accepted_candidates if c.energy < energy_threshold]
+        pp1_candidates = []
+        for c in accepted_candidates:
+            if c.energy < energy_threshold:
+                pp1_candidates.append(c)
+            else:
+                self.rejection_causes[c] = 'maximum energy was %f but actual %f' % (energy_threshold, c.energy)
 
         min_obj_region_overlap = config.get_value(cfg, 'min_obj_region_overlap', 0.5)
         x_map = surface.get_pixel_map(g_superpixels.shape, normalized=False)
-        postprocessed_candidates = [c for c in postprocessed_candidates if compute_object_region_overlap(c, x_map, g_superpixels) >= min_obj_region_overlap]
+        pp2_candidates = []
+        for c in pp1_candidates:
+            region_overlap = compute_object_region_overlap(c, x_map, g_superpixels)
+            if region_overlap >= min_obj_region_overlap:
+                pp2_candidates.append(c)
+            else:
+                self.rejection_causes[c] = 'min region overlap was %f but actual %f' % (min_obj_region_overlap, region_overlap)
 
         return {
-            'postprocessed_candidates': postprocessed_candidates
+            'postprocessed_candidates': pp2_candidates
         }
 

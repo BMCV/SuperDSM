@@ -3,6 +3,7 @@ import aux
 import config
 import cvxopt, cvxopt.solvers
 import numpy as np
+import math
 
 
 class MaxSetPackWeights(pipeline.Stage):
@@ -14,12 +15,24 @@ class MaxSetPackWeights(pipeline.Stage):
 
     def process(self, input_data, cfg, out):
         candidates, superpixels_covered_by = input_data['processed_candidates'], input_data['superpixels_covered_by']
-        alpha = float(config.get_value(cfg, 'alpha', 1.  ))
-        beta  = float(config.get_value(cfg, 'beta' , 1e-8))
+        alpha = float(config.get_value(cfg, 'alpha',  1.  ))
+        beta  = float(config.get_value(cfg, 'beta' ,  1e-8))
+        gamma = float(config.get_value(cfg, 'gamma',  1.  ))
+        form  =       config.get_value(cfg, 'form' , 'add')
+
+        energies = [candidate.energy for candidate in candidates]
+        high_energy = np.mean(energies) + np.std(energies)
 
         weights = []
         for cidx, candidate in enumerate(candidates):
-            weights.append(candidate.energy + alpha / (beta + len(superpixels_covered_by[candidate])))
+
+            if form == 'add':
+                weights.append(candidate.energy + high_energy * alpha / (beta + len(superpixels_covered_by[candidate])))
+            elif form == 'mult':
+                weights.append(candidate.energy / math.pow(beta + gamma * len(superpixels_covered_by[candidate]), alpha))
+            else:
+                raise ValueError('unknown "form" parameter: %s' % form)
+
             out.intermediate('Computed MAXSETPACK weight %d / %d' % (cidx + 1, len(candidates)))
         out.write('Computed MAXSETPACK weights')
         max_weight = max(weights)
@@ -89,7 +102,8 @@ class MaxSetPackCheck(pipeline.Stage):
         apx_primal = sum(max_setpack_weights[c] for c in accepted_candidates)
         opt_dual   = self.solve_dual_lp_relaxation(input_data)
 
-        assert apx_primal <= opt_dual
+        assert apx_primal <= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
+        apx_primal = min((apx_primal, opt_dual))
 
         min_accuracy = apx_primal / opt_dual if opt_dual > 0 else 0.
         out.write('Minimum accuracy of MAXSETPACK solution: %5.2f %%' % (100 * min_accuracy))
@@ -101,6 +115,7 @@ class MaxSetPackCheck(pipeline.Stage):
     def solve_dual_lp_relaxation(self, input_data):
         superpixels = list(set(input_data['g_superpixels'].flatten()) - {0})
         max_setpack_weights = input_data['max_setpack_weights']
+        max_weight = float(max(max_setpack_weights.values()))
         G = [ -np.eye(len(superpixels))]
         h = [np.zeros(len(superpixels))]
         for c in input_data['processed_candidates']:
@@ -109,12 +124,13 @@ class MaxSetPackCheck(pipeline.Stage):
                 i = superpixels.index(s)
                 G_row[0, i] = -1
             G.append(G_row)
-            h.append(np.array([-max_setpack_weights[c]]))
+            h.append(np.array([-max_setpack_weights[c] / max_weight]))
+        assert all(G_row.sum() <= -1 for G_row in np.array(G))
         G = cvxopt.matrix(np.concatenate(G, axis=0))
         h = cvxopt.matrix(np.concatenate(h, axis=0))
         with aux.CvxoptFrame() as batch:
             batch['show_progress'] = False
             solution = cvxopt.solvers.lp(cvxopt.matrix(np.ones(len(superpixels))), G, h)
         assert solution['status'] == 'optimal'
-        return solution['primal objective']
+        return solution['primal objective'] * max_weight
 
