@@ -1,5 +1,6 @@
 import cvxopt, cvxopt.solvers
 import sys
+import numpy as np
 
 from skimage.filter.rank import median as median_filter
 from IPython.display     import clear_output
@@ -86,4 +87,14 @@ class CvxoptFrame:
     def __exit__(self, *args):
         cvxopt.solvers.options.clear()
         cvxopt.solvers.options.update(self.options)
+
+
+def threshold_gauss(data, tolerance, mode):
+    X = np.array(data).flat
+    f = None
+    if mode in ('l', 'lower'): f = -1
+    if mode in ('u', 'upper'): f = +1
+    assert f is not None, 'unknown mode "%s"' % mode
+    t_gauss = np.mean(X) + f * np.std(X) * tolerance
+    return t_gauss
 

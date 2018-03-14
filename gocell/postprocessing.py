@@ -1,9 +1,12 @@
 import pipeline
 import config
 import surface
+import aux
 import numpy as np
 
 from skimage.filter import threshold_otsu
+from skimage        import morphology
+from scipy          import ndimage
 
 
 def threshold_accepted_energies(accepted_candidates, cfg):
@@ -21,15 +24,22 @@ def compute_object_region_overlap(candidate, x_map, g_superpixels):
     return roi_overlap
 
 
+def compute_object_boundary(candidate, x_map):
+    obj_foreground = candidate.result.s(x_map) >= 0
+    obj_interior   = morphology.binary_erosion(obj_foreground, morphology.disk(1))
+    obj_boundary   = np.logical_xor(obj_foreground, obj_interior)
+    return obj_boundary.astype(bool)
+
+
 class Postprocessing(pipeline.Stage):
 
     def __init__(self):
         super(Postprocessing, self).__init__('postprocess',
-                                             inputs  = ['g_superpixels', 'accepted_candidates'],
+                                             inputs  = ['g_raw', 'g_superpixels', 'accepted_candidates'],
                                              outputs = ['postprocessed_candidates'])
 
     def process(self, input_data, cfg, out):
-        g_superpixels, accepted_candidates = input_data['g_superpixels'], input_data['accepted_candidates']
+        g_raw, g_superpixels, accepted_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['accepted_candidates']
         self.rejection_causes = {}
 
         energy_threshold = threshold_accepted_energies(accepted_candidates, config.get_value(cfg, 'energy_threshold', {}))
@@ -50,7 +60,30 @@ class Postprocessing(pipeline.Stage):
             else:
                 self.rejection_causes[c] = 'min region overlap was %f but actual %f' % (min_obj_region_overlap, region_overlap)
 
+        r_map  = ndimage.filters.gaussian_gradient_magnitude(g_raw, config.get_value(cfg, 'r_sigma', 10.))
+        r_map -= r_map.min()
+        r_map /= r_map.max()
+        self.r_map = r_map
+
+        r_map_responses = {}
+        for c in pp2_candidates:
+            cc = compute_object_boundary(c, x_map)
+            r_map_responses[c] = r_map[cc].mean()
+
+        r_threshold = aux.threshold_gauss(r_map_responses.values(), mode='lower',
+                                          tolerance=config.get_value(cfg, 'boundary_tolerance', np.inf))
+        r_threshold = max([r_threshold,
+                           max(r_map_responses.values()) * config.get_value(cfg, 'boundary_min', -np.inf)])
+
+        pp3_candidates = []
+        for c in pp2_candidates:
+            r_map_response = r_map_responses[c]
+            if r_map_response >= r_threshold:
+                pp3_candidates.append(c)
+            else:
+                self.rejection_causes[c] = 'minimum r_map response was %f but actual %f' % (r_threshold, r_map_response)
+
         return {
-            'postprocessed_candidates': pp2_candidates
+            'postprocessed_candidates': pp3_candidates
         }
 
