@@ -1,3 +1,4 @@
+import config
 import numpy as np
 
 from sklearn.cluster   import estimate_bandwidth
@@ -66,12 +67,16 @@ class ThresholdedLabels:
         return thres_final
 
     @staticmethod
-    def compute_threshold(g, method='otsu', bandwidth=None, samples_count=None):
+    def compute_threshold(g, method='otsu', bandwidth=None, samples_count=None, extras={}):
         if method == 'otsu':
             return threshold_otsu(g.model[g.mask])
         elif method == 'kde' or method == 'kde_pure':
             otsu_ub = (method == 'kde')  ## use Otsu threshold as upperr bound if method is not pure KDE
             return ThresholdedLabels.compute_kde_threshold(g, bandwidth, samples_count, otsu_ub=otsu_ub)
+        elif method == 'isbi':
+            t_otsu, t_median = threshold_otsu(g.model[g.mask]), np.median(g.model[g.mask])
+            w_otsu, w_median = config.get_value(extras, 'w_otsu', 1), config.get_value(extras, 'w_median', 1)
+            return (w_otsu * t_otsu + w_median * min([t_median, t_otsu])) / (w_otsu + w_median)
         else:
             raise ValueError('unknown threshold method "%s"' % method)
 

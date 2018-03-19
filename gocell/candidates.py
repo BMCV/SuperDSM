@@ -188,7 +188,8 @@ class IntensityModels(pipeline.Stage):
             region    = candidate.get_region(g, g_superpixels)
             threshold = labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
                                                                            bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
-                                                                           samples_count = config.get_value(cfg, 'samples_count',   100 ))
+                                                                           samples_count = config.get_value(cfg, 'samples_count',   100 ),
+                                                                           extras        = config.get_value(cfg, 'extras'       ,    {} ))
             intensity_thresholds.append(threshold)
 
             out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
