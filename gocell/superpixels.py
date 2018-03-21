@@ -31,6 +31,7 @@ class Seeds(pipeline.Stage):
         seeds = peak_local_max(g_src,
                                min_distance   = min_distance,
                                footprint      = footprint,
+                               threshold_abs  = config.get_value(cfg, 'abs_threshold' ,      0),
                                threshold_rel  = config.get_value(cfg, 'rel_threshold' ,   1e-3),
                                num_peaks      = config.get_value(cfg, 'max_count'     , np.inf),
                                exclude_border = config.get_value(cfg, 'exclude_border',   True))
