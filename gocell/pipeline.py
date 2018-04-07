@@ -72,9 +72,9 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
 
 
-def create_default_pipeline(backend):
+def create_default_pipeline(backend, log_seeds=False):
     from preprocessing  import Preprocessing
-    from superpixels    import Seeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
+    from superpixels    import Seeds, GaussianLaplaceSeeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
     from candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
     from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
     from postprocessing import Postprocessing
@@ -84,10 +84,11 @@ def create_default_pipeline(backend):
     pipeline = Pipeline()
 
     pipeline.append(Preprocessing())
-    pipeline.append(Seeds())
+    pipeline.append(GaussianLaplaceSeeds() if log_seeds else Seeds())
     pipeline.append(Superpixels())
-    pipeline.append(SuperpixelsEntropy())
-    pipeline.append(SuperpixelsDiscard())
+    if not log_seeds:
+        pipeline.append(SuperpixelsEntropy())
+        pipeline.append(SuperpixelsDiscard())
     pipeline.append(ComputeCandidates())
     pipeline.append(FilterUniqueCandidates())
     pipeline.append(IntensityModels())

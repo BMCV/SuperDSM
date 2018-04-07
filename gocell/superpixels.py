@@ -5,10 +5,22 @@ import numpy as np
 import warnings
 import math
 
-from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude
+from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude, gaussian_laplace
 
 from skimage.feature import peak_local_max
 from skimage         import morphology
+
+
+def _get_seeds(g_src, cfg, default_rel_threshold):
+    min_distance = config.get_value(cfg, 'min_distance', 10)
+    footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
+    return peak_local_max(g_src,
+                          min_distance   = min_distance,
+                          footprint      = footprint,
+                          threshold_abs  = config.get_value(cfg, 'abs_threshold' ,                     0),
+                          threshold_rel  = config.get_value(cfg, 'rel_threshold' , default_rel_threshold),
+                          num_peaks      = config.get_value(cfg, 'max_count'     ,                np.inf),
+                          exclude_border = config.get_value(cfg, 'exclude_border',                  True))
 
 
 class Seeds(pipeline.Stage):
@@ -25,19 +37,26 @@ class Seeds(pipeline.Stage):
         if median_radius > 0: g_src = aux.medianf(g_src, morphology.disk(median_radius))
         if smooth_amount > 0: g_src = gaussian_filter(g_src, smooth_amount)
 
-        min_distance = config.get_value(cfg, 'min_distance', 10)
-        footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
-
-        seeds = peak_local_max(g_src,
-                               min_distance   = min_distance,
-                               footprint      = footprint,
-                               threshold_abs  = config.get_value(cfg, 'abs_threshold' ,      0),
-                               threshold_rel  = config.get_value(cfg, 'rel_threshold' ,   1e-3),
-                               num_peaks      = config.get_value(cfg, 'max_count'     , np.inf),
-                               exclude_border = config.get_value(cfg, 'exclude_border',   True))
+        seeds = _get_seeds(g_src, cfg, default_rel_threshold=1e-3)
 
         return {
             'g_src': g_src,
+            'seeds': seeds
+        }
+
+
+class GaussianLaplaceSeeds(pipeline.Stage):
+
+    def __init__(self):
+        super(GaussianLaplaceSeeds, self).__init__('seeds', inputs=['g_raw'], outputs=['g_src', 'seeds'])
+
+    def process(self, input_data, cfg, out):
+        radius = config.get_value(cfg, 'expected_radius', 10.)
+        sigma  = radius / math.sqrt(2)
+        g_log  = gaussian_laplace(input_data['g_raw'], sigma)
+        seeds  = _get_seeds(-g_log, cfg, default_rel_threshold=0.1)
+        return {
+            'g_src': -g_log,
             'seeds': seeds
         }
 
