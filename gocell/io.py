@@ -11,15 +11,15 @@ def imwrite(filepath, img):
     skimage.io.imsave(filepath, img, **kwargs)
 
 
-def imread(filepath):
+def imread(filepath, **kwargs):
     filepath = os.path.expanduser(filepath)
     if not os.path.exists(filepath) or not os.path.isfile(filepath):
         raise ValueError('not a file: %s' % filepath)
     fp_lowercase = filepath.lower()
     if fp_lowercase.endswith('.png'):
-        img = skimage.io.imread(filepath, as_grey=True)
+        img = skimage.io.imread(filepath, as_grey=True, **kwargs)
     elif fp_lowercase.endswith('.tif') or fp_lowercase.endswith('.tiff'):
-        img = skimage.io.imread(filepath, as_grey=True, plugin='tifffile')
+        img = skimage.io.imread(filepath, as_grey=True, plugin='tifffile', **kwargs)
     else:
         raise ValueError('unknown file extension: %s' % filepath)
     return img
