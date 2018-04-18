@@ -131,7 +131,7 @@ class ComputeCandidates(pipeline.Stage):
                 candidate.superpixels = superpixels
                 candidate_mask = candidate.get_mask(g_superpixels)
                 if candidate_mask.sum() < min_region_size: continue
-                if count_binary_holes(candidate_mask) > 0: continue
+                if len(superpixels) > 1 and count_binary_holes(candidate_mask) > 0: continue
                 candidates.append(candidate)
 
             out.intermediate('Generated %d candidates from %d / %d seeds' % \
