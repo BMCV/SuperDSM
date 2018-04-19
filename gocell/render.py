@@ -1,9 +1,13 @@
 import surface
+import aux
 import numpy as np
 import warnings
 
 from skimage import morphology
 from scipy   import ndimage
+
+
+BUGFIX_20180418A = aux.BUGFIX_DISABLED_CRITICAL
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -92,14 +96,22 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
 def rasterize_objects(data, candidates_key, dilate=0):
     models = [candidate.result for candidate in data[candidates_key]]
     x_map = data['g'].get_map(normalized=False)
+
+    # BUGFIX_20180418A is only relevant if dilate != 0
+    if dilate == 0:
+        dlation, erosion = None, None
+    else:
+        if aux.is_bugfix_enabled(BUGFIX_20180418A):
+            dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
+        else:
+            dilation, erosion = (morphology.dilation, morphology.erosion)
+
     for model in models:
         fg = (model.s(x_map) > 0)
-        if dilate > 0:
-            fg = morphology.dilation(fg, morphology.disk(dilate))
-        elif dilate < 0:
-            fg = morphology.erosion(fg, morphology.disk(-dilate))
-        if fg.any():
-            yield fg
+        if dilate > 0:   fg = dilation(fg, morphology.disk( dilate))
+        elif dilate < 0: fg =  erosion(fg, morphology.disk(-dilate))
+
+        if fg.any(): yield fg
 
 
 def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0):
