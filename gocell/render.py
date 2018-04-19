@@ -96,7 +96,10 @@ def rasterize_objects(data, candidates_key, dilate=0):
         fg = (model.s(x_map) > 0)
         if dilate > 0:
             fg = morphology.dilation(fg, morphology.disk(dilate))
-        yield fg
+        elif dilate < 0:
+            fg = morphology.erosion(fg, morphology.disk(-dilate))
+        if fg.any():
+            yield fg
 
 
 def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0):
