@@ -32,13 +32,15 @@ def copy_dict(d):
 
 
 class Output:
-    def __init__(self, parent=None):
-        self.lines = []
-        self.current = None
-        self.parent = parent
+    def __init__(self, parent=None, maxlen=np.inf):
+        self.lines     = []
+        self.current   = None
+        self.parent    = parent
+        self.maxlen    = maxlen
+        self.truncated = 0
     
-    def derive(self):
-        child = Output(parent=self)
+    def derive(self, maxlen=np.inf):
+        child = Output(parent=self, maxlen=maxlen)
         if self.current is not None: child.lines.append(self.current)
         return child
     
@@ -48,14 +50,21 @@ class Output:
     
     def clear(self):
         clear_output(True)
-        p = self.parent
-        while p is not None:
+        p_list = [self]
+        while p_list[-1].parent is not None:
+            p_list += [p_list[-1].parent]
+        for p in p_list[::-1]:
+            if p.truncated > 0: print('[...] (%d)' % self.truncated)
             for line in p.lines: print(line)
-            p = p.parent
-        for line in self.lines: print(line)
         self.current = None
+
+    def truncate(self, offset=0):
+        if len(self.lines) + offset > self.maxlen:
+            self.lines = self.lines[len(self.lines) + offset - self.maxlen:]
+            self.truncated += 1
     
     def intermediate(self, line, flush=True):
+        self.truncate(offset=+1)
         self.clear()
         self.current = line
         print(line)
@@ -64,6 +73,7 @@ class Output:
     def write(self, line, keep_current=False):
         if keep_current and self.current is not None: self.lines.append(self.current)
         self.lines.append(line)
+        self.truncate()
         self.clear()
 
 
