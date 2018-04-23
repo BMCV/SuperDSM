@@ -83,7 +83,22 @@ class Postprocessing(pipeline.Stage):
             else:
                 self.rejection_causes[c] = 'minimum r_map response was %f but actual %f' % (r_threshold, r_map_response)
 
+        if config.get_value(cfg, 'discard_image_boundary', False):
+            pp4_candidates = []
+            pp4_shape = np.add(g_superpixels.shape, 2)
+            x_map_ext = surface.get_pixel_map(pp4_shape, normalized=False) - 1
+            x_map_bnd_mask = np.ones(pp4_shape, bool)
+            x_map_bnd_mask[1 : pp4_shape[0] - 1, 1 : pp4_shape[1] - 1] = False
+            x_map_ext = x_map_ext[:, x_map_bnd_mask]
+            for c in pp3_candidates:
+                if (c.result.s(x_map_ext) < 0).all():
+                    pp4_candidates.append(c)
+                else:
+                    self.rejection_causes[c] = 'intersects image exterior'
+        else:
+            pp4_candidates = pp3_candidates
+
         return {
-            'postprocessed_candidates': pp3_candidates
+            'postprocessed_candidates': pp4_candidates
         }
 

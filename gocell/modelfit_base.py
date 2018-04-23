@@ -61,6 +61,9 @@ class PolynomialModel:
         b  = A.dot(center)
         c  = np.inner(center, b) - 1
         return PolynomialModel(A, -b, c)
+
+    def is_measurable(self):
+        return (np.linalg.eigvalsh(self.A) < 0).all()
     
     def measure(self):
         """Returns the center `b` and halfaxes `H` of an ellipse-shaped model.
@@ -71,7 +74,7 @@ class PolynomialModel:
         b = -np.linalg.inv(self.A + 1e-12 * np.eye(self.A.ndim)).dot(self.b)
         c = self.c - np.inner(b, self.A.dot(b))
         d,U = np.linalg.eigh(self.A)
-        l = sqrt(np.max((np.zeros_like(d), -c / d), axis=0))
+        l = np.sqrt(np.max((np.zeros_like(d), -c / d), axis=0))
         L = U.dot(np.diag(l))
         return b, L.T
     
