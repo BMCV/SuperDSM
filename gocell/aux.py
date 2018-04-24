@@ -105,7 +105,9 @@ def threshold_gauss(data, tolerance, mode):
     if mode in ('l', 'lower'): f = -1
     if mode in ('u', 'upper'): f = +1
     assert f is not None, 'unknown mode "%s"' % mode
-    t_gauss = np.mean(X) + f * np.std(X) * tolerance
+    X_std = np.std(X) if len(X) > 1 else np.inf
+    t_gauss = np.mean(X) + f * X_std * tolerance
+    assert not np.isnan(t_gauss)
     return t_gauss
 
 
