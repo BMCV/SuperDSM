@@ -116,6 +116,7 @@ class MaxSetPackCheck(pipeline.Stage):
         superpixels = list(set(input_data['g_superpixels'].flatten()) - {0})
         max_setpack_weights = input_data['max_setpack_weights']
         max_weight = float(max(max_setpack_weights.values()))
+        if max_weight == 0: max_weight = 1
         G = [ -np.eye(len(superpixels))]
         h = [np.zeros(len(superpixels))]
         for c in input_data['processed_candidates']:
