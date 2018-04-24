@@ -144,14 +144,15 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
     # Finally, we merge the rasterized objects
     objects_by_label = dict((i[0], [objects[k] for k in i[1]]) for i in obj_indices_by_label.items())
     objects  = [(np.sum(same_label_objects, axis=0) > 0) for same_label_objects in objects_by_label.values()]
-    overlaps = (np.sum(objects, axis=0) > 1)
-    result   = np.zeros(overlaps.shape, 'uint16')
-    for l, obj in enumerate(objects, 1): result[obj] = l
-    background = (result == 0).copy()
-    result[overlaps] = 0
-    dist = ndimage.morphology.distance_transform_edt(result == 0)
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', FutureWarning)
-        result = morphology.watershed(dist, result, mask=np.logical_not(background))
+    result   = np.zeros(data['g'].model.shape, 'uint16')
+    if len(objects) > 0:
+        overlaps = (np.sum(objects, axis=0) > 1)
+        for l, obj in enumerate(objects, 1): result[obj] = l
+        background = (result == 0).copy()
+        result[overlaps] = 0
+        dist = ndimage.morphology.distance_transform_edt(result == 0)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', FutureWarning)
+            result = morphology.watershed(dist, result, mask=np.logical_not(background))
     return result
 
