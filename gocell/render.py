@@ -66,11 +66,11 @@ def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
 
-def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5):
+def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None):
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
-    g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img))
+    g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
     models = [candidate.result for candidate in data[candidates_key]]
 
     if is_legal == True: is_legal = lambda m: True
