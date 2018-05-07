@@ -4,6 +4,7 @@ import config
 import cvxopt, cvxopt.solvers
 import numpy as np
 import math
+import sys
 
 
 class MaxSetPackWeights(pipeline.Stage):
@@ -100,13 +101,19 @@ class MaxSetPackCheck(pipeline.Stage):
         max_setpack_weights = input_data['max_setpack_weights']
 
         apx_primal = sum(max_setpack_weights[c] for c in accepted_candidates)
-        opt_dual   = self.solve_dual_lp_relaxation(input_data)
+        try:
+            opt_dual = self.solve_dual_lp_relaxation(input_data)
 
-        assert apx_primal <= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
-        apx_primal = min((apx_primal, opt_dual))
+            assert apx_primal <= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
+            apx_primal = min((apx_primal, opt_dual))
 
-        min_accuracy = apx_primal / opt_dual if opt_dual > 0 else 0.
-        out.write('Minimum accuracy of MAXSETPACK solution: %5.2f %%' % (100 * min_accuracy))
+            min_accuracy = apx_primal / opt_dual if opt_dual > 0 else 0.
+            out.write('Minimum accuracy of MAXSETPACK solution: %5.2f %%' % (100 * min_accuracy))
+
+        except:
+            err = sys.exc_info()[0]
+            out.write('Minimum accuracy of MAXSETPACK failure: %s' % str(err))
+            min_accuracy = 0
 
         return {
             'max_setpack_min_accuracy': min_accuracy
