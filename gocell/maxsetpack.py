@@ -54,23 +54,6 @@ class MaxSetPackGreedy(pipeline.Stage):
     def process(self, input_data, cfg, out):
         candidates, weights = input_data['processed_candidates'], input_data['max_setpack_weights']
         accepted_candidates = []  ## primal variable
-#        superpixel_charges  = {}  ## dual variables used to compute the accuracy of the approximation
-#
-#        while len(weights) > 0:
-#            
-#            # choose the best remaining candidate
-#            best_candidate = max(weights, key=weights.get)
-#            accepted_candidates.append(best_candidate)
-#
-#            # update dual variable
-#            superpixel_charges[list(best_candidate.superpixels)[0]] = weights[best_candidate]
-#
-#            # discard conflicting candidates
-#            conflicting = [c for c in weights.keys() if len(c.superpixels & best_candidate.superpixels) > 0]
-#            for c in sorted(conflicting, key=weights.get, revert=True):
-#                if not any(s in superpixel_charges for s in c.superpixels):
-#                    superpixel_charges[list(c.superpixels)[0]] = weights[c]
-#            weights = dict([(c, w) for c, w in weights.items() if c not in conflicting)
 
         while len(weights) > 0:
             
