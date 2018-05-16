@@ -72,11 +72,12 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
 
 
-def create_default_pipeline(backend, log_seeds=False):
+def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack'):
     from preprocessing  import Preprocessing
     from superpixels    import Seeds, GaussianLaplaceSeeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
     from candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
     from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
+    from minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
     from postprocessing import Postprocessing
 
     if isinstance(backend, (int, long)): backend = modelfit.fork_based_backend(num_forks=backend)
@@ -94,9 +95,16 @@ def create_default_pipeline(backend, log_seeds=False):
     pipeline.append(IntensityModels())
     pipeline.append(ProcessCandidates(backend))
     pipeline.append(AnalyzeCandidates())
-    pipeline.append(MaxSetPackWeights())
-    pipeline.append(MaxSetPackGreedy())
-    pipeline.append(MaxSetPackCheck())
+    if selection_type == 'maxsetpack':
+        pipeline.append(MaxSetPackWeights())
+        pipeline.append(MaxSetPackGreedy())
+        pipeline.append(MaxSetPackCheck())
+    elif selection_type == 'minsetcover':
+        pipeline.append(MinSetCoverWeights())
+        pipeline.append(MinSetCoverGreedy())
+        pipeline.append(MinSetCoverCheck())
+    else:
+        raise ValueError('unknown selection_type "%s"' % selection_type)
     pipeline.append(Postprocessing())
 
     return pipeline
