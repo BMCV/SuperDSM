@@ -1,4 +1,5 @@
 import config
+import surface
 import numpy as np
 
 from sklearn.cluster   import estimate_bandwidth
@@ -20,6 +21,13 @@ class PCIntensityLabels:
     
     def get_map(self):
         return (self.f1 - self.g.model) ** 2 - (self.f0 - self.g.model) ** 2
+
+
+def _reverse_surface_intensities(g):
+    rg = surface.Surface(g.model.shape)
+    rg.model = g.model.max() - g.model
+    rg.mask  = g.mask
+    return rg
 
 
 class ThresholdedLabels:
@@ -73,6 +81,10 @@ class ThresholdedLabels:
         elif method == 'kde' or method == 'kde_pure':
             otsu_ub = (method == 'kde')  ## use Otsu threshold as upperr bound if method is not pure KDE
             return ThresholdedLabels.compute_kde_threshold(g, bandwidth, samples_count, otsu_ub=otsu_ub)
+        elif method == 'rkde':
+            return g.model.max() - ThresholdedLabels.compute_threshold(_reverse_surface_intensities(g), 'kde', bandwidth, samples_count, extras)
+        elif method == 'rkde_pure':
+            return g.model.max() - ThresholdedLabels.compute_threshold(_reverse_surface_intensities(g), 'kde_pure', bandwidth, samples_count, extras)
         elif method == 'isbi':
             t_otsu, t_median = threshold_otsu(g.model[g.mask]), np.median(g.model[g.mask])
             w_otsu, w_median = config.get_value(extras, 'w_otsu', 1), config.get_value(extras, 'w_median', 1)
