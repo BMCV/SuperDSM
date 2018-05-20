@@ -48,8 +48,8 @@ class Output:
     def get(out):
         return Output() if out is None else out
     
-    def clear(self):
-        clear_output(True)
+    def clear(self, flush=False):
+        clear_output(not flush)
         p_list = [self]
         while p_list[-1].parent is not None:
             p_list += [p_list[-1].parent]
