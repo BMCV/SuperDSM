@@ -4,6 +4,7 @@ import aux
 import numpy as np
 import warnings
 import math
+import scipy.ndimage as ndi
 
 from scipy.ndimage.filters import gaussian_filter, gaussian_gradient_magnitude, gaussian_laplace
 
@@ -11,16 +12,40 @@ from skimage.feature import peak_local_max
 from skimage         import morphology
 
 
+def _get_local_maxima(image, footprint_radius, rel_threshold=1e-2, abs_threshold=1e-2, rel_epsilon=1e-2, max_count=np.inf):
+    image    -= image.min()
+    image_min = ndi.minimum_filter(image, footprint=morphology.disk(footprint_radius))
+    image_max = ndi.maximum_filter(image, footprint=morphology.disk(footprint_radius))
+    image_maxima = (image == image_max)
+    image_maxima = np.logical_and(image_maxima, image_min + rel_epsilon <= (1 - rel_threshold) * image_max)
+    image_maxima = np.logical_and(image_maxima, image >= abs_threshold * image.max())
+    if not np.isinf(max_count):
+        significance = image_max / (1e-8 + image_min)
+        max_count = int(min((max_count, image_maxima.sum())))
+        min_significance = sorted(significance[image_maxima], reverse=True)[max_count - 1]
+        image_maxima = np.logical_and(image_maxima, significance >= min_significance)
+    return image_maxima
+
+
 def _get_seeds(g_src, cfg, default_rel_threshold):
-    min_distance = config.get_value(cfg, 'min_distance', 10)
-    footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
-    return peak_local_max(g_src,
-                          min_distance   = min_distance,
-                          footprint      = footprint,
-                          threshold_abs  = config.get_value(cfg, 'abs_threshold' ,                     0),
-                          threshold_rel  = config.get_value(cfg, 'rel_threshold' , default_rel_threshold),
-                          num_peaks      = config.get_value(cfg, 'max_count'     ,                np.inf),
-                          exclude_border = config.get_value(cfg, 'exclude_border',                  True))
+    min_distance = config.get_value(cfg, 'min_distance',     10)
+    max_count    = config.get_value(cfg, 'max_count'   , np.inf)
+    if config.get_value(cfg, 'local_maxima_ng', False):
+        return np.array(zip(*np.where(_get_local_maxima(g_src,
+                                                        footprint_radius = min_distance,
+                                                        max_count        = max_count,
+                                                        rel_threshold = config.get_value(cfg, 'rel_threshold', 1e-2),
+                                                        rel_epsilon   = config.get_value(cfg, 'rel_epsilon'  , 1e-2),
+                                                        abs_threshold = config.get_value(cfg, 'abs_threshold', 1e-2)))))
+    else:
+        footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
+        return peak_local_max(g_src,
+                              min_distance   = min_distance,
+                              footprint      = footprint,
+                              num_peaks      = max_count,
+                              threshold_abs  = config.get_value(cfg, 'abs_threshold' ,                     0),
+                              threshold_rel  = config.get_value(cfg, 'rel_threshold' , default_rel_threshold),
+                              exclude_border = config.get_value(cfg, 'exclude_border',                  True))
 
 
 class Seeds(pipeline.Stage):
