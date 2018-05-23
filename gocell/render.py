@@ -66,26 +66,34 @@ def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
 
-def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None):
+def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g'):
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
+    colormap = {'r': 0, 'g': 1, 'b': 2}
+    assert (isinstance(colors, dict) and all(c in colormap.keys() for c in colors.values())) or colors in colormap.keys()
+
     g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
-    models = [candidate.result for candidate in data[candidates_key]]
+    candidates = data[candidates_key]
 
     if is_legal == True: is_legal = lambda m: True
     x_maps = override_xmaps if override_xmaps is not None else g.get_map(normalized=False)
-    if isinstance(x_maps, np.ndarray): x_maps = [x_maps] * len(models)
-    assert len(x_maps) == len(models), 'number of `x_maps` and `models` mismatch'
+    if isinstance(x_maps, np.ndarray): x_maps = [x_maps] * len(candidates)
+    assert len(x_maps) == len(candidates), 'number of `x_maps` and `candidates` mismatch'
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
     for i in xrange(3): img[:, :, i] = g.model * g.mask
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
-    for model, x_map in zip(models, x_maps):
+    for candidate, x_map in zip(candidates, x_maps):
+        model = candidate.result
         model_shape = (model.s(x_map) >= 0)
         interior = morphology.binary_erosion (model_shape, border_erode_selem)
         border   = morphology.binary_dilation(model_shape, border_dilat_selem) - interior
-        colorchannel = 1 if is_legal(model) else 0
+        if isinstance(colors, dict):
+            if candidate not in colors: continue
+            colorchannel = colormap[colors[candidate]]
+        else:
+            colorchannel = colormap[colors]
         for ch in xrange(3):
             img[interior.astype(bool), ch] += interior_alpha * (+1 if ch == colorchannel else -1)
             img[border  .astype(bool), ch]  = (1 if ch == colorchannel else 0)
