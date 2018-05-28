@@ -85,6 +85,7 @@ class Postprocessing(pipeline.Stage):
                 self.rejection_causes[c] = 'minimum r_map response was %f but actual %f' % (r_threshold, r_map_response)
 
         min_obj_radius = config.get_value(cfg, 'min_obj_radius', 0)
+        max_obj_radius = config.get_value(cfg, 'max_obj_radius', np.inf)
         pp4_candidates = []
         pp4_shape = np.add(g_superpixels.shape, 2)
         x_map_ext = surface.get_pixel_map(pp4_shape, normalized=False) - 1
@@ -94,14 +95,16 @@ class Postprocessing(pipeline.Stage):
         for c in pp3_candidates:
             is_boundary_object = (c.result.s(x_map_ext) > 0).any()
             obj_radius = math.sqrt((c.result.s(x_map) > 0).sum() / math.pi)
-            if not is_boundary_object and obj_radius < min_obj_radius:
-                self.rejection_causes[c] = 'radius (%s) too small (minimum is %s)' % \
-                    (str(obj_radius), str(min_obj_radius))
+            if obj_radius > max_obj_radius:
+                self.rejection_causes[c] = 'radius (%s) too large (maximum is %s)' % (str(obj_radius), str(max_obj_radius))
             else:
-                if config.get_value(cfg, 'discard_image_boundary', False) and is_boundary_object:
-                    self.rejection_causes[c] = 'intersects image exterior'
+                if not is_boundary_object and obj_radius < min_obj_radius:
+                    self.rejection_causes[c] = 'radius (%s) too small (minimum is %s)' % (str(obj_radius), str(min_obj_radius))
                 else:
-                    pp4_candidates.append(c)
+                    if config.get_value(cfg, 'discard_image_boundary', False) and is_boundary_object:
+                        self.rejection_causes[c] = 'intersects image exterior'
+                    else:
+                        pp4_candidates.append(c)
 
         return {
             'postprocessed_candidates': pp4_candidates
