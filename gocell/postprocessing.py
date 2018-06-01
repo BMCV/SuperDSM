@@ -67,9 +67,10 @@ class Postprocessing(pipeline.Stage):
         self.r_map = r_map
 
         r_map_responses = {}
+        r_map_response_func = {'mean': np.mean, 'median': np.median}[config.get_value(cfg, 'boundary_func', 'mean')]
         for c in pp2_candidates:
             cc = compute_object_boundary(c, x_map)
-            r_map_responses[c] = r_map[cc].mean()
+            r_map_responses[c] = r_map_response_func(r_map[cc])
 
         r_threshold = aux.threshold_gauss(r_map_responses.values(), mode='lower',
                                           tolerance=config.get_value(cfg, 'boundary_tolerance', np.inf))
