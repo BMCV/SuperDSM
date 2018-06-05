@@ -8,6 +8,7 @@ from scipy   import ndimage
 
 
 BUGFIX_20180418A = aux.BUGFIX_DISABLED_CRITICAL
+BUGFIX_20180605A = aux.BUGFIX_DISABLED
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -162,5 +163,13 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
             result = morphology.watershed(dist, result, mask=np.logical_not(background))
+
+    # In rare cases it can happen that two or more objects overlap exactly, in which csae the above code
+    # will eliminate both objects. We will fix this by checking for such occasions explicitly:
+    if aux.is_bugfix_enabled(BUGFIX_20180605A):
+        for obj in objects:
+            obj_mask = ((result > 0) * 1 - (obj > 0) * 1 < 0)
+            if obj_mask.any(): result[obj_mask] = result.max() + 1
+
     return result
 
