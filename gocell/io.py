@@ -1,8 +1,19 @@
-import skimage.io
+import skimage.io, skimage.transform
 import os
+import _warps
 
 
-def imwrite(filepath, img):
+def imwrite(filepath, img, shape=None, antialias=False):
+    if shape is not None:
+        aa, aa_sigma = False, None
+        img = img.astype(float)
+        if antialias is not None:
+            if isinstance(antialias, float):
+                aa_sigma = antialias
+                aa = True
+            elif isinstance(antialias, bool):
+                aa = antialias
+        img = _warps.resize(img, shape, anti_aliasing=aa, anti_aliasing_sigma=aa_sigma, mode='reflect')
     filepath = os.path.expanduser(filepath)
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
