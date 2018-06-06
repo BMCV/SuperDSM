@@ -7,13 +7,16 @@ def imwrite(filepath, img, shape=None, antialias=False):
     if shape is not None:
         aa, aa_sigma = False, None
         img = img.astype(float)
+        order = 0
         if antialias is not None:
             if isinstance(antialias, float):
                 aa_sigma = antialias
                 aa = True
+                order = 1
             elif isinstance(antialias, bool):
                 aa = antialias
-        img = _warps.resize(img, shape, anti_aliasing=aa, anti_aliasing_sigma=aa_sigma, mode='reflect')
+                order = 1 if antialias else 0
+        img = _warps.resize(img, shape, order=order, anti_aliasing=aa, anti_aliasing_sigma=aa_sigma, mode='reflect')
     filepath = os.path.expanduser(filepath)
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
