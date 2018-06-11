@@ -71,7 +71,7 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
-    colormap = {'r': 0, 'g': 1, 'b': 2}
+    colormap = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
     assert (isinstance(colors, dict) and all(c in colormap.keys() for c in colors.values())) or colors in colormap.keys()
 
     g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
@@ -92,12 +92,12 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
         border   = morphology.binary_dilation(model_shape, border_dilat_selem) - interior
         if isinstance(colors, dict):
             if candidate not in colors: continue
-            colorchannel = colormap[colors[candidate]]
+            colorchannels = colormap[colors[candidate]]
         else:
-            colorchannel = colormap[colors]
+            colorchannels = colormap[colors]
         for ch in xrange(3):
-            img[interior.astype(bool), ch] += interior_alpha * (+1 if ch == colorchannel else -1)
-            img[border  .astype(bool), ch]  = (1 if ch == colorchannel else 0)
+            img[interior.astype(bool), ch] += interior_alpha * (+1 if ch in colorchannels else -1)
+            img[border  .astype(bool), ch]  = (1 if ch in colorchannels else 0)
 
     return (255 * img).clip(0, 255).astype('uint8')
 
