@@ -9,6 +9,7 @@ from scipy   import ndimage
 
 BUGFIX_20180418A = aux.BUGFIX_DISABLED_CRITICAL
 BUGFIX_20180605A = aux.BUGFIX_DISABLED
+BUGFIX_20180614A = aux.BUGFIX_DISABLED
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -74,9 +75,13 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     colormap = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
     assert (isinstance(colors, dict) and all(c in colormap.keys() for c in colors.values())) or colors in colormap.keys()
 
-    g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
-    candidates = data[candidates_key]
+    if not aux.is_bugfix_enabled(BUGFIX_20180614A) or normalize_img:
+        g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
+    else:
+        g = surface.Surface(data['g_raw'].shape)
+        g.model = fetch_image_from_data(data, normalize_img) if override_img is None else override_img
 
+    candidates = data[candidates_key]
     if is_legal == True: is_legal = lambda m: True
     x_maps = override_xmaps if override_xmaps is not None else g.get_map(normalized=False)
     if isinstance(x_maps, np.ndarray): x_maps = [x_maps] * len(candidates)
