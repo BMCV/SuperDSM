@@ -112,7 +112,7 @@ def render_gaussian(shape, center, std):
 
 def get_roi_weights(y_map, roi, std_factor=1):
     if np.isinf(std_factor):
-        return ones(roi.mask.shape)
+        return np.ones(roi.mask.shape)
     else:
         fg_center, fg_std = get_fg_measures(y_map, roi)
         return render_gaussian(roi.model.shape, fg_center, fg_std * std_factor)
