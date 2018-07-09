@@ -181,7 +181,14 @@ class IntensityModels(pipeline.Stage):
 
         g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
         g_raw = subtract_background_using_cfg(g_raw, cfg, out)
-        g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
+        
+        smooth_method = config.get_value(cfg, 'smooth_method', 'gaussian')
+        if smooth_method == 'gaussian':
+            g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
+        elif smooth_method == 'median':
+            g = surface.Surface.create_from_image(aux.medianf(g_raw, selem=morphology.disk(config.get_value(cfg, 'median_radius', 1))))
+        else:
+            raise ValueError('unknown smooth method: "%s"' % smooth_method)
 
         intensity_thresholds = []
         for cidx, candidate in enumerate(unique_candidates):
