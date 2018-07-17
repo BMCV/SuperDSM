@@ -16,8 +16,18 @@ class MinSetCoverWeights(pipeline.Stage):
     def process(self, input_data, cfg, out):
         candidates = input_data['processed_candidates']
         alpha = float(config.get_value(cfg, 'alpha', 1))
+        alpha_scale = config.get_value(cfg, 'alpha_scale', 'median')
 
-        alpha_scale = np.median([c.energy for c in candidates]) if len(candidates) > 0 else 1
+        if len(candidates) == 0 or alpha_scale == 'constant':
+            alpha_scale = 1
+        else:
+            energies = [c.energy for c in candidates]
+            if alpha_scale == 'mean':
+                alpha_scale = np.mean(energies)
+            elif alpha_scale == 'median':
+                alpha_scale = np.median(energies)
+            else:
+                raise Valueerror('unknown alpha_scale: "%s"' % alpha_scale)
         weights = dict((c, c.energy + alpha_scale * alpha) for c in candidates)
 
         out.write('Computed MINSETCOVER weights')
