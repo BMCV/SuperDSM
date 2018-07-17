@@ -68,7 +68,7 @@ def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
 
-def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g'):
+def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
@@ -90,9 +90,21 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
     for i in xrange(3): img[:, :, i] = g.model * g.mask
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
+    merged_candidates = set()
     for candidate, x_map in zip(candidates, x_maps):
+        if candidate in merged_candidates: continue
+        merged_candidates |= {candidate}
         model = candidate.result
         model_shape = (model.s(x_map) >= 0)
+        if labels is not None:
+            label = np.bincount(labels[model_shape]).argmax()
+            for candidate1, x_map1 in zip(candidates, x_maps):
+                if candidate1 in merged_candidates: continue
+                model1_shape = (candidate1.result.s(x_map1) >= 0)
+                label1 = np.bincount(labels[model1_shape]).argmax()
+                if label != label1: continue
+                merged_candidates |= {candidate1}
+                model_shape[model1_shape] = True
         interior = morphology.binary_erosion (model_shape, border_erode_selem)
         border   = morphology.binary_dilation(model_shape, border_dilat_selem) - interior
         if isinstance(colors, dict):
