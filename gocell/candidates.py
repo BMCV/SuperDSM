@@ -190,15 +190,24 @@ class IntensityModels(pipeline.Stage):
         else:
             raise ValueError('unknown smooth method: "%s"' % smooth_method)
 
+        compute_threshold = lambda region: \
+            labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
+                                                               bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
+                                                               samples_count = config.get_value(cfg, 'samples_count',   100 ),
+                                                               extras        = config.get_value(cfg, 'extras'       ,    {} ))
         intensity_thresholds = []
+        pooling = config.get_value(cfg, 'pooling', 'off')
         for cidx, candidate in enumerate(unique_candidates):
-            region    = candidate.get_region(g, g_superpixels)
-            threshold = labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
-                                                                           bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
-                                                                           samples_count = config.get_value(cfg, 'samples_count',   100 ),
-                                                                           extras        = config.get_value(cfg, 'extras'       ,    {} ))
+            if pooling != 'off':
+                thresholds = []
+                for l in candidate.superpixels:
+                    region_mask = (g_superpixels == l)
+                    region = surface.Surface(g.model.shape, g.model, mask=region_mask)
+                    thresholds.append(compute_threshold(region))
+                threshold = {'min': min, 'mean': np.mean, 'median': np.median}[pooling](thresholds)
+            else:
+                threshold = compute_threshold(candidate.get_region(g, g_superpixels))
             intensity_thresholds.append(threshold)
-
             out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
         out.write('Computed %d intensity models' % len(unique_candidates))
 
