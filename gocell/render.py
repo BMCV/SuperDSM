@@ -68,12 +68,14 @@ def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
 
+COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
+
+
 def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
-    colormap = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
-    assert (isinstance(colors, dict) and all(c in colormap.keys() for c in colors.values())) or colors in colormap.keys()
+    assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
 
     if not aux.is_bugfix_enabled(BUGFIX_20180614A) or normalize_img:
         g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
@@ -109,14 +111,40 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
         border   = morphology.binary_dilation(model_shape, border_dilat_selem) - interior
         if isinstance(colors, dict):
             if candidate not in colors: continue
-            colorchannels = colormap[colors[candidate]]
+            colorchannels = COLORMAP[colors[candidate]]
         else:
-            colorchannels = colormap[colors]
+            colorchannels = COLORMAP[colors]
         for ch in xrange(3):
             img[interior.astype(bool), ch] += interior_alpha * (+1 if ch in colorchannels else -1)
             img[border  .astype(bool), ch]  = (1 if ch in colorchannels else 0)
 
     return (255 * img).clip(0, 255).astype('uint8')
+
+
+def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_key='postprocessed_candidates', normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+    assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
+    assert gt_color in COLORMAP.keys()
+
+    im_seg  = np.dstack([fetch_image_from_data(data, normalize_img=normalize_img) if override_img is None else override_img] * 3).copy()
+    im_seg /= im_seg.max()
+    seg_objects = rasterize_labels(data, merge_overlap_threshold=merge_overlap_threshold)
+    for l in set(seg_objects.flatten()) - {0}:
+        seg_obj = (seg_objects == l)
+        seg_bnd = np.logical_xor(morphology.binary_erosion(seg_obj, morphology.disk(border / 2)), morphology.binary_dilation(seg_obj, morphology.disk(border)))
+        if isinstance(colors, dict):
+            if candidate not in colors: continue
+            colorchannels = COLORMAP[colors[candidate]]
+        else:
+            colorchannels = COLORMAP[colors]
+        for i in xrange(3): im_seg[seg_bnd, i] = (1 if i in colorchannels else 0)
+    if gt_seg is not None:
+        xmap = np.indices(im_seg.shape[:2])
+        for l in set(gt_seg.flatten()) - {0}:
+            gt_obj = (gt_seg == l)
+            gt_obj_center = np.asarray(ndimage.center_of_mass(gt_obj))
+            gt_obj_dist   = np.linalg.norm(xmap - gt_obj_center[:,None,None], axis=0)
+            for i in xrange(3): im_seg[gt_obj_dist <= gt_radius, i] = (1 if i in COLORMAP[gt_color] else 0)
+    return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
 
 def rasterize_objects(data, candidates_key, dilate=0):
