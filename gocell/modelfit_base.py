@@ -1,4 +1,4 @@
-import surface
+import gocell.surface as surface
 import numpy as np
 import cvxopt
 import sys
@@ -17,7 +17,7 @@ class PolynomialModelType:
         derivatives = [None] * 6
         derivatives[0] = np.square(x_map[0])
         derivatives[1] = np.square(x_map[1])
-        derivatives[2] = 2 * np.prod([x_map[i] for i in xrange(2)], axis=0)
+        derivatives[2] = 2 * np.prod([x_map[i] for i in range(2)], axis=0)
         derivatives[3] = 2 * x_map[0]
         derivatives[4] = 2 * x_map[1]
         derivatives[5] = 1
@@ -171,9 +171,9 @@ class Energy:
         self.update_maps(params)
         self.update_theta()
         f = [None] * len(self.q)
-        for i in xrange(len(f)): f[i] = -self.theta * self.y * self.q[i]
-        grad = np.array(map(lambda f: np.inner(self.w.flat, f.flat), f))
-        for i in xrange(len(grad)):
+        for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
+        grad = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
+        for i in range(len(grad)):
             grad[i] += self.kappa * np.inner(self.w.flat, (self.rs * self.r * self.q[i] / self.bft).flat)
         return grad
     
@@ -184,9 +184,9 @@ class Energy:
         gamma = np.square(self.y) * (self.theta - np.square(self.theta)) + self.kappa * self.epsilon * np.square(self.r) / np.power(self.bft, 3)
         H = np.empty((len(self.q), len(self.q)))
         H_ik = lambda i, k: np.inner(self.w.flat, (gamma * self.q[i] * self.q[k]).flat)
-        for i in xrange(H.shape[0]):
+        for i in range(H.shape[0]):
             H[i, i] = H_ik(i, i)
-            for k in xrange(i + 1, H.shape[1]):
+            for k in range(i + 1, H.shape[1]):
                 value = H_ik(i, k)
                 H[i, k] = value
                 H[k, i] = value

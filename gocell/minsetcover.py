@@ -1,6 +1,6 @@
-import pipeline
-import aux
-import config
+import gocell.pipeline as pipeline
+import gocell.aux      as aux
+import gocell.config   as config
 import cvxopt, cvxopt.solvers
 import numpy as np
 import math

@@ -1,13 +1,13 @@
-import pipeline
-import config
-import surface
-import aux
+import gocell.pipeline as pipeline
+import gocell.config   as config
+import gocell.surface  as surface
+import gocell.aux      as aux
 import numpy as np
 import math
 
-from skimage.filter import threshold_otsu
-from skimage        import morphology
-from scipy          import ndimage
+from skimage.filters import threshold_otsu
+from skimage         import morphology
+from scipy           import ndimage
 
 
 def threshold_accepted_energies(accepted_candidates, cfg):

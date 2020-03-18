@@ -1,7 +1,7 @@
-import aux
-import config
-import surface
-import modelfit
+import gocell.aux      as aux
+import gocell.config   as config
+import gocell.surface  as surface
+import gocell.modelfit as modelfit
 import math
 
 
@@ -73,14 +73,14 @@ class Pipeline:
 
 
 def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack'):
-    from preprocessing  import Preprocessing
-    from superpixels    import Seeds, GaussianLaplaceSeeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
-    from candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
-    from maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
-    from minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
-    from postprocessing import Postprocessing
+    from gocell.preprocessing  import Preprocessing
+    from gocell.superpixels    import Seeds, GaussianLaplaceSeeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
+    from gocell.candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
+    from gocell.maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
+    from gocell.minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
+    from gocell.postprocessing import Postprocessing
 
-    if isinstance(backend, (int, long)): backend = modelfit.fork_based_backend(num_forks=backend)
+    if isinstance(backend, int): backend = modelfit.fork_based_backend(num_forks=backend)
 
     pipeline = Pipeline()
 

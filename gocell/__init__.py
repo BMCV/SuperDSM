@@ -1,4 +1,4 @@
-import pipeline
-import render
-import io
+import gocell.pipeline
+import gocell.render
+import gocell.io
 

@@ -1,4 +1,4 @@
-import io
+import gocell.io as io
 import numpy as np
 
 

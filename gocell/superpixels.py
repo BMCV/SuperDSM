@@ -1,6 +1,6 @@
-import pipeline
-import config
-import aux
+import gocell.pipeline as pipeline
+import gocell.config   as config
+import gocell.aux      as aux
 import numpy as np
 import warnings
 import math
@@ -130,7 +130,7 @@ class SuperpixelsEntropy(pipeline.Stage):  # It is not really the entropy we com
         g_superpixels_entropy = np.zeros(g_superpixels.shape)
         superpixels_entropies = []
 
-        for l in xrange(1, g_superpixels.max() + 1):
+        for l in range(1, g_superpixels.max() + 1):
             superpixel = (g_superpixels == l)
             entropy    = math.sqrt(np.square(g_grad_magnitude[superpixel]).sum()) / (1 + g_src[superpixel].mean())
             g_superpixels_entropy[superpixel] = entropy

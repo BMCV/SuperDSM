@@ -1,13 +1,13 @@
-import aux
-import labels
-import mapper
+import gocell.aux           as aux
+import gocell.labels        as labels
+import gocell.mapper        as mapper
+import gocell.surface       as surface
+import gocell.modelfit_base as modelfit_base
 import cvxopt, cvxopt.solvers
-import surface
-import modelfit_base
 import numpy as np
 
-from skimage.filter import threshold_otsu
-from scipy          import ndimage
+from skimage.filters import threshold_otsu
+from scipy           import ndimage
 
 
 def compute_r_map(g, region, r_sigma):
@@ -50,7 +50,7 @@ def fork_based_backend(num_forks):
     def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
         for ret_idx, ret in enumerate(mapper.fork.imap_unordered(num_forks,
                                                                  process_candidate,
-                                                                 mapper.unroll(xrange(len(unique_candidates))),
+                                                                 mapper.unroll(range(len(unique_candidates))),
                                                                  g, g_superpixels,
                                                                  mapper.unroll(unique_candidates),
                                                                  mapper.unroll(intensity_thresholds),

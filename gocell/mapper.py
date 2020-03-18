@@ -34,7 +34,7 @@ class Mapper:
         try:
             if self.level == self.parallel_level:
                 if self.verbosity >= Mapper.VERBOSITY_DEBUG:
-                    print 'running %s in parallel (level: %d)' % (str(f), self.level)
+                    print('running %s in parallel (level: %d)' % (str(f), self.level))
                 engines = ipp_client.load_balanced_view() if self.load_balance else ipp_client[:]
                 async_result = engines.map(*real_args)
                 if self.verbosity >= Mapper.VERBOSITY_PROGRESS:
@@ -113,7 +113,7 @@ class fork: # namespace
                     yield result
                 pool.close()
             else:
-                for result in itertools.imap(UnrollArgs(f), real_args):
+                for result in map(UnrollArgs(f), real_args):
                     yield result
         except:
             if run_parallel: pool.terminate()

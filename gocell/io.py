@@ -1,6 +1,6 @@
 import skimage.io, skimage.transform
 import os
-import _warps
+import gocell._warps as _warps
 
 
 def imwrite(filepath, img, shape=None, antialias=False):
@@ -31,9 +31,9 @@ def imread(filepath, **kwargs):
         raise ValueError('not a file: %s' % filepath)
     fp_lowercase = filepath.lower()
     if fp_lowercase.endswith('.png'):
-        img = skimage.io.imread(filepath, as_grey=True, **kwargs)
+        img = skimage.io.imread(filepath, as_gray=True, **kwargs)
     elif fp_lowercase.endswith('.tif') or fp_lowercase.endswith('.tiff'):
-        img = skimage.io.imread(filepath, as_grey=True, plugin='tifffile', **kwargs)
+        img = skimage.io.imread(filepath, as_gray=True, plugin='tifffile', **kwargs)
     else:
         raise ValueError('unknown file extension: %s' % filepath)
     return img

@@ -1,5 +1,5 @@
-import surface
-import aux
+import gocell.surface as surface
+import gocell.aux     as aux
 import numpy as np
 import warnings
 
@@ -15,7 +15,7 @@ BUGFIX_20180614A = aux.BUGFIX_DISABLED
 def rasterize_regions(regions, background_label=None, radius=3):
     borders = np.zeros(regions.shape, bool)
     background = np.zeros(regions.shape, bool)
-    for i in xrange(regions.max() + 1):
+    for i in range(regions.max() + 1):
         region_mask = (regions == i)
         interior = morphology.erosion(region_mask, morphology.disk(radius))
         border   = np.logical_and(region_mask, ~interior)
@@ -27,12 +27,12 @@ def rasterize_regions(regions, background_label=None, radius=3):
 def render_regions_over_image(img, regions, background_label=None, bg=(0.6, 1, 0.6, 0.3), **kwargs):
     assert img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1), 'image has wrong dimensions'
     result = np.zeros((img.shape[0], img.shape[1], 3))
-    for i in xrange(3): result[:, :, i] = img
+    for i in range(3): result[:, :, i] = img
     borders, background = rasterize_regions(regions, background_label, **kwargs)
     borders = borders.astype(int)
     result[:, :, 1]  = (1 - borders) * result[:, :, 1] + borders
     for i in [0, 2]: result[:, :, i] *=  1 - borders
-    for i in xrange(3): result[background, i] = bg[i] * bg[3] + result[background, i] * (1 - bg[3])
+    for i in range(3): result[background, i] = bg[i] * bg[3] + result[background, i] * (1 - bg[3])
     return (255 * result).clip(0, 255).astype('uint8')
 
 
@@ -90,7 +90,7 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     assert len(x_maps) == len(candidates), 'number of `x_maps` and `candidates` mismatch'
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
-    for i in xrange(3): img[:, :, i] = g.model * g.mask
+    for i in range(3): img[:, :, i] = g.model * g.mask
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()
     for candidate, x_map in zip(candidates, x_maps):
@@ -108,13 +108,13 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
                 merged_candidates |= {candidate1}
                 model_shape[model1_shape] = True
         interior = morphology.binary_erosion (model_shape, border_erode_selem)
-        border   = morphology.binary_dilation(model_shape, border_dilat_selem) - interior
+        border   = morphology.binary_dilation(model_shape, border_dilat_selem) ^ interior
         if isinstance(colors, dict):
             if candidate not in colors: continue
             colorchannels = COLORMAP[colors[candidate]]
         else:
             colorchannels = COLORMAP[colors]
-        for ch in xrange(3):
+        for ch in range(3):
             img[interior.astype(bool), ch] += interior_alpha * (+1 if ch in colorchannels else -1)
             img[border  .astype(bool), ch]  = (1 if ch in colorchannels else 0)
 
@@ -136,14 +136,14 @@ def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_ke
             colorchannels = COLORMAP[colors[candidate]]
         else:
             colorchannels = COLORMAP[colors]
-        for i in xrange(3): im_seg[seg_bnd, i] = (1 if i in colorchannels else 0)
+        for i in range(3): im_seg[seg_bnd, i] = (1 if i in colorchannels else 0)
     if gt_seg is not None:
         xmap = np.indices(im_seg.shape[:2])
         for l in set(gt_seg.flatten()) - {0}:
             gt_obj = (gt_seg == l)
             gt_obj_center = np.asarray(ndimage.center_of_mass(gt_obj))
             gt_obj_dist   = np.linalg.norm(xmap - gt_obj_center[:,None,None], axis=0)
-            for i in xrange(3): im_seg[gt_obj_dist <= gt_radius, i] = (1 if i in COLORMAP[gt_color] else 0)
+            for i in range(3): im_seg[gt_obj_dist <= gt_radius, i] = (1 if i in COLORMAP[gt_color] else 0)
     return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
 
@@ -182,8 +182,8 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
             merge_mask[i1] = True
 
     # Next, we associate a (potentially non-unique) label to each object
-    labels, obj_indices_by_label = range(1, 1 + len(objects)), {}
-    for label, obj_idx in zip(labels, xrange(len(objects))): obj_indices_by_label[label] = [obj_idx]
+    labels, obj_indices_by_label = list(range(1, 1 + len(objects))), {}
+    for label, obj_idx in zip(labels, range(len(objects))): obj_indices_by_label[label] = [obj_idx]
     for merge_idx, merge_data in enumerate(merge_list):
         assert merge_data[1] < merge_data[0], 'inconsistent merge data'
         merge_label0  = len(objects) + 1 + merge_idx         # the new label for the merged objects

@@ -1,13 +1,13 @@
-import pipeline
-import config
-import aux
-import surface
-import modelfit
-import labels
+import gocell.pipeline as pipeline
+import gocell.config   as config
+import gocell.aux      as aux
+import gocell.surface  as surface
+import gocell.modelfit as modelfit
+import gocell.labels   as labels
 import numpy as np
 import collections
 
-from preprocessing import remove_dark_spots_using_cfg, subtract_background_using_cfg
+from gocell.preprocessing import remove_dark_spots_using_cfg, subtract_background_using_cfg
 
 from skimage import morphology, measure
 from scipy   import ndimage
@@ -19,7 +19,7 @@ class SuperpixelAdjacenciesGraph:
     def __init__(self, g_superpixels, out=None):
         out = aux.Output.get(out)
         self.adjacencies, se = {}, morphology.disk(1)
-        for l0 in xrange(1, g_superpixels.max() + 1):
+        for l0 in range(1, g_superpixels.max() + 1):
             cc = (g_superpixels == l0)
             cc_dilated = np.logical_and(morphology.binary_dilation(cc, se), np.logical_not(cc))
             self.adjacencies[l0] = set(g_superpixels[cc_dilated].flatten()) - {0, l0}

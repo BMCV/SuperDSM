@@ -1,11 +1,11 @@
-import config
-import surface
+import gocell.config  as config
+import gocell.surface as surface
 import numpy as np
 
 from sklearn.cluster   import estimate_bandwidth
 from sklearn.neighbors import KernelDensity
 from skimage.feature   import peak_local_max
-from skimage.filter    import threshold_otsu
+from skimage.filters   import threshold_otsu
 
 
 class PCIntensityLabels:

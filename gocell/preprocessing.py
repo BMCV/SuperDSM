@@ -1,6 +1,6 @@
-import pipeline
-import config
-import aux
+import gocell.pipeline as pipeline
+import gocell.config   as config
+import gocell.aux      as aux
 import numpy as np
 
 from math import sqrt, pi
@@ -8,8 +8,8 @@ from math import sqrt, pi
 from scipy                 import ndimage
 from scipy.ndimage.filters import gaussian_laplace, gaussian_filter
 
-from skimage        import morphology
-from skimage.filter import threshold_otsu, rank
+from skimage         import morphology
+from skimage.filters import threshold_otsu, rank
 
 
 def find_dark_spots(g, radius, max_radius, rel_tolerance=0.2):
@@ -24,7 +24,8 @@ def find_dark_spots(g, radius, max_radius, rel_tolerance=0.2):
             h_labeled[cc] = 0
         else:
             h_means[label] = h[cc].mean()
-    t = np.mean(h_means.values()) - rel_tolerance * np.std(h_means.values())
+    h_means_values = list(h_means.values())
+    t = np.mean(h_means_values) - rel_tolerance * np.std(h_means_values)
     spot_labels = []
     for label, m in h_means.items():
         if m < t:

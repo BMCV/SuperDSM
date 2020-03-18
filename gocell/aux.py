@@ -2,8 +2,8 @@ import cvxopt, cvxopt.solvers
 import sys
 import numpy as np
 
-from skimage.filter.rank import median as median_filter
-from IPython.display     import clear_output
+from skimage.filters.rank import median as median_filter
+from IPython.display      import clear_output
 
 
 def set2str(S, delim=','):
@@ -16,7 +16,7 @@ def int_hist(g):
     """Computes the histogram of array `g`.
     """
     h, i = [], []
-    for k in xrange(g.min(), g.max() + 1):
+    for k in range(g.min(), g.max() + 1):
         hi = (g == k).sum()
         if hi > 0:
             i.append(k)
@@ -100,7 +100,7 @@ class CvxoptFrame:
 
 
 def threshold_gauss(data, tolerance, mode):
-    X = np.array(data).flat
+    X = np.array(list(data)).flat
     f = None
     if mode in ('l', 'lower'): f = -1
     if mode in ('u', 'upper'): f = +1
