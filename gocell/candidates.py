@@ -233,7 +233,6 @@ class ProcessCandidates(pipeline.Stage):
 
         modelfit_kwargs = {
             'r_sigma':        config.get_value(cfg, 'r_sigma'       ,     9.),
-            'kappa':          config.get_value(cfg, 'kappa'         ,     0 ),
             'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',     2.),
             'averaging':      config.get_value(cfg, 'averaging'     ,  True ),
             'bg_radius':      config.get_value(cfg, 'bg_radius'     ,   100 )
@@ -249,7 +248,7 @@ class ProcessCandidates(pipeline.Stage):
 
     def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
         with aux.CvxoptFrame() as batch:
-            batch['show_progress'] = False
+#            batch['show_progress'] = False
             for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
                 candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
                 candidates[ret['cidx']].energy = ret['energy']

@@ -29,16 +29,21 @@ class PolynomialModel:
     TYPE = PolynomialModelType()
     
     def __init__(self, *args):
-        if len(args) == 1 and len(args[0]) == 6:
+        if len(args) == 1 and len(args[0]) > 6:
             self.array = args[0].astype(float).flatten()
-            self.a = args[0].flat[:3  ]
-            self.b = args[0].flat[ 3:5]
-            self.c = args[0].flat[   5]
+            self.a = args[0].flat[:3    ]
+            self.b = args[0].flat[ 3:5  ]
+            self.c = args[0].flat[   5  ]
+            self.ξ = args[0].flat[    6:]
+        elif len(args) >= 1:
+            assert isinstance(args[0], (int, np.ndarray))
+            self.ξ = np.zeros(args[0])   if isinstance(args[0], int) else args[0].reshape(-1)
+            self.a = np.array([1, 1, 0]) if len(args) < 2 else args[1].flat[np.array([0, 3, 1])]
+            self.b =         np.zeros(2) if len(args) < 3 else args[2].astype(float)
+            self.c =                   0 if len(args) < 4 else float(args[3])
+            self.array = np.concatenate([self.a, self.b, np.array([self.c]), self.ξ])
         else:
-            self.a = np.array([1, 1, 0]) if len(args) < 1 else args[0].flat[np.array([0, 3, 1])]
-            self.b =         np.zeros(2) if len(args) < 2 else args[1].astype(float)
-            self.c =                   0 if len(args) < 3 else float(args[2])
-            self.array = np.concatenate([self.a, self.b, np.array([self.c])])
+            raise ValueError('Initialization failed')
 
     def copy(self):
         return PolynomialModel(self.array.copy())
@@ -47,20 +52,20 @@ class PolynomialModel:
     def A(self):
         return np.array([self.a[0], self.a[2], self.a[2], self.a[1]]).reshape((2, 2))
     
-    def s(self, x):
+    def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c
+        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + smooth_mat @ self.ξ
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
-    def create_ellipsoid(center, halfaxis1_len, halfaxis2_len, U=None):
+    def create_ellipsoid(ξ, center, halfaxis1_len, halfaxis2_len, U=None):
         ev = lambda half_length: (1. / np.square(half_length))
         if U is None: U = orth(np.random.randn(2, 2)) # random rotation matrix
         A  = U.dot(np.diag((ev(halfaxis1_len), ev(halfaxis2_len)))).dot(U.T)
         b  = A.dot(center)
         c  = np.inner(center, b) - 1
-        return PolynomialModel(A, -b, c)
+        return PolynomialModel(ξ, A, -b, c)
 
     def is_measurable(self):
         return (np.linalg.eigvalsh(self.A) < 0).all()
@@ -85,7 +90,7 @@ class PolynomialModel:
         A = G.dot(self.A).dot(G)
         b = G.dot(self.A.dot(v) + self.b)
         c = np.inner(v, self.A.dot(v)) + 2 * np.inner(self.b, v) + self.c
-        return PolynomialModel(A, b, c)
+        return PolynomialModel(self.ξ, A, b, c)
 
 
 def diagquad(A, X):
@@ -118,16 +123,82 @@ def get_roi_weights(y_map, roi, std_factor=1):
         return render_gaussian(roi.model.shape, fg_center, fg_std * std_factor)
 
 
+def _create_gaussian_kernel(sigma, shape=None):
+    if shape is None: shape = [round(1 + sigma * 4)] * 2
+    inp = np.zeros(shape)
+    inp[shape[0] // 2, shape[1] // 2] = 1
+    return ndimage.gaussian_filter(inp, sigma)
+
+
+#def _convmat(filter_mask, img_shape, mask=None):
+#    if mask is None: mask = np.ones(img_shape, bool)
+#    n = np.prod(img_shape)
+#    mat = np.empty((n, n))
+#    z = np.zeros(img_shape)
+#    for r, p in enumerate(np.ndindex(z.shape)):
+#        if not mask[p]: continue
+#        z[p] = 1
+#        mat[r] = ndimage.convolve(z, filter_mask, mode='constant', cval=0).reshape(-1)
+#        z[p] = 0
+#    return mat
+
+
+#def _convmat(filter_mask, img_shape, mask=None):
+#    assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
+#    assert filter_mask.shape[0] % 2 == 1
+#    if mask is None: mask = ones(img_shape, bool)
+#    w = filter_mask.shape[0] // 2
+#    n = np.prod(img_shape)
+#    mat = np.empty((n, n))
+#    z = np.zeros(np.add(img_shape, 2 * w))
+#    for r, p in enumerate(np.ndindex(img_shape)):
+#        if not mask[p]: continue
+#        sect = np.s_[p[0] : p[0] + filter_mask.shape[0], p[1] : p[1] + filter_mask.shape[1]]
+#        z[sect] = filter_mask
+#        mat[r]  = z[w : w + img_shape[0], w : w + img_shape[1]].reshape(-1)
+#        z[sect] = 0
+#    return mat
+
+
+def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
+    assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
+    assert filter_mask.shape[0] % 2 == 1
+    if row_mask is None: row_mask = ones(img_shape, bool)
+    if col_mask is None: col_mask = ones(img_shape, bool)
+    w = filter_mask.shape[0] // 2
+    mat = np.empty((row_mask.sum(), col_mask.sum()))
+    z = np.zeros(np.add(img_shape, 2 * w))
+    mat_next_row_idx = 0
+    for p in np.ndindex(img_shape):
+        if not row_mask[p]: continue
+        sect = np.s_[p[0] : p[0] + filter_mask.shape[0], p[1] : p[1] + filter_mask.shape[1]]
+        z[sect] = filter_mask
+        mat[mat_next_row_idx]  = z[w : w + img_shape[0], w : w + img_shape[1]][col_mask].reshape(-1)
+        mat_next_row_idx += 1
+        z[sect] = 0
+    return mat
+
+
+def _create_masked_smooth_matrix(kernel, mask, subsample=1):
+    mask = mask[np.where(mask.any(axis=1))[0], :]
+    mask = mask[:, np.where(mask.any(axis=0))[0]]
+    subsample_grid = np.zeros_like(mask)
+    subsample_grid[::subsample, ::subsample] = True
+    M  = _convmat(kernel, mask.shape, row_mask=mask, col_mask=np.logical_and(mask, subsample_grid))
+    M /= M.sum(axis=1)[:, None]
+    return M
+
+
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, r_map=None, kappa=5, epsilon=1e-4, model_type=PolynomialModel.TYPE):
-        self.kappa = kappa if r_map is not None else 0
-        self.roi   = roi
-        self.p     = None
+    def __init__(self, y_map, roi, w_map, epsilon=1e-4, smooth_amount=10, smooth_subsample=20, model_type=PolynomialModel.TYPE):
+        self.roi = roi
+        self.p   = None
+
+        self.smooth_mat = _create_masked_smooth_matrix(_create_gaussian_kernel(smooth_amount), roi.mask, smooth_subsample)
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = w_map[roi.mask]
-        self.r = (r_map if r_map is not None else np.zeros(w_map.shape, 'uint8'))[roi.mask]
         self.y = y_map[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
@@ -139,17 +210,15 @@ class Energy:
     
     def update_maps(self, params):
         if self.p is not None and all(self.p.array == params.array): return
+        s = params.s(self.x, self.smooth_mat)
         self.p     = params
-        self.t     = self.y * params.s(self.x)
+        self.t     = self.y * s
         self.theta = None # invalidate
         
         valid_t_mask = self.t >= -np.log(sys.float_info.max)
-        self.h   = np.empty_like(self.t)
+        self.h = np.empty_like(self.t)
         self.h[  valid_t_mask] = np.exp(-self.t[valid_t_mask])
         self.h[~ valid_t_mask] = np.NaN
-        
-        self.rs  = self.r * params.s(self.x)
-        self.bft = np.sqrt(np.square(self.rs) + self.epsilon)
     
     def update_theta(self):
         if self.theta is None:
@@ -164,7 +233,8 @@ class Energy:
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
-        return np.inner(self.w.flat, phi.flat) + self.kappa * np.inner(self.w.flat, self.bft.flat)
+        objective1 = np.inner(self.w.flat, phi.flat)
+        return objective1
     
     def grad(self, params):
         params = self.model_type.get_model(params)
@@ -172,30 +242,25 @@ class Energy:
         self.update_theta()
         f = [None] * len(self.q)
         for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
-        grad = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
-        for i in range(len(grad)):
-            grad[i] += self.kappa * np.inner(self.w.flat, (self.rs * self.r * self.q[i] / self.bft).flat)
+        grad1 = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
+        grad2 = self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)
+        grad  = np.concatenate([grad1, grad2.reshape(-1)])
         return grad
     
     def hessian(self, params):
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        gamma = np.square(self.y) * (self.theta - np.square(self.theta)) + self.kappa * self.epsilon * np.square(self.r) / np.power(self.bft, 3)
-        H = np.empty((len(self.q), len(self.q)))
-        H_ik = lambda i, k: np.inner(self.w.flat, (gamma * self.q[i] * self.q[k]).flat)
-        for i in range(H.shape[0]):
-            H[i, i] = H_ik(i, i)
-            for k in range(i + 1, H.shape[1]):
-                value = H_ik(i, k)
-                H[i, k] = value
-                H[k, i] = value
+        gamma = self.theta - np.square(self.theta)
+        n = len(self.q) + self.smooth_mat.shape[1]
+        D = np.asarray([-self.y * qi for qi in self.q] + [-self.y * c for c in self.smooth_mat.T])
+        H = ((gamma * self.w.reshape(-1))[None, :] * D) @ D.T
         return H
 
 
 class CP:
 
-    def __init__(self, energy, params0, verbose=False, epsilon=0, scale=1):
+    def __init__(self, energy, params0, verbose=False, epsilon=1e-6, scale=1):
         self.energy  = energy
         self.params0 = params0
         self.verbose = verbose
@@ -212,7 +277,8 @@ class CP:
             if w is None:
                 return l, Dl
             else:
-                H = self.scale * self.energy.hessian(p) + self.epsilon * np.eye(len(self.energy.q))
+                H  = self.scale   * self.energy.hessian(p)
+                H += self.epsilon * np.eye(H.shape[0])
                 if self.verbose: print(np.linalg.eigvals(H))
                 return l, Dl, cvxopt.matrix(w[0] * H)
     
