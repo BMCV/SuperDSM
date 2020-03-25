@@ -130,36 +130,6 @@ def _create_gaussian_kernel(sigma, shape=None):
     return ndimage.gaussian_filter(inp, sigma)
 
 
-#def _convmat(filter_mask, img_shape, mask=None):
-#    if mask is None: mask = np.ones(img_shape, bool)
-#    n = np.prod(img_shape)
-#    mat = np.empty((n, n))
-#    z = np.zeros(img_shape)
-#    for r, p in enumerate(np.ndindex(z.shape)):
-#        if not mask[p]: continue
-#        z[p] = 1
-#        mat[r] = ndimage.convolve(z, filter_mask, mode='constant', cval=0).reshape(-1)
-#        z[p] = 0
-#    return mat
-
-
-#def _convmat(filter_mask, img_shape, mask=None):
-#    assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
-#    assert filter_mask.shape[0] % 2 == 1
-#    if mask is None: mask = ones(img_shape, bool)
-#    w = filter_mask.shape[0] // 2
-#    n = np.prod(img_shape)
-#    mat = np.empty((n, n))
-#    z = np.zeros(np.add(img_shape, 2 * w))
-#    for r, p in enumerate(np.ndindex(img_shape)):
-#        if not mask[p]: continue
-#        sect = np.s_[p[0] : p[0] + filter_mask.shape[0], p[1] : p[1] + filter_mask.shape[1]]
-#        z[sect] = filter_mask
-#        mat[r]  = z[w : w + img_shape[0], w : w + img_shape[1]].reshape(-1)
-#        z[sect] = 0
-#    return mat
-
-
 def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
     assert filter_mask.shape[0] % 2 == 1
@@ -191,7 +161,7 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1):
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon=1e-4, smooth_amount=10, smooth_subsample=20, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, epsilon=0.1, smooth_amount=10, smooth_subsample=20, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
@@ -234,7 +204,8 @@ class Energy:
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
-        return objective1
+        objective2 = np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.roi.mask.sum()
+        return objective1 + objective2
     
     def grad(self, params):
         params = self.model_type.get_model(params)
@@ -242,9 +213,10 @@ class Energy:
         self.update_theta()
         f = [None] * len(self.q)
         for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
-        grad1 = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
-        grad2 = self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)
-        grad  = np.concatenate([grad1, grad2.reshape(-1)])
+        grad1  = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
+        grad2  = (self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)).reshape(-1)
+        grad2 += params.ξ / (np.sqrt(np.square(params.ξ) + self.epsilon) * self.roi.mask.sum())
+        grad   = np.concatenate([grad1, grad2])
         return grad
     
     def hessian(self, params):
@@ -255,12 +227,15 @@ class Energy:
         n = len(self.q) + self.smooth_mat.shape[1]
         D = np.asarray([-self.y * qi for qi in self.q] + [-self.y * c for c in self.smooth_mat.T])
         H = ((gamma * self.w.reshape(-1))[None, :] * D) @ D.T
-        return H
+        g = (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / (2 * np.power(np.square(params.ξ) + self.epsilon, 1.5))) / self.roi.mask.sum()
+        assert (g >= 0).all()
+        return H + np.diag(np.concatenate([np.zeros(6), g]))
 
 
 class CP:
 
-    def __init__(self, energy, params0, verbose=False, epsilon=1e-6, scale=1):
+#    def __init__(self, energy, params0, verbose=False, epsilon=1e-6, scale=1):
+    def __init__(self, energy, params0, verbose=False, epsilon=0, scale=1):
         self.energy  = energy
         self.params0 = params0
         self.verbose = verbose
