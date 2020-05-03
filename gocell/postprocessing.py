@@ -19,14 +19,14 @@ def threshold_accepted_energies(accepted_candidates, cfg):
 
 
 def compute_object_region_overlap(candidate, x_map, g_superpixels):
-    obj_interior = candidate.result.s(x_map) > 0
+    obj_interior = candidate.result.s(x_map, candidate.smooth_mat) > 0
     roi_mask     = candidate.get_mask(g_superpixels)
     roi_overlap  = np.logical_and(obj_interior, roi_mask).sum() / float(obj_interior.sum())
     return roi_overlap
 
 
 def compute_object_boundary(candidate, x_map):
-    obj_foreground = candidate.result.s(x_map) >= 0
+    obj_foreground = candidate.result.s(x_map, candidate.smooth_mat) >= 0
     obj_interior   = morphology.binary_erosion(obj_foreground, morphology.disk(1))
     obj_boundary   = np.logical_xor(obj_foreground, obj_interior)
     return obj_boundary.astype(bool)
@@ -94,8 +94,9 @@ class Postprocessing(pipeline.Stage):
         x_map_bnd_mask[1 : pp4_shape[0] - 1, 1 : pp4_shape[1] - 1] = False
         x_map_ext = x_map_ext[:, x_map_bnd_mask]
         for c in pp3_candidates:
-            is_boundary_object = (c.result.s(x_map_ext) > 0).any()
-            obj_radius = math.sqrt((c.result.s(x_map) > 0).sum() / math.pi)
+            smooth_mat_ext = aux.uplift_smooth_matrix(c.smooth_mat.toarray(), np.logical_not(x_map_bnd_mask))[x_map_bnd_mask.reshape(-1)]
+            is_boundary_object = (c.result.s(x_map_ext, smooth_mat_ext) > 0).any()
+            obj_radius = math.sqrt((c.result.s(x_map, c.smooth_mat) > 0).sum() / math.pi)
             if obj_radius > max_obj_radius:
                 self.rejection_causes[c] = 'radius (%s) too large (maximum is %s)' % (str(obj_radius), str(max_obj_radius))
             else:

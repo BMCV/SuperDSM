@@ -8,17 +8,18 @@ import numpy as np
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
+import scipy.sparse
 
 
-def modelfit(g, region, intensity_threshold, w_sigma_factor, averaging, bg_radius):
+def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier):
     y_map = labels.ThresholdedLabels(region, intensity_threshold).get_map()
     w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
     bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
     region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
     w_map[~region.mask] = 0
-    if averaging: w_map /= float(w_map.sum())
-    J = modelfit_base.Energy(y_map, region, w_map)
-    params = np.concatenate([np.random.randn(6), np.zeros(J.smooth_mat.shape[1])])
+    w_map /= float(w_map.sum())
+    J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier)
+    params = np.concatenate([np.zeros(6), np.zeros(J.smooth_mat.shape[1])])
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, params).solve()['x']))
 
 
@@ -29,7 +30,8 @@ def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, mo
         'cidx':   cidx,
         'region': region,
         'energy': J(result),
-        'result': result
+        'result': result,
+        'smooth_mat': scipy.sparse.csr_matrix(J.smooth_mat)
     }
 
 

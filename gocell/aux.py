@@ -111,6 +111,13 @@ def threshold_gauss(data, tolerance, mode):
     return t_gauss
 
 
+def uplift_smooth_matrix(smoothmat, mask, matrixtype=np.zeros):
+    assert mask.sum() == smoothmat.shape[0], 'smooth matrix and region mask are incompatible'
+    smoothmat2 = matrixtype((np.prod(mask.shape), smoothmat.shape[1]))
+    smoothmat2[mask.reshape(-1)] = smoothmat
+    return smoothmat2
+
+
 BUGFIX_ENABLED  = 1
 BUGFIX_DISABLED = 0
 BUGFIX_DISABLED_CRITICAL = -1

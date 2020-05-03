@@ -13,6 +13,7 @@ from skimage import morphology, measure
 from scipy   import ndimage
 
 from scipy.ndimage.filters import gaussian_filter
+import scipy.sparse
 
 
 class SuperpixelAdjacenciesGraph:
@@ -82,6 +83,7 @@ class Candidate:
         self.result      = None
         self.superpixels = set()
         self.energy      = np.NaN
+        self.smooth_mat  = None
     
     def get_mask(self, g_superpixels):
         return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
@@ -95,6 +97,7 @@ class Candidate:
         if self.result is not None: c.result = self.result.copy()
         c.superpixels = set(self.superpixels)
         c.energy      = self.energy
+        c.smooth_mat  = self.smooth_mat
         return c
 
 
@@ -232,10 +235,13 @@ class ProcessCandidates(pipeline.Stage):
                                                                     input_data['intensity_thresholds']
 
         modelfit_kwargs = {
-            'r_sigma':        config.get_value(cfg, 'r_sigma'       ,     9.),
-            'w_sigma_factor': config.get_value(cfg, 'w_sigma_factor',     2.),
-            'averaging':      config.get_value(cfg, 'averaging'     ,  True ),
-            'bg_radius':      config.get_value(cfg, 'bg_radius'     ,   100 )
+            'epsilon':                   config.get_value(cfg, 'epsilon'                  , 1.  ),
+            'rho':                       config.get_value(cfg, 'rho'                      , 1e-2),
+            'w_sigma_factor':            config.get_value(cfg, 'w_sigma_factor'           , 2.  ),
+            'bg_radius':                 config.get_value(cfg, 'bg_radius'                , 100 ),
+            'smooth_amount':             config.get_value(cfg, 'smooth_amount'            , 10  ),
+            'smooth_subsample':          config.get_value(cfg, 'smooth_subsample'         , 20  ),
+            'gaussian_shape_multiplier': config.get_value(cfg, 'gaussian_shape_multiplier', 2   )
         }
 
         candidates = [c.copy() for c in unique_candidates]
@@ -248,10 +254,11 @@ class ProcessCandidates(pipeline.Stage):
 
     def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
         with aux.CvxoptFrame() as batch:
-#            batch['show_progress'] = False
+            batch['show_progress'] = False
             for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
                 candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
                 candidates[ret['cidx']].energy = ret['energy']
+                candidates[ret['cidx']].smooth_mat = scipy.sparse.csr_matrix(aux.uplift_smooth_matrix(ret['smooth_mat'].toarray(), ret['region'].mask))
 
 
 class AnalyzeCandidates(pipeline.Stage):
@@ -267,7 +274,7 @@ class AnalyzeCandidates(pipeline.Stage):
 
         x_map = g.get_map(normalized=False)
         for cidx, candidate in enumerate(candidates):
-            model_fg = (candidate.result.s(x_map) > 0)
+            model_fg = (candidate.result.s(x_map, candidate.smooth_mat) > 0)
             superpixels_covered_by[candidate] = candidate.superpixels & set(g_superpixels[model_fg])
             out.intermediate('Analyzed candidate %d / %d' % (cidx + 1, len(candidates)))
         out.write('Analyzed %d candidates' % len(candidates))

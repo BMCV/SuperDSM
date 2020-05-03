@@ -123,8 +123,9 @@ def get_roi_weights(y_map, roi, std_factor=1):
         return render_gaussian(roi.model.shape, fg_center, fg_std * std_factor)
 
 
-def _create_gaussian_kernel(sigma, shape=None):
-    if shape is None: shape = [round(1 + sigma * 4)] * 2
+def _create_gaussian_kernel(sigma, shape=None, shape_multiplier=1):
+    if abs(shape_multiplier - 1) > 0 and shape is not None: raise ValueError()
+    if shape is None: shape = [round(1 + sigma * 4 * shape_multiplier)] * 2
     inp = np.zeros(shape)
     inp[shape[0] // 2, shape[1] // 2] = 1
     return ndimage.gaussian_filter(inp, sigma)
@@ -133,8 +134,8 @@ def _create_gaussian_kernel(sigma, shape=None):
 def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
     assert filter_mask.shape[0] % 2 == 1
-    if row_mask is None: row_mask = ones(img_shape, bool)
-    if col_mask is None: col_mask = ones(img_shape, bool)
+    if row_mask is None: row_mask = np.ones(img_shape, bool)
+    if col_mask is None: col_mask = np.ones(img_shape, bool)
     w = filter_mask.shape[0] // 2
     mat = np.empty((row_mask.sum(), col_mask.sum()))
     z = np.zeros(np.add(img_shape, 2 * w))
@@ -149,23 +150,39 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     return mat
 
 
+def _create_subsample_grid(mask, subsample):
+    subsample_grid = np.zeros_like(mask)
+    subsample_grid[::subsample, ::subsample] = True
+    subsample_grid = np.logical_and(mask, subsample_grid)
+    while True:
+        distances = mask * ndimage.distance_transform_bf(~subsample_grid, metric='chessboard')
+        outside = (distances >= subsample)
+        if not outside.any(): break
+        min_outside_distance = distances[outside].min()
+        min_outside_pixel = np.asarray(np.where(distances == min_outside_distance)).T[0]
+        subsample_grid[tuple(min_outside_pixel)] = True
+    return subsample_grid
+
+
 def _create_masked_smooth_matrix(kernel, mask, subsample=1):
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
-    subsample_grid = np.zeros_like(mask)
-    subsample_grid[::subsample, ::subsample] = True
-    M  = _convmat(kernel, mask.shape, row_mask=mask, col_mask=np.logical_and(mask, subsample_grid))
-    M /= M.sum(axis=1)[:, None]
+    subsample_grid = _create_subsample_grid(mask, subsample)
+    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=np.logical_and(mask, subsample_grid))
+    M_sums = M.sum(axis=1)
+    M /= M_sums[:, None]
+    assert (M.sum(axis=0) > 0).all() and (M.sum(axis=1) > 0).all()
     return M
 
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon=0.1, smooth_amount=10, smooth_subsample=20, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
-        self.smooth_mat = _create_masked_smooth_matrix(_create_gaussian_kernel(smooth_amount), roi.mask, smooth_subsample)
+        psf = _create_gaussian_kernel(smooth_amount, shape_multiplier=gaussian_shape_multiplier)
+        self.smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = w_map[roi.mask]
@@ -173,6 +190,9 @@ class Energy:
 
         assert epsilon > 0, 'epsilon must be strictly positive'
         self.epsilon = epsilon
+
+        assert rho >= 0, 'rho must be positive'
+        self.rho = rho
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.model_type = model_type
@@ -204,7 +224,7 @@ class Energy:
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
-        objective2 = np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.roi.mask.sum()
+        objective2 = self.rho * np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.smooth_mat.shape[1]
         return objective1 + objective2
     
     def grad(self, params):
@@ -215,7 +235,7 @@ class Energy:
         for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
         grad1  = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
         grad2  = (self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)).reshape(-1)
-        grad2 += params.ξ / (np.sqrt(np.square(params.ξ) + self.epsilon) * self.roi.mask.sum())
+        grad2 += self.rho * (params.ξ / np.sqrt(np.square(params.ξ) + self.epsilon)) / self.smooth_mat.shape[1]
         grad   = np.concatenate([grad1, grad2])
         return grad
     
@@ -227,14 +247,14 @@ class Energy:
         n = len(self.q) + self.smooth_mat.shape[1]
         D = np.asarray([-self.y * qi for qi in self.q] + [-self.y * c for c in self.smooth_mat.T])
         H = ((gamma * self.w.reshape(-1))[None, :] * D) @ D.T
-        g = (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / (2 * np.power(np.square(params.ξ) + self.epsilon, 1.5))) / self.roi.mask.sum()
-        assert (g >= 0).all()
+        g = self.rho * (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / np.power(np.square(params.ξ) + self.epsilon, 1.5)) / self.smooth_mat.shape[1]
+        assert np.allclose(0, g[g < 0])
+        g[g < 0] = 0
         return H + np.diag(np.concatenate([np.zeros(6), g]))
 
 
 class CP:
 
-#    def __init__(self, energy, params0, verbose=False, epsilon=1e-6, scale=1):
     def __init__(self, energy, params0, verbose=False, epsilon=0, scale=1):
         self.energy  = energy
         self.params0 = params0

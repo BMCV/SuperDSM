@@ -97,7 +97,7 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
         if candidate in merged_candidates: continue
         merged_candidates |= {candidate}
         model = candidate.result
-        model_shape = (model.s(x_map) >= 0)
+        model_shape = (model.s(x_map, candidate.smooth_mat) >= 0)
         if labels is not None:
             label = np.bincount(labels[model_shape]).argmax()
             for candidate1, x_map1 in zip(candidates, x_maps):
@@ -149,6 +149,7 @@ def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_ke
 
 def rasterize_objects(data, candidates_key, dilate=0):
     models = [candidate.result for candidate in data[candidates_key]]
+    smooth_mats = [candidate.smooth_mat for candidate in data[candidates_key]]
     x_map = data['g'].get_map(normalized=False)
 
     # BUGFIX_20180418A is only relevant if dilate != 0
@@ -160,15 +161,16 @@ def rasterize_objects(data, candidates_key, dilate=0):
         else:
             dilation, erosion = (morphology.dilation, morphology.erosion)
 
-    for model in models:
-        fg = (model.s(x_map) > 0)
+    for model, smooth_mat in zip(models, smooth_mats):
+        fg = (model.s(x_map, smooth_mat) > 0)
         if dilate > 0:   fg = dilation(fg, morphology.disk( dilate))
         elif dilate < 0: fg =  erosion(fg, morphology.disk(-dilate))
 
         if fg.any(): yield fg
 
 
-def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0):
+def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
+    assert background_label <= 0
     objects = [obj for obj in rasterize_objects(data, candidates_key, dilate)]
 
     # First, we determine which objects overlap sufficiently
@@ -216,5 +218,6 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
             obj_mask = ((result > 0) * 1 - (obj > 0) * 1 < 0)
             if obj_mask.any(): result[obj_mask] = result.max() + 1
 
+    result[result == 0] = background_label
     return result
 
