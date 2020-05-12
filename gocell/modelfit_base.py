@@ -11,7 +11,9 @@ from scipy        import ndimage
 class PolynomialModelType:
     
     def get_model(self, params):
-        return params if isinstance(params, PolynomialModel) else PolynomialModel(params)
+        model = params if isinstance(params, PolynomialModel) else PolynomialModel(params)
+        assert not np.isnan(model.array).any()
+        return model
     
     def compute_derivatives(self, x_map):
         derivatives = [None] * 6
@@ -29,8 +31,8 @@ class PolynomialModel:
     TYPE = PolynomialModelType()
     
     def __init__(self, *args):
-        if len(args) == 1 and len(args[0]) > 6:
-            self.array = args[0].astype(float).flatten()
+        if len(args) == 1 and len(args[0]) >= 6:
+            self.array = args[0].astype(float).reshape(-1)
             self.a = args[0].flat[:3    ]
             self.b = args[0].flat[ 3:5  ]
             self.c = args[0].flat[   5  ]
@@ -181,8 +183,11 @@ class Energy:
         self.roi = roi
         self.p   = None
 
-        psf = _create_gaussian_kernel(smooth_amount, shape_multiplier=gaussian_shape_multiplier)
-        self.smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
+        if smooth_amount < np.inf:
+            psf = _create_gaussian_kernel(smooth_amount, shape_multiplier=gaussian_shape_multiplier)
+            self.smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
+        else:
+            self.smooth_mat = np.empty((roi.mask.sum(), 0))
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = w_map[roi.mask]
@@ -224,7 +229,10 @@ class Energy:
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
-        objective2 = self.rho * np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.smooth_mat.shape[1]
+        if self.smooth_mat.shape[1] > 0:
+            objective2 = self.rho * np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.smooth_mat.shape[1]
+        else:
+            objective2 = 0
         return objective1 + objective2
     
     def grad(self, params):
@@ -233,10 +241,11 @@ class Energy:
         self.update_theta()
         f = [None] * len(self.q)
         for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
-        grad1  = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
-        grad2  = (self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)).reshape(-1)
-        grad2 += self.rho * (params.ξ / np.sqrt(np.square(params.ξ) + self.epsilon)) / self.smooth_mat.shape[1]
-        grad   = np.concatenate([grad1, grad2])
+        grad = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
+        if self.smooth_mat.shape[1] > 0:
+            grad2  = (self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)).reshape(-1)
+            grad2 += self.rho * (params.ξ / np.sqrt(np.square(params.ξ) + self.epsilon)) / self.smooth_mat.shape[1]
+            grad   = np.concatenate([grad, grad2])
         return grad
     
     def hessian(self, params):
@@ -247,10 +256,12 @@ class Energy:
         n = len(self.q) + self.smooth_mat.shape[1]
         D = np.asarray([-self.y * qi for qi in self.q] + [-self.y * c for c in self.smooth_mat.T])
         H = ((gamma * self.w.reshape(-1))[None, :] * D) @ D.T
-        g = self.rho * (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / np.power(np.square(params.ξ) + self.epsilon, 1.5)) / self.smooth_mat.shape[1]
-        assert np.allclose(0, g[g < 0])
-        g[g < 0] = 0
-        return H + np.diag(np.concatenate([np.zeros(6), g]))
+        if self.smooth_mat.shape[1] > 0:
+            g = self.rho * (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / np.power(np.square(params.ξ) + self.epsilon, 1.5)) / self.smooth_mat.shape[1]
+            assert np.allclose(0, g[g < 0])
+            g[g < 0] = 0
+            H += np.diag(np.concatenate([np.zeros(6), g]))
+        return H
 
 
 class CP:
@@ -266,14 +277,17 @@ class CP:
         if params is None:
             return 0, cvxopt.matrix(self.params0)
         else:
-            p  = np.array(params).flatten()
+            p  = np.array(params).reshape(-1)
             l  = self.scale * self.energy(p)
             Dl = cvxopt.matrix(self.scale * self.energy.grad(p)).T
+            assert not np.isnan(p).any()
+            assert not np.isnan(np.array(Dl)).any()
             if w is None:
                 return l, Dl
             else:
                 H  = self.scale   * self.energy.hessian(p)
                 H += self.epsilon * np.eye(H.shape[0])
+                assert not np.isnan(H).any()
                 if self.verbose: print(np.linalg.eigvals(H))
                 return l, Dl, cvxopt.matrix(w[0] * H)
     

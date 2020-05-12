@@ -11,7 +11,7 @@ from scipy           import ndimage
 import scipy.sparse
 
 
-def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier):
+def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, init=None):
     y_map = labels.ThresholdedLabels(region, intensity_threshold).get_map()
     w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
     bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
@@ -19,7 +19,7 @@ def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon,
     w_map[~region.mask] = 0
     w_map /= float(w_map.sum())
     J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier)
-    params = np.concatenate([np.zeros(6), np.zeros(J.smooth_mat.shape[1])])
+    params = np.concatenate([np.zeros(6), np.zeros(J.smooth_mat.shape[1])]) if init is None else init(J.smooth_mat.shape[1])
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, params).solve()['x']))
 
 
