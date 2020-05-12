@@ -241,7 +241,8 @@ class ProcessCandidates(pipeline.Stage):
             'bg_radius':                 config.get_value(cfg, 'bg_radius'                , 100 ),
             'smooth_amount':             config.get_value(cfg, 'smooth_amount'            , 10  ),
             'smooth_subsample':          config.get_value(cfg, 'smooth_subsample'         , 20  ),
-            'gaussian_shape_multiplier': config.get_value(cfg, 'gaussian_shape_multiplier', 2   )
+            'gaussian_shape_multiplier': config.get_value(cfg, 'gaussian_shape_multiplier', 2   ),
+            'init':                      config.get_value(cfg, 'init'                     , None)
         }
 
         candidates = [c.copy() for c in unique_candidates]

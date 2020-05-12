@@ -19,7 +19,15 @@ def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon,
     w_map[~region.mask] = 0
     w_map /= float(w_map.sum())
     J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier)
-    params = np.concatenate([np.zeros(6), np.zeros(J.smooth_mat.shape[1])]) if init is None else init(J.smooth_mat.shape[1])
+    if callable(init):
+        params = init(J.smooth_mat.shape[1])
+    else:
+        if init == 'gocell':
+            J_gocell = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount=np.inf, smooth_subsample=np.nan, gaussian_shape_multiplier=np.nan)
+            params = modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J_gocell, np.zeros(6)).solve()['x'])).array
+        else:
+            params = np.zeros(6)
+        params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, params).solve()['x']))
 
 
