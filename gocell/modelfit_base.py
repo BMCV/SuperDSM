@@ -264,31 +264,63 @@ class Energy:
         return H
 
 
+class Cache:
+
+    #def __init__(self, size, getter, equality=lambda a, b: np.allclose(a, b)):
+    #def __init__(self, size, getter, equality=lambda a, b: (a == b).all()):
+    def __init__(self, size, getter, equality=None):
+        if equality is None: equality = np.array_equal
+        elif isinstance(equality, str): equality = eval(equality)
+        assert callable(equality)
+        self.size     = size
+        self.inputs   = []
+        self.outputs  = []
+        self.getter   = getter
+        self.equality = equality
+
+    def __call__(self, input):
+        pos = -1
+        for i in range(len(self.inputs))[::-1]:
+            input2 = self.inputs[i]
+            if self.equality(input, input2):
+                pos = i
+                input = input2
+                break
+        if pos > -1:
+            output = self.outputs[pos]
+            del self.inputs[pos], self.outputs[pos]
+        else:
+            output = self.getter(input)
+        self.inputs .append(input)
+        self.outputs.append(output)
+        assert len(self.inputs) == len(self.outputs)
+        if len(self.inputs) > self.size:
+            del self.inputs[0], self.outputs[0]
+        return output
+
+
 class CP:
 
-    def __init__(self, energy, params0, verbose=False, epsilon=0, scale=1):
-        self.energy  = energy
+    def __init__(self, energy, params0, epsilon=0, cachesize=0, cachetest=None):
         self.params0 = params0
-        self.verbose = verbose
         self.epsilon = epsilon
-        self.scale   = scale
+        self.gradient = Cache(cachesize, lambda p: (energy(p), cvxopt.matrix(energy.grad(p)).T), equality=cachetest)
+        self.hessian  = Cache(cachesize, lambda p:  energy.hessian(p), equality=cachetest)
     
     def __call__(self, params=None, w=None):
         if params is None:
             return 0, cvxopt.matrix(self.params0)
         else:
             p  = np.array(params).reshape(-1)
-            l  = self.scale * self.energy(p)
-            Dl = cvxopt.matrix(self.scale * self.energy.grad(p)).T
+            l, Dl = self.gradient(p)
             assert not np.isnan(p).any()
             assert not np.isnan(np.array(Dl)).any()
             if w is None:
                 return l, Dl
             else:
-                H  = self.scale   * self.energy.hessian(p)
+                H  = self.hessian(p)
                 H += self.epsilon * np.eye(H.shape[0])
                 assert not np.isnan(H).any()
-                if self.verbose: print(np.linalg.eigvals(H))
                 return l, Dl, cvxopt.matrix(w[0] * H)
     
     def solve(self):
