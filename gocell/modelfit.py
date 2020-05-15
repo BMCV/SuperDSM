@@ -8,7 +8,6 @@ import numpy as np
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
-import scipy.sparse
 
 
 def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, init=None, cachesize=0, cachetest=None):
@@ -40,7 +39,7 @@ def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, mo
         'region': region,
         'energy': J(result),
         'result': result,
-        'smooth_mat': scipy.sparse.csr_matrix(J.smooth_mat)
+        'smooth_mat': J.smooth_mat
     }
 
 

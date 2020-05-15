@@ -6,6 +6,7 @@ import sys
 from math         import sqrt
 from scipy.linalg import orth
 from scipy        import ndimage
+from scipy.sparse import csr_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
 
 class PolynomialModelType:
@@ -185,9 +186,10 @@ class Energy:
 
         if smooth_amount < np.inf:
             psf = _create_gaussian_kernel(smooth_amount, shape_multiplier=gaussian_shape_multiplier)
-            self.smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
+            smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
         else:
-            self.smooth_mat = np.empty((roi.mask.sum(), 0))
+            smooth_mat = np.empty((roi.mask.sum(), 0))
+        self.smooth_mat = csr_matrix(smooth_mat)
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = w_map[roi.mask]
@@ -240,10 +242,13 @@ class Energy:
         self.update_maps(params)
         self.update_theta()
         f = [None] * len(self.q)
-        for i in range(len(f)): f[i] = -self.theta * self.y * self.q[i]
+        term1 = -self.theta * self.y
+#        if (abs(term1)<1e-8).sum() / np.prod(term1.shape) > 0.3:
+#            raise ValueError()
+        for i in range(len(f)): f[i] = term1 * self.q[i]
         grad = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
         if self.smooth_mat.shape[1] > 0:
-            grad2  = (self.w.reshape(-1)[None, :] @ ((-self.theta * self.y)[:, None] * self.smooth_mat)).reshape(-1)
+            grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1[:, None])).reshape(-1)
             grad2 += self.rho * (params.ξ / np.sqrt(np.square(params.ξ) + self.epsilon)) / self.smooth_mat.shape[1]
             grad   = np.concatenate([grad, grad2])
         return grad
@@ -254,20 +259,24 @@ class Energy:
         self.update_theta()
         gamma = self.theta - np.square(self.theta)
         n = len(self.q) + self.smooth_mat.shape[1]
-        D = np.asarray([-self.y * qi for qi in self.q] + [-self.y * c for c in self.smooth_mat.T])
-        H = ((gamma * self.w.reshape(-1))[None, :] * D) @ D.T
+        D1 = np.asarray([-self.y * qi for qi in self.q])
+        D2 = self.smooth_mat.multiply(-self.y[:, None]).T
+        D1_, D2_ = D1 * (gamma * self.w.reshape(-1))[None, :], D2.multiply((gamma * self.w.reshape(-1))[None, :])
         if self.smooth_mat.shape[1] > 0:
+            H = sparse_block([
+                [D1_ @ D1.T, D1_ @ D2.T],
+                [D2_ @ D1.T, D2_ @ D2.T]])
             g = self.rho * (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / np.power(np.square(params.ξ) + self.epsilon, 1.5)) / self.smooth_mat.shape[1]
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
-            H += np.diag(np.concatenate([np.zeros(6), g]))
+            H += sparse_diag(np.concatenate([np.zeros(6), g]))
+        else:
+            H = D1_ @ D1.T
         return H
 
 
 class Cache:
 
-    #def __init__(self, size, getter, equality=lambda a, b: np.allclose(a, b)):
-    #def __init__(self, size, getter, equality=lambda a, b: (a == b).all()):
     def __init__(self, size, getter, equality=None):
         if equality is None: equality = np.array_equal
         elif isinstance(equality, str): equality = eval(equality)
@@ -301,9 +310,8 @@ class Cache:
 
 class CP:
 
-    def __init__(self, energy, params0, epsilon=0, cachesize=0, cachetest=None):
+    def __init__(self, energy, params0, cachesize=0, cachetest=None):
         self.params0 = params0
-        self.epsilon = epsilon
         self.gradient = Cache(cachesize, lambda p: (energy(p), cvxopt.matrix(energy.grad(p)).T), equality=cachetest)
         self.hessian  = Cache(cachesize, lambda p:  energy.hessian(p), equality=cachetest)
     
@@ -318,10 +326,14 @@ class CP:
             if w is None:
                 return l, Dl
             else:
-                H  = self.hessian(p)
-                H += self.epsilon * np.eye(H.shape[0])
-                assert not np.isnan(H).any()
-                return l, Dl, cvxopt.matrix(w[0] * H)
+                H = self.hessian(p)
+                if issparse(H):
+                    H = H.tocoo()
+                    H = cvxopt.spmatrix(w[0] * H.data, H.row, H.col, size=H.shape)
+                else:
+                    assert not np.isnan(H).any()
+                    H = cvxopt.matrix(w[0] * H)
+                return l, Dl, H
     
     def solve(self):
         return cvxopt.solvers.cp(self)
