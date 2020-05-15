@@ -242,6 +242,7 @@ class ProcessCandidates(pipeline.Stage):
             'smooth_amount':             config.get_value(cfg, 'smooth_amount'            , 10  ),
             'smooth_subsample':          config.get_value(cfg, 'smooth_subsample'         , 20  ),
             'gaussian_shape_multiplier': config.get_value(cfg, 'gaussian_shape_multiplier', 2   ),
+            'sparsity_tol':              config.get_value(cfg, 'sparsity_tol'             , 0   ),
             'init':                      config.get_value(cfg, 'init'                     , None),
             'cachesize':                 config.get_value(cfg, 'cachesize'                , 0   ),
             'cachetest':                 config.get_value(cfg, 'cachetest'                , None)

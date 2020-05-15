@@ -1,4 +1,5 @@
 import gocell.surface as surface
+import gocell.aux     as aux
 import numpy as np
 import cvxopt
 import sys
@@ -7,6 +8,10 @@ from math         import sqrt
 from scipy.linalg import orth
 from scipy        import ndimage
 from scipy.sparse import csr_matrix, bmat as sparse_block, diags as sparse_diag, issparse
+from scipy.sparse import csc_matrix, coo_matrix
+
+
+BUGFIX_20200515A = aux.BUGFIX_DISABLED
 
 
 class PolynomialModelType:
@@ -180,7 +185,7 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1):
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
@@ -201,6 +206,9 @@ class Energy:
         assert rho >= 0, 'rho must be positive'
         self.rho = rho
 
+        assert sparsity_tol >= 0, 'sparsity_tol must be positive'
+        self.sparsity_tol = sparsity_tol
+
         # pre-compute common terms occuring in the computation of the derivatives
         self.model_type = model_type
         self.q = model_type.compute_derivatives(self.x)
@@ -213,14 +221,18 @@ class Energy:
         self.theta = None # invalidate
         
         valid_t_mask = self.t >= -np.log(sys.float_info.max)
-        self.h = np.empty_like(self.t)
-        self.h[  valid_t_mask] = np.exp(-self.t[valid_t_mask])
-        self.h[~ valid_t_mask] = np.NaN
+        self.h = np.full(self.t.shape, np.nan)
+        self.h[valid_t_mask] = np.exp(-self.t[valid_t_mask])
+
+        if self.smooth_mat.shape[1] > 0:
+            self.term3 = np.square(params.ξ)
+            self.term2 = np.sqrt(self.term3 + self.epsilon)
     
     def update_theta(self):
         if self.theta is None:
             valid_h_mask = ~np.isnan(self.h)
-            self.theta = -np.ones_like(self.t)
+            self.theta = np.ones_like(self.t)
+            if not aux.is_bugfix_enabled(BUGFIX_20200515A): self.theta *= -1
             self.theta[valid_h_mask] = self.h[valid_h_mask] / (1 + self.h[valid_h_mask])
     
     def __call__(self, params):
@@ -232,7 +244,7 @@ class Energy:
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
         if self.smooth_mat.shape[1] > 0:
-            objective2 = self.rho * np.sqrt(np.square(params.ξ) + self.epsilon).sum() / self.smooth_mat.shape[1]
+            objective2 = self.rho * self.term2.sum() / self.smooth_mat.shape[1]
         else:
             objective2 = 0
         return objective1 + objective2
@@ -241,15 +253,13 @@ class Energy:
         params = self.model_type.get_model(params)
         self.update_maps(params)
         self.update_theta()
-        f = [None] * len(self.q)
-        term1 = -self.theta * self.y
-#        if (abs(term1)<1e-8).sum() / np.prod(term1.shape) > 0.3:
-#            raise ValueError()
-        for i in range(len(f)): f[i] = term1 * self.q[i]
-        grad = np.array(list(map(lambda f: np.inner(self.w.flat, f.flat), f)))
+        term1 = -self.y * self.theta
+        grad = np.asarray([term1 * q for q in self.q]) @ self.w
+        term1[abs(term1) < self.sparsity_tol] = 0
+        term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
-            grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1[:, None])).reshape(-1)
-            grad2 += self.rho * (params.ξ / np.sqrt(np.square(params.ξ) + self.epsilon)) / self.smooth_mat.shape[1]
+            grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+            grad2 += self.rho * (params.ξ / self.term2) / self.smooth_mat.shape[1]
             grad   = np.concatenate([grad, grad2])
         return grad
     
@@ -258,15 +268,17 @@ class Energy:
         self.update_maps(params)
         self.update_theta()
         gamma = self.theta - np.square(self.theta)
+        gamma[gamma < self.sparsity_tol] = 0
         n = len(self.q) + self.smooth_mat.shape[1]
         D1 = np.asarray([-self.y * qi for qi in self.q])
         D2 = self.smooth_mat.multiply(-self.y[:, None]).T
-        D1_, D2_ = D1 * (gamma * self.w.reshape(-1))[None, :], D2.multiply((gamma * self.w.reshape(-1))[None, :])
+        term4 = (gamma * self.w.reshape(-1))[None, :]
+        D1_, D2_ = D1 * term4, D2.multiply(term4)
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1_ @ D1.T, D1_ @ D2.T],
                 [D2_ @ D1.T, D2_ @ D2.T]])
-            g = self.rho * (1 / np.sqrt(np.square(params.ξ) + self.epsilon) - np.square(params.ξ) / np.power(np.square(params.ξ) + self.epsilon, 1.5)) / self.smooth_mat.shape[1]
+            g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3)) / self.smooth_mat.shape[1]
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
             H += sparse_diag(np.concatenate([np.zeros(6), g]))
