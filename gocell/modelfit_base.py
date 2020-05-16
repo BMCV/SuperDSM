@@ -7,8 +7,7 @@ import sys
 from math         import sqrt
 from scipy.linalg import orth
 from scipy        import ndimage
-from scipy.sparse import csr_matrix, bmat as sparse_block, diags as sparse_diag, issparse
-from scipy.sparse import csc_matrix, coo_matrix
+from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
 
 BUGFIX_20200515A = aux.BUGFIX_DISABLED
@@ -269,10 +268,11 @@ class Energy:
         self.update_theta()
         gamma = self.theta - np.square(self.theta)
         gamma[gamma < self.sparsity_tol] = 0
-        n = len(self.q) + self.smooth_mat.shape[1]
-        D1 = np.asarray([-self.y * qi for qi in self.q])
-        D2 = self.smooth_mat.multiply(-self.y[:, None]).T
-        term4 = (gamma * self.w.reshape(-1))[None, :]
+        pixelmask = (gamma != 0)
+        # TODO: use https://stackoverflow.com/questions/50733148/numpy-efficient-matrix-self-multiplication-gram-matrix
+        D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask]
+        D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T
+        term4 = (gamma[pixelmask] * self.w[pixelmask])[None, :]
         D1_, D2_ = D1 * term4, D2.multiply(term4)
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
