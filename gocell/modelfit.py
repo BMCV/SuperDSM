@@ -10,14 +10,14 @@ from skimage.filters import threshold_otsu
 from scipy           import ndimage
 
 
-def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     y_map = labels.ThresholdedLabels(region, intensity_threshold).get_map()
     w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
     bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
     region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
     w_map[~region.mask] = 0
     w_map /= float(w_map.sum())
-    J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol)
+    J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest}
     if callable(init):
         params = init(J.smooth_mat.shape[1])

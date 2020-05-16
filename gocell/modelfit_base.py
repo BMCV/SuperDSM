@@ -184,7 +184,7 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1):
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
@@ -207,6 +207,9 @@ class Energy:
 
         assert sparsity_tol >= 0, 'sparsity_tol must be positive'
         self.sparsity_tol = sparsity_tol
+
+        assert hessian_sparsity_tol >= 0, 'hessian_sparsity_tol must be positive'
+        self.hessian_sparsity_tol = hessian_sparsity_tol
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.model_type = model_type
@@ -282,6 +285,13 @@ class Energy:
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
             H += sparse_diag(np.concatenate([np.zeros(6), g]))
+            if self.hessian_sparsity_tol > 0:
+                H = H.tocoo()
+                H_mask = (np.abs(H.data) >= self.hessian_sparsity_tol)
+                H_mask = np.logical_or(H_mask, H.row == H.col)
+                H.data = H.data[H_mask]
+                H.row  = H.row [H_mask]
+                H.col  = H.col [H_mask]
         else:
             H = D1_ @ D1.T
         return H
