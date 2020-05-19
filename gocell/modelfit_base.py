@@ -9,6 +9,12 @@ from scipy.linalg import orth
 from scipy        import ndimage
 from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
+import os.path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'sparse_dot'))
+import sparse_dot_mkl as mkl
+mkl_dot  = mkl.dot_product_mkl
+mkl_gram = mkl.dot_product_transpose_mkl
+
 
 BUGFIX_20200515A = aux.BUGFIX_DISABLED
 
@@ -62,7 +68,7 @@ class PolynomialModel:
     def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + smooth_mat @ self.ξ
+        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl_dot(smooth_mat, self.ξ)
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
@@ -272,15 +278,13 @@ class Energy:
         gamma = self.theta - np.square(self.theta)
         gamma[gamma < self.sparsity_tol] = 0
         pixelmask = (gamma != 0)
-        # TODO: use https://stackoverflow.com/questions/50733148/numpy-efficient-matrix-self-multiplication-gram-matrix
-        D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask]
-        D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T
-        term4 = (gamma[pixelmask] * self.w[pixelmask])[None, :]
-        D1_, D2_ = D1 * term4, D2.multiply(term4)
+        term4 = np.sqrt(gamma[pixelmask] * self.w[pixelmask])[None, :]
+        D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask] * term4
+        D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T.multiply(term4).tocsr()
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
-                [D1_ @ D1.T, D1_ @ D2.T],
-                [D2_ @ D1.T, D2_ @ D2.T]])
+                [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
+                [mkl_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3)) / self.smooth_mat.shape[1]
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
@@ -293,7 +297,7 @@ class Energy:
                 H.row  = H.row [H_mask]
                 H.col  = H.col [H_mask]
         else:
-            H = D1_ @ D1.T
+            H = D1 @ D1.T
         return H
 
 
