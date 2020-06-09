@@ -1,6 +1,8 @@
 import cvxopt, cvxopt.solvers
 import sys
 import numpy as np
+import scipy.sparse
+import warnings
 
 from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
@@ -111,10 +113,14 @@ def threshold_gauss(data, tolerance, mode):
     return t_gauss
 
 
-def uplift_smooth_matrix(smoothmat, mask, matrixtype=np.zeros):
+def uplift_smooth_matrix(smoothmat, mask):
     assert mask.sum() == smoothmat.shape[0], 'smooth matrix and region mask are incompatible'
-    smoothmat2 = matrixtype((np.prod(mask.shape), smoothmat.shape[1]))
-    smoothmat2[mask.reshape(-1)] = smoothmat
+    if not scipy.sparse.issparse(smoothmat): warnings.warn(f'{uplift_smooth_matrix.__name__} received a dense matrix which is inefficient')
+    M = scipy.sparse.coo_matrix((np.prod(mask.shape), smoothmat.shape[0]))
+    M.data = np.ones(mask.sum())
+    M.row  = np.where(mask.reshape(-1))[0]
+    M.col  = np.arange(len(M.data))
+    smoothmat2 = M.tocsr() @ smoothmat
     return smoothmat2
 
 

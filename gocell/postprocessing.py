@@ -94,7 +94,7 @@ class Postprocessing(pipeline.Stage):
         x_map_bnd_mask[1 : pp4_shape[0] - 1, 1 : pp4_shape[1] - 1] = False
         x_map_ext = x_map_ext[:, x_map_bnd_mask]
         for c in pp3_candidates:
-            smooth_mat_ext = aux.uplift_smooth_matrix(c.smooth_mat.toarray(), np.logical_not(x_map_bnd_mask))[x_map_bnd_mask.reshape(-1)]
+            smooth_mat_ext = aux.uplift_smooth_matrix(c.smooth_mat, np.logical_not(x_map_bnd_mask)).toarray()[x_map_bnd_mask.reshape(-1)]
             is_boundary_object = (c.result.s(x_map_ext, smooth_mat_ext) > 0).any()
             obj_radius = math.sqrt((c.result.s(x_map, c.smooth_mat) > 0).sum() / math.pi)
             if obj_radius > max_obj_radius:

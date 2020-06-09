@@ -263,7 +263,7 @@ class ProcessCandidates(pipeline.Stage):
             for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
                 candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
                 candidates[ret['cidx']].energy = ret['energy']
-                candidates[ret['cidx']].smooth_mat = scipy.sparse.csr_matrix(aux.uplift_smooth_matrix(ret['smooth_mat'].toarray(), ret['region'].mask))
+                candidates[ret['cidx']].smooth_mat = aux.uplift_smooth_matrix(ret['smooth_mat'], ret['region'].mask)
 
 
 class AnalyzeCandidates(pipeline.Stage):
