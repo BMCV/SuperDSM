@@ -31,12 +31,12 @@ def _get_seeds(g_src, cfg, default_rel_threshold):
     min_distance = config.get_value(cfg, 'min_distance',     10)
     max_count    = config.get_value(cfg, 'max_count'   , np.inf)
     if config.get_value(cfg, 'local_maxima_ng', False):
-        return np.array(zip(*np.where(_get_local_maxima(g_src,
-                                                        footprint_radius = min_distance,
-                                                        max_count        = max_count,
-                                                        rel_threshold = config.get_value(cfg, 'rel_threshold', 1e-2),
-                                                        rel_epsilon   = config.get_value(cfg, 'rel_epsilon'  , 1e-2),
-                                                        abs_threshold = config.get_value(cfg, 'abs_threshold', 1e-2)))))
+        return np.array(list(zip(*np.where(_get_local_maxima(g_src,
+                                                             footprint_radius = min_distance,
+                                                             max_count        = max_count,
+                                                             rel_threshold = config.get_value(cfg, 'rel_threshold', 1e-2),
+                                                             rel_epsilon   = config.get_value(cfg, 'rel_epsilon'  , 1e-2),
+                                                             abs_threshold = config.get_value(cfg, 'abs_threshold', 1e-2))))))
     else:
         footprint = morphology.disk(min_distance - 1) if config.get_value(cfg, 'use_disk_footprint', False) else None
         return peak_local_max(g_src,

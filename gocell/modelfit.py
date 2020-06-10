@@ -28,6 +28,10 @@ def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon,
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
+    #ξ_mask = (np.abs(J.grad(params)[6:] * J.smooth_mat.shape[1]) > 1e-6)
+    #J.smooth_mat = J.smooth_mat[:, ξ_mask]
+    #J.p = None
+    #params = params[:6 + J.smooth_mat.shape[1]]
     return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, params, **CP_params).solve()['x']))
 
 
