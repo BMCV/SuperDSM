@@ -16,7 +16,13 @@ mkl_dot  = mkl.dot_product_mkl
 mkl_gram = mkl.dot_product_transpose_mkl
 
 
+def mkl_dot2(A, B):
+    if A.shape[1] == B.shape[0] == 1: return A @ B
+    return mkl_dot(A, B)
+
+
 BUGFIX_20200515A = aux.BUGFIX_DISABLED
+BUGFIX_20200626A = aux.BUGFIX_DISABLED
 
 
 class PolynomialModelType:
@@ -253,6 +259,8 @@ class Energy:
         objective1 = np.inner(self.w.flat, phi.flat)
         if self.smooth_mat.shape[1] > 0:
             objective2 = self.rho * self.term2.sum() / self.smooth_mat.shape[1]
+            if aux.is_bugfix_enabled(BUGFIX_20200626A):
+                objective2 -= self.rho * sqrt(self.epsilon) / self.smooth_mat.shape[1]
         else:
             objective2 = 0
         return objective1 + objective2
@@ -284,7 +292,7 @@ class Energy:
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
-                [mkl_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
+                [mkl_dot2(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3)) / self.smooth_mat.shape[1]
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0

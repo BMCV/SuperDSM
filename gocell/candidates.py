@@ -238,6 +238,7 @@ class ProcessCandidates(pipeline.Stage):
             'epsilon':                   config.get_value(cfg, 'epsilon'                  , 1.  ),
             'rho':                       config.get_value(cfg, 'rho'                      , 1e-2),
             'w_sigma_factor':            config.get_value(cfg, 'w_sigma_factor'           , 2.  ),
+            'averaging':                 config.get_value(cfg, 'averaging'                , True),            
             'bg_radius':                 config.get_value(cfg, 'bg_radius'                , 100 ),
             'smooth_amount':             config.get_value(cfg, 'smooth_amount'            , 10  ),
             'smooth_subsample':          config.get_value(cfg, 'smooth_subsample'         , 20  ),

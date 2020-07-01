@@ -16,7 +16,8 @@ def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon,
     bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
     region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
     w_map[~region.mask] = 0
-    w_map /= float(w_map.sum())
+    w_map_sum = w_map.sum()
+    w_map /= float(w_map_sum)
     J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest}
     if callable(init):
@@ -32,16 +33,23 @@ def modelfit(g, region, intensity_threshold, w_sigma_factor, bg_radius, epsilon,
     #J.smooth_mat = J.smooth_mat[:, ξ_mask]
     #J.p = None
     #params = params[:6 + J.smooth_mat.shape[1]]
-    return J, modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J, params, **CP_params).solve()['x']))
+    try:
+        solution = np.array(modelfit_base.CP(J, params, **CP_params).solve()['x'])
+    except ValueError as ex: # fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+        solution = params    # at least something we can work with
+    return w_map_sum, J, modelfit_base.PolynomialModel(solution)
 
 
 def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, modelfit_kwargs):
-    region = candidate.get_region(g, g_superpixels)
-    J, result = modelfit(g, region, intensity_threshold, **modelfit_kwargs)
+    modelfit_kwargs = aux.copy_dict(modelfit_kwargs)
+    region    = candidate.get_region(g, g_superpixels)
+    averaging = modelfit_kwargs.pop('averaging')
+    factor, J, result = modelfit(g, region, intensity_threshold, **modelfit_kwargs)
+    if averaging: factor = 1
     return {
         'cidx':   cidx,
         'region': region,
-        'energy': J(result),
+        'energy': factor * J(result),
         'result': result,
         'smooth_mat': J.smooth_mat
     }
