@@ -82,8 +82,11 @@ class Candidate:
     def __init__(self):
         self.result      = None
         self.superpixels = set()
-        self.energy      = np.NaN
+        self.energy      = np.nan
+        self.bg_radius   = np.nan
         self.smooth_mat  = None
+        self.smooth_matrix_factory = None
+        self.intensity_threshold   = np.nan
     
     def get_mask(self, g_superpixels):
         return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
@@ -92,13 +95,35 @@ class Candidate:
         region_mask = self.get_mask(g_superpixels)
         return surface.Surface(g.model.shape, g.model, mask=region_mask)
 
+    def get_modelfit_region(self, g, g_superpixels):
+        assert not np.isnan(self.intensity_threshold)
+        assert not np.isnan(self.bg_radius)
+        region  = self.get_region(g, g_superpixels)
+        y_map   = labels.ThresholdedLabels(region, self.intensity_threshold).get_map()
+        bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < self.bg_radius)
+        region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
+        return region, y_map
+
+    def set(self, state):
+        self.result      = state.result.copy() if state.result is not None else None
+        self.superpixels = set(state.superpixels)
+        self.energy      = state.energy
+        self.smooth_mat  = state.smooth_mat
+        self.bg_radius   = state.bg_radius
+        self.smooth_matrix_factory = state.smooth_matrix_factory
+        self.intensity_threshold   = state.intensity_threshold
+        return self
+
     def copy(self):
-        c = Candidate()
-        if self.result is not None: c.result = self.result.copy()
-        c.superpixels = set(self.superpixels)
-        c.energy      = self.energy
-        c.smooth_mat  = self.smooth_mat
-        return c
+        return Candidate().set(self)
+
+    def restore_smooth_matrix(self, g, g_superpixels):
+        if self.smooth_mat is None:
+            mask = self.get_modelfit_region(g, g_superpixels)[0].mask
+            self.smooth_mat = self.smooth_matrix_factory.get(mask, uplift=True)
+
+    def collapse_smooth_matrix(self):
+        self.smooth_mat = None
 
 
 class ComputeCandidates(pipeline.Stage):
@@ -262,9 +287,7 @@ class ProcessCandidates(pipeline.Stage):
         with aux.CvxoptFrame() as batch:
             batch['show_progress'] = False
             for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
-                candidates[ret['cidx']].result = ret['result'].map_to_image_pixels(g, ret['region'])
-                candidates[ret['cidx']].energy = ret['energy']
-                candidates[ret['cidx']].smooth_mat = aux.uplift_smooth_matrix(ret['smooth_mat'], ret['region'].mask)
+                candidates[ret['cidx']].set(ret['candidate'])
 
 
 class AnalyzeCandidates(pipeline.Stage):

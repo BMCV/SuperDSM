@@ -163,7 +163,7 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
         if not row_mask[p]: continue
         sect = np.s_[p[0] : p[0] + filter_mask.shape[0], p[1] : p[1] + filter_mask.shape[1]]
         z[sect] = filter_mask
-        mat[mat_next_row_idx]  = z[w : w + img_shape[0], w : w + img_shape[1]][col_mask].reshape(-1)
+        mat[mat_next_row_idx] = z[w : w + img_shape[0], w : w + img_shape[1]][col_mask].reshape(-1)
         mat_next_row_idx += 1
         z[sect] = 0
     return mat
@@ -194,18 +194,33 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1):
     return M
 
 
+class SmoothMatrixFactory: ## TODO: move to `modelfit.py`
+
+    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample):
+        self.smooth_amount    = smooth_amount
+        self.shape_multiplier = shape_multiplier
+        self.smooth_subsample = smooth_subsample
+
+    def get(self, mask, uplift=False):
+        if self.smooth_amount < np.inf:
+            psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier)
+            mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample)
+        else:
+            mat = np.empty((mask.sum(), 0))
+        mat = csr_matrix(mat)
+        if uplift: mat = aux.uplift_smooth_matrix(mat, mask)
+        return mat
+    
+SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
+
+
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
-        if smooth_amount < np.inf:
-            psf = _create_gaussian_kernel(smooth_amount, shape_multiplier=gaussian_shape_multiplier)
-            smooth_mat = _create_masked_smooth_matrix(psf, roi.mask, smooth_subsample)
-        else:
-            smooth_mat = np.empty((roi.mask.sum(), 0))
-        self.smooth_mat = csr_matrix(smooth_mat)
+        self.smooth_mat = smooth_matrix_factory.get(roi.mask)
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = w_map[roi.mask]
