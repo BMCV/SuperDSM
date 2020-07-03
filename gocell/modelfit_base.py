@@ -3,6 +3,7 @@ import gocell.aux     as aux
 import numpy as np
 import cvxopt
 import sys
+import skimage.util
 
 from math         import sqrt
 from scipy.linalg import orth
@@ -155,17 +156,10 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     assert filter_mask.shape[0] % 2 == 1
     if row_mask is None: row_mask = np.ones(img_shape, bool)
     if col_mask is None: col_mask = np.ones(img_shape, bool)
-    w = filter_mask.shape[0] // 2
-    mat = np.empty((row_mask.sum(), col_mask.sum()))
-    z = np.zeros(np.add(img_shape, 2 * w))
-    mat_next_row_idx = 0
-    for p in np.ndindex(img_shape):
-        if not row_mask[p]: continue
-        sect = np.s_[p[0] : p[0] + filter_mask.shape[0], p[1] : p[1] + filter_mask.shape[1]]
-        z[sect] = filter_mask
-        mat[mat_next_row_idx] = z[w : w + img_shape[0], w : w + img_shape[1]][col_mask].reshape(-1)
-        mat_next_row_idx += 1
-        z[sect] = 0
+    p = np.subtract(img_shape, filter_mask.shape[0] // 2 + 1)
+    z = np.pad(filter_mask, np.vstack([p, p]).T)
+    view = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
+    mat  = view[:, :, col_mask][row_mask]
     return mat
 
 

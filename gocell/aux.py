@@ -1,3 +1,4 @@
+import gocell.mapper as mapper
 import cvxopt, cvxopt.solvers
 import sys
 import numpy as np
@@ -138,4 +139,27 @@ def is_bugfix_enabled(bugfix):
         return False  ## disable the bugfix and proceed
     else:
         return True   ## enable the bugfix
+
+
+def collapse_smooth_matrices(data):
+    if 'processed_candidates' in data:
+        for c in data['processed_candidates']:
+            c.collapse_smooth_matrix()
+
+
+def _restore_smooth_matrix(cidx, c, g, g_superpixels):
+    c.restore_smooth_matrix(g, g_superpixels)
+    return cidx, c
+
+
+def restore_smooth_matrices(processes, data, out=None):
+    if 'processed_candidates' in data:
+        candidates = data['processed_candidates']
+        out = Output.get(out)
+        for ret_idx, ret in enumerate(mapper.fork.imap_unordered(processes, _restore_smooth_matrix,
+                                                                 mapper.unroll(range(len(candidates))),
+                                                                 mapper.unroll(candidates),
+                                                                 data['g'], data['g_superpixels'])):
+            out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {len(candidates)}... {100 * ret_idx / len(candidates):.1f} %')
+            candidates[ret[0]].smooth_mat = ret[1].smooth_mat
 
