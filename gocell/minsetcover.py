@@ -98,12 +98,12 @@ class MinSetCoverCheck(pipeline.Stage):
                                                outputs = ['min_setcover_min_accuracy'])
 
     def process(self, input_data, cfg, out):
-        accepted_candidates = input_data['accepted_candidates']
+        accepted_candidates  = input_data[ 'accepted_candidates']
         min_setcover_weights = input_data['min_setcover_weights']
 
         apx_primal = sum(min_setcover_weights[c] for c in accepted_candidates)
         try:
-            opt_dual = self.solve_dual_lp_relaxation(input_data)
+            opt_dual = MinSetCoverCheck.solve_dual_lp_relaxation(input_data)
 
             assert apx_primal >= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
             apx_primal = max((apx_primal, opt_dual))
@@ -119,7 +119,8 @@ class MinSetCoverCheck(pipeline.Stage):
             'min_setcover_min_accuracy': min_accuracy
         }
 
-    def solve_dual_lp_relaxation(self, input_data):
+    @staticmethod
+    def solve_dual_lp_relaxation(input_data):
         superpixels = list(set(input_data['g_superpixels'].flatten()) - {0})
         min_setcover_weights = input_data['min_setcover_weights']
         max_weight = float(max(min_setcover_weights.values()))
@@ -143,6 +144,8 @@ class MinSetCoverCheck(pipeline.Stage):
         h = cvxopt.matrix(np.concatenate(h, axis=0))
         with aux.CvxoptFrame() as batch:
             batch['show_progress'] = False
+            batch['abstol'] = min((1e-7, 1 / max_weight))
+            batch['reltol'] = min((1e-6, 1 / max_weight))
             solution = cvxopt.solvers.lp(cvxopt.matrix(-np.ones(len(superpixels))), G, h)
         assert solution['status'] == 'optimal', 'failed to find optimal LP solution'
         return solution['primal objective'] * (-1) * max_weight
