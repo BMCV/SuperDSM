@@ -167,13 +167,18 @@ def _create_subsample_grid(mask, subsample):
     subsample_grid = np.zeros_like(mask)
     subsample_grid[::subsample, ::subsample] = True
     subsample_grid = np.logical_and(mask, subsample_grid)
+    distances = mask * ndimage.distance_transform_bf(~subsample_grid, metric='chessboard')
+    tmp1 = np.ones_like(subsample_grid, bool)
     while True:
-        distances = mask * ndimage.distance_transform_bf(~subsample_grid, metric='chessboard')
         outside = (distances >= subsample)
         if not outside.any(): break
         min_outside_distance = distances[outside].min()
-        min_outside_pixel = np.asarray(np.where(distances == min_outside_distance)).T[0]
-        subsample_grid[tuple(min_outside_pixel)] = True
+        min_outside_pixel = tuple(np.asarray(np.where(distances == min_outside_distance)).T[0])
+        subsample_grid[min_outside_pixel] = True
+        tmp1[min_outside_pixel] = False
+        tmp2 = ndimage.distance_transform_bf(tmp1, metric='chessboard')
+        distances = np.min((distances, tmp2), axis=0)
+        tmp1[min_outside_pixel] = True
     return subsample_grid
 
 
