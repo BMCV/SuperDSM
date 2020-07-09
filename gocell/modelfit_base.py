@@ -181,7 +181,9 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1):
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
     subsample_grid = _create_subsample_grid(mask, subsample)
-    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=np.logical_and(mask, subsample_grid))
+    col_mask = np.logical_and(mask, subsample_grid)
+    print(f'{mask.sum()} rows, {col_mask.sum()} columns')
+    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=col_mask)
     M_sums = M.sum(axis=1)
     M /= M_sums[:, None]
     assert (M.sum(axis=0) > 0).all() and (M.sum(axis=1) > 0).all()
@@ -196,13 +198,16 @@ class SmoothMatrixFactory: ## TODO: move to `modelfit.py`
         self.smooth_subsample = smooth_subsample
 
     def get(self, mask, uplift=False):
+        print('-- smooth matrix computation starting --')
         if self.smooth_amount < np.inf:
             psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier)
             mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample)
         else:
+            print('using null-matrix')
             mat = np.empty((mask.sum(), 0))
         mat = csr_matrix(mat)
         if uplift: mat = aux.uplift_smooth_matrix(mat, mask)
+        print('-- smooth matrix finished --')
         return mat
     
 SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)

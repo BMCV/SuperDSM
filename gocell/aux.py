@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse
 import warnings
 import pathlib
+import contextlib
 
 from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
@@ -149,7 +150,8 @@ def collapse_smooth_matrices(data):
 
 
 def _restore_smooth_matrix(cidx, c, g, g_superpixels):
-    c.restore_smooth_matrix(g, g_superpixels)
+    with contextlib.redirect_stdout(None):
+        c.restore_smooth_matrix(g, g_superpixels)
     return cidx, c
 
 

@@ -5,7 +5,7 @@ import gocell.surface       as surface
 import gocell.modelfit_base as modelfit_base
 import cvxopt, cvxopt.solvers
 import numpy as np
-import contextlib, traceback
+import contextlib, traceback, io
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
@@ -33,7 +33,7 @@ def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smoo
     try:
         print('-- convex programming starting: GOCELLOS --')
         solution = np.array(modelfit_base.CP(J, params, **CP_params).solve()['x'])
-    except ValueError: # fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+    except: # e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
         print('-- GOCELLOS failed: failing back to GOCELL result --')
         traceback.print_exc(file=sys.stdout)
         solution = params    # at least something we can work with
@@ -43,9 +43,14 @@ def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smoo
 
 def process_candidate_logged(log_root_dir, cidx, *args):
     if log_root_dir is not None:
-        with open(aux.join_path(log_root_dir, f'{cidx}.txt'), 'w') as logfile:
-            with contextlib.redirect_stdout(logfile):
-                return process_candidate(cidx, *args)
+        log_filename = aux.join_path(log_root_dir, f'{cidx}.txt')
+        with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
+            with contextlib.redirect_stdout(log_file):
+                try:
+                    return process_candidate(cidx, *args)
+                except:
+                    traceback.print_exc(file=log_file)
+                    raise
     else:
         with contextlib.redirect_stdout(None):
             return process_candidate(cidx, *args)
@@ -72,18 +77,22 @@ def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, mo
 def fork_based_backend(num_forks):
     def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
         remaining_indices = list(range(len(unique_candidates)))
-        for ret_idx, ret in enumerate(mapper.fork.imap_unordered(num_forks,
-                                                                 process_candidate_logged,
-                                                                 log_root_dir,
-                                                                 mapper.unroll(range(len(unique_candidates))),
-                                                                 g, g_superpixels,
-                                                                 mapper.unroll(unique_candidates),
-                                                                 mapper.unroll(intensity_thresholds),
-                                                                 modelfit_kwargs)):
-            remaining_indices.remove(ret['cidx'])
-            suffix = ', remaining: ' + ','.join(str(i) for i in remaining_indices) if 0 < len(remaining_indices) < 10 else ''
-            out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d%s)' % \
-                (ret_idx + 1, len(unique_candidates), num_forks, modelfit_kwargs['cachesize'], suffix))
-            yield ret
+        try:
+            for ret_idx, ret in enumerate(mapper.fork.imap_unordered(num_forks,
+                                                                     process_candidate_logged,
+                                                                     log_root_dir,
+                                                                     mapper.unroll(range(len(unique_candidates))),
+                                                                     g, g_superpixels,
+                                                                     mapper.unroll(unique_candidates),
+                                                                     mapper.unroll(intensity_thresholds),
+                                                                     modelfit_kwargs)):
+                remaining_indices.remove(ret['cidx'])
+                out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d)' % \
+                    (ret_idx + 1, len(unique_candidates), num_forks, modelfit_kwargs['cachesize']))
+                yield ret
+        except:
+            pass
+            out.write('Remaining candidates: ' + ((','.join(str(i) for i in remaining_indices) if len(remaining_indices) > 0 else 'None')))
+            raise
     return _imap
 
