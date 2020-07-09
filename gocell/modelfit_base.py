@@ -1,5 +1,6 @@
 import gocell.surface as surface
 import gocell.aux     as aux
+import gocell.mkl     as mkl
 import numpy as np
 import cvxopt
 import sys
@@ -10,16 +11,10 @@ from scipy.linalg import orth
 from scipy        import ndimage
 from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
-import os.path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'sparse_dot'))
-import sparse_dot_mkl as mkl
-mkl_dot  = mkl.dot_product_mkl
-mkl_gram = mkl.dot_product_transpose_mkl
 
-
-def mkl_dot2(A, B):
+def mkl_dot(A, B):
     if A.shape[1] == B.shape[0] == 1: return A @ B
-    return mkl_dot(A, B)
+    return mkl.dot(A, B)
 
 
 BUGFIX_20200515A = aux.BUGFIX_DISABLED
@@ -75,7 +70,7 @@ class PolynomialModel:
     def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl_dot(smooth_mat, self.ξ)
+        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl.dot(smooth_mat, self.ξ)
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
@@ -306,7 +301,7 @@ class Energy:
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
-                [mkl_dot2(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
+                [mkl_dot(D2, D1.T), mkl.gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3)) / self.smooth_mat.shape[1]
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
@@ -358,6 +353,8 @@ class Cache:
 
 class CP:
 
+    CHECK_NUMBERS = True
+
     def __init__(self, energy, params0, cachesize=0, cachetest=None):
         self.params0 = params0
         self.gradient = Cache(cachesize, lambda p: (energy(p), cvxopt.matrix(energy.grad(p)).T), equality=cachetest)
@@ -369,17 +366,23 @@ class CP:
         else:
             p  = np.array(params).reshape(-1)
             l, Dl = self.gradient(p)
-            assert not np.isnan(p).any()
-            assert not np.isnan(np.array(Dl)).any()
+            if CP.CHECK_NUMBERS:
+                Dl_array = np.array(Dl)
+                assert not np.isnan(p).any() and not np.isinf(p).any()
+                assert not np.isnan(Dl_array).any() and not np.isinf(Dl_array).any()
             if w is None:
                 return l, Dl
             else:
                 H = self.hessian(p)
                 if issparse(H):
+                    if CP.CHECK_NUMBERS:
+                        H_array = H.toarray()
+                        assert not np.isnan(H_array).any() and not np.isinf(H_array).any()
                     H = H.tocoo()
                     H = cvxopt.spmatrix(w[0] * H.data, H.row, H.col, size=H.shape)
                 else:
-                    assert not np.isnan(H).any()
+                    if CP.CHECK_NUMBERS:
+                        assert not np.isnan(H).any() and not np.isinf(H).any()
                     H = cvxopt.matrix(w[0] * H)
                 return l, Dl, H
     

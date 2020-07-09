@@ -3,6 +3,7 @@ import gocell.config   as config
 import gocell.surface  as surface
 import gocell.modelfit as modelfit
 import math
+import numpy as np
 
 
 class Stage(object):
@@ -62,8 +63,11 @@ class Pipeline:
             'min_region_size': 2 * math.pi * config.get_value(cfg, 'min_region_radius', 25)
         }
 
-    def find(self, stage_name):
-        return [stage.name for stage in self.stages].index(stage_name)
+    def find(self, stage_name, not_found_dummy=np.inf):
+        try:
+            return [stage.name for stage in self.stages].index(stage_name)
+        except ValueError:
+            return not_found_dummy
 
     def append(self, stage, after=None):
         if after is None: self.stages.append(stage)

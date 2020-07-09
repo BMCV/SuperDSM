@@ -103,7 +103,7 @@ class fork: # namespace
         run_parallel = processes >= 2 and not fork.DEBUG
         n, real_args = _get_args_chain(args)
         real_args = list(zip(*real_args))
-    
+        
         if run_parallel: pool = multiprocessing.Pool(processes=processes)
         fork._forked = True
         try:
