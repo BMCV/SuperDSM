@@ -5,13 +5,14 @@ import gocell.surface       as surface
 import gocell.modelfit_base as modelfit_base
 import cvxopt, cvxopt.solvers
 import numpy as np
-import contextlib
+import contextlib, traceback
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
 
 
 def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+    print('-- initializing --')
     w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
     w_map[~region.mask] = 0
     w_map_sum = w_map.sum()
@@ -23,19 +24,20 @@ def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smoo
         params = init(J.smooth_mat.shape[1])
     else:
         if init == 'gocell':
+            print('-- convex programming starting: GOCELL --')
             J_gocell = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, modelfit_base.SmoothMatrixFactory.NULL_FACTORY)
             params = modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J_gocell, np.zeros(6), **CP_params).solve()['x'])).array
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
-    #ξ_mask = (np.abs(J.grad(params)[6:] * J.smooth_mat.shape[1]) > 1e-6)
-    #J.smooth_mat = J.smooth_mat[:, ξ_mask]
-    #J.p = None
-    #params = params[:6 + J.smooth_mat.shape[1]]
     try:
+        print('-- convex programming starting: GOCELLOS --')
         solution = np.array(modelfit_base.CP(J, params, **CP_params).solve()['x'])
-    except ValueError as ex: # fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+    except ValueError: # fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+        print('-- GOCELLOS failed: failing back to GOCELL result --')
+        traceback.print_exc(file=sys.stdout)
         solution = params    # at least something we can work with
+    print('-- finished --')
     return w_map_sum, smooth_matrix_factory, J, modelfit_base.PolynomialModel(solution)
 
 
@@ -45,7 +47,8 @@ def process_candidate_logged(log_root_dir, cidx, *args):
             with contextlib.redirect_stdout(logfile):
                 return process_candidate(cidx, *args)
     else:
-        return process_candidate(cidx, *args)
+        with contextlib.redirect_stdout(None):
+            return process_candidate(cidx, *args)
 
 
 def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, modelfit_kwargs):
