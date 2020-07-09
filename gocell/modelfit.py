@@ -5,6 +5,7 @@ import gocell.surface       as surface
 import gocell.modelfit_base as modelfit_base
 import cvxopt, cvxopt.solvers
 import numpy as np
+import contextlib
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
@@ -38,6 +39,15 @@ def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smoo
     return w_map_sum, smooth_matrix_factory, J, modelfit_base.PolynomialModel(solution)
 
 
+def process_candidate_logged(log_root_dir, cidx, *args):
+    if log_root_dir is not None:
+        with open(aux.join_path(log_root_dir, f'{cidx}.txt'), 'w') as logfile:
+            with contextlib.redirect_stdout(logfile):
+                return process_candidate(cidx, *args)
+    else:
+        return process_candidate(cidx, *args)
+
+
 def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, modelfit_kwargs):
     modelfit_kwargs = aux.copy_dict(modelfit_kwargs)
     candidate.intensity_threshold = intensity_threshold
@@ -57,16 +67,20 @@ def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, mo
 
 
 def fork_based_backend(num_forks):
-    def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
+    def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
+        remaining_indices = list(range(len(unique_candidates)))
         for ret_idx, ret in enumerate(mapper.fork.imap_unordered(num_forks,
-                                                                 process_candidate,
+                                                                 process_candidate_logged,
+                                                                 log_root_dir,
                                                                  mapper.unroll(range(len(unique_candidates))),
                                                                  g, g_superpixels,
                                                                  mapper.unroll(unique_candidates),
                                                                  mapper.unroll(intensity_thresholds),
                                                                  modelfit_kwargs)):
-            out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d)' % \
-                (ret_idx + 1, len(unique_candidates), num_forks, modelfit_kwargs['cachesize']))
+            remaining_indices.remove(ret['cidx'])
+            suffix = ', remaining: ' + ','.join(str(i) for i in remaining_indices) if 0 < len(remaining_indices) < 10 else ''
+            out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d%s)' % \
+                (ret_idx + 1, len(unique_candidates), num_forks, modelfit_kwargs['cachesize'], suffix))
             yield ret
     return _imap
 

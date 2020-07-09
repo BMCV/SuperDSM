@@ -83,7 +83,7 @@ class Preprocessing(pipeline.Stage):
     def __init__(self):
         super(Preprocessing, self).__init__('preprocess', inputs=['g_raw'], outputs=['g_raw'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g_raw = input_data['g_raw']
         g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
         g_raw = subtract_background_using_cfg(g_raw, cfg, out)

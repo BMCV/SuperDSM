@@ -39,7 +39,7 @@ class Postprocessing(pipeline.Stage):
                                              inputs  = ['g_raw', 'g_superpixels', 'accepted_candidates'],
                                              outputs = ['postprocessed_candidates'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g_raw, g_superpixels, accepted_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['accepted_candidates']
         self.rejection_causes = {}
 

@@ -15,17 +15,17 @@ class Stage(object):
         self.inputs  = dict([(key, key) for key in  inputs])
         self.outputs = dict([(key, key) for key in outputs])
 
-    def __call__(self, data, cfg, out=None):
+    def __call__(self, data, cfg, out=None, log_root_dir=None):
         out = aux.Output.get(out)
         input_data = {}
         for data_key, input_data_key in self.inputs.items():
             input_data[input_data_key] = data[data_key]
-        output_data = self.process(input_data, cfg=config.get_value(cfg, self.cfg_key, {}), out=out)
+        output_data = self.process(input_data, cfg=config.get_value(cfg, self.cfg_key, {}), out=out, log_root_dir=log_root_dir)
         assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
         for output_data_key, data_key in self.outputs.items():
             data[data_key] = output_data[output_data_key]
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         raise ValueError('not implemented')
 
 
@@ -48,13 +48,14 @@ class Pipeline:
     def __init__(self):
         self.stages = []
 
-    def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None):
+    def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
+        if log_root_dir is not None: aux.mkdir(log_root_dir)
         out  = aux.Output.get(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
         else: assert data is not None, 'data argument must be provided if first_stage is used'
         for stage in self.stages:
-            if ctrl.step(stage.name): stage(data, cfg, out=out)
+            if ctrl.step(stage.name): stage(data, cfg, out=out, log_root_dir=log_root_dir)
         return data, cfg
 
     def init(self, g_raw, cfg):

@@ -133,7 +133,7 @@ class ComputeCandidates(pipeline.Stage):
                                                 inputs  = ['seeds', 'g_superpixels', 'g_superpixel_seeds', 'min_region_size'],
                                                 outputs = ['candidates'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates = []
 
         max_superpixel_distance = config.get_value(cfg, 'max_superpixel_distance', 60)
@@ -177,7 +177,7 @@ class FilterUniqueCandidates(pipeline.Stage):
         super(FilterUniqueCandidates, self).__init__('filter_unique_candidates',
                                                      inputs=['candidates'], outputs=['unique_candidates'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates = input_data['candidates']
         unique_candidates = []
 
@@ -204,7 +204,7 @@ class IntensityModels(pipeline.Stage):
                                               inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
                                               outputs = ['intensity_thresholds', 'g'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g_raw, g_superpixels, unique_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['unique_candidates']
 
         g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
@@ -253,7 +253,7 @@ class ProcessCandidates(pipeline.Stage):
                                                 outputs = ['processed_candidates'])
         self.backend = backend
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g, g_superpixels, unique_candidates, intensity_thresholds = input_data['g'], \
                                                                     input_data['g_superpixels'], \
                                                                     input_data['unique_candidates'], \
@@ -276,17 +276,17 @@ class ProcessCandidates(pipeline.Stage):
         }
 
         candidates = [c.copy() for c in unique_candidates]
-        self.modelfit(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)
+        self.modelfit(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir)
         out.write('Processed candidates: %d' % len(candidates))
 
         return {
             'processed_candidates': candidates
         }
 
-    def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out):
+    def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
         with aux.CvxoptFrame() as batch:
-            batch['show_progress'] = False
-            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out=out)):
+            batch['show_progress'] = (log_root_dir is not None)
+            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir)):
                 candidates[ret['cidx']].set(ret['candidate'])
 
 
@@ -297,7 +297,7 @@ class AnalyzeCandidates(pipeline.Stage):
                                                 inputs  = ['g', 'g_superpixels', 'processed_candidates'],
                                                 outputs = ['superpixels_covered_by'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g, g_superpixels, candidates = input_data['g'], input_data['g_superpixels'], input_data['processed_candidates']
         superpixels_covered_by = {}
 

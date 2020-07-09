@@ -13,7 +13,7 @@ class MinSetCoverWeights(pipeline.Stage):
                                                  inputs  = ['processed_candidates'],
                                                  outputs = ['min_setcover_weights'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates = input_data['processed_candidates']
         alpha = float(config.get_value(cfg, 'alpha', 1))
         alpha_scale = config.get_value(cfg, 'alpha_scale', 'median')
@@ -44,7 +44,7 @@ class MinSetCoverGreedy(pipeline.Stage):
                                                 inputs  = ['processed_candidates', 'g_superpixels', 'min_setcover_weights'],
                                                 outputs = ['accepted_candidates'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates, g_superpixels, w = input_data['processed_candidates'], input_data['g_superpixels'], input_data['min_setcover_weights']
         accepted_candidates = []  ## primal variable
 
@@ -97,7 +97,7 @@ class MinSetCoverCheck(pipeline.Stage):
                                                inputs  = ['g_superpixels', 'processed_candidates', 'accepted_candidates', 'min_setcover_weights'],
                                                outputs = ['min_setcover_min_accuracy'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         accepted_candidates  = input_data[ 'accepted_candidates']
         min_setcover_weights = input_data['min_setcover_weights']
 

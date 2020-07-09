@@ -53,7 +53,7 @@ class Seeds(pipeline.Stage):
     def __init__(self):
         super(Seeds, self).__init__('seeds', inputs=['g_raw'], outputs=['g_src', 'seeds'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g_src = input_data['g_raw']
 
         median_radius = config.get_value(cfg, 'median_radius',  0 )
@@ -75,7 +75,7 @@ class GaussianLaplaceSeeds(pipeline.Stage):
     def __init__(self):
         super(GaussianLaplaceSeeds, self).__init__('seeds', inputs=['g_raw'], outputs=['g_src', 'seeds'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         radius = config.get_value(cfg, 'expected_radius', 10.)
         sigma  = radius / math.sqrt(2)
         g_log  = gaussian_laplace(input_data['g_raw'], sigma)
@@ -93,7 +93,7 @@ class Superpixels(pipeline.Stage):
                                           inputs  = ['g_src', 'seeds'],
                                           outputs = ['g_superpixels', 'g_superpixel_seeds'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         shape = input_data['g_src'].shape
 
         # Rasterize superpixel seeds
@@ -121,7 +121,7 @@ class SuperpixelsEntropy(pipeline.Stage):  # It is not really the entropy we com
                                                  inputs  = ['g_superpixels', 'g_raw', 'g_src'],
                                                  outputs = ['g_superpixels_entropy', 'superpixels_entropies'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         g_raw = input_data['g_raw']
         g_src = input_data['g_src']
         g_superpixels = input_data['g_superpixels']
@@ -150,7 +150,7 @@ class SuperpixelsDiscard(pipeline.Stage):
                                                             'superpixels_entropies', 'g_superpixels_entropy'],
                                                  outputs = ['g_superpixels'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         seeds, g_superpixels, min_region_size = input_data['seeds'], input_data['g_superpixels'], input_data['min_region_size']
 
         log_superpixels_entropies = np.log(input_data['superpixels_entropies'])

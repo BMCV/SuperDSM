@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import scipy.sparse
 import warnings
+import pathlib
 
 from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
@@ -162,4 +163,12 @@ def restore_smooth_matrices(processes, data, out=None):
                                                                  data['g'], data['g_superpixels'])):
             out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {len(candidates)}... {100 * ret_idx / len(candidates):.1f} %')
             candidates[ret[0]].smooth_mat = ret[1].smooth_mat
+
+
+def mkdir(dir_path):
+    pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
+
+
+def join_path(path1, path2):
+    return str(pathlib.Path(path1) / pathlib.Path(path2))
 

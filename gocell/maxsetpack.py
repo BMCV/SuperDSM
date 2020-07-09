@@ -14,7 +14,7 @@ class MaxSetPackWeights(pipeline.Stage):
                                                 inputs  = ['processed_candidates', 'superpixels_covered_by'],
                                                 outputs = ['max_setpack_weights'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates, superpixels_covered_by = input_data['processed_candidates'], input_data['superpixels_covered_by']
         alpha = float(config.get_value(cfg, 'alpha',  1.  ))
         beta  = float(config.get_value(cfg, 'beta' ,  1e-8))
@@ -51,7 +51,7 @@ class MaxSetPackGreedy(pipeline.Stage):
                                                inputs  = ['processed_candidates', 'max_setpack_weights'],
                                                outputs = ['accepted_candidates'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         candidates, weights = input_data['processed_candidates'], input_data['max_setpack_weights']
         accepted_candidates = []  ## primal variable
 
@@ -79,7 +79,7 @@ class MaxSetPackCheck(pipeline.Stage):
                                               inputs  = ['g_superpixels', 'processed_candidates', 'accepted_candidates', 'max_setpack_weights'],
                                               outputs = ['max_setpack_min_accuracy'])
 
-    def process(self, input_data, cfg, out):
+    def process(self, input_data, cfg, out, log_root_dir):
         accepted_candidates = input_data['accepted_candidates']
         max_setpack_weights = input_data['max_setpack_weights']
 
