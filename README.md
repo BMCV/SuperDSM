@@ -1,4 +1,4 @@
-# GOCELL
+# GOCELLOS
 
-Globally Optimal Collaborative Ellipses
+Globally Optimal Collaborative Ellipses and Other Shapes
 
