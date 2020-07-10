@@ -57,9 +57,8 @@ def process_candidate_logged(log_root_dir, cidx, *args):
             return process_candidate(cidx, *args)
 
 
-def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, modelfit_kwargs):
+def process_candidate(cidx, g, g_superpixels, candidate, modelfit_kwargs):
     modelfit_kwargs = aux.copy_dict(modelfit_kwargs)
-    candidate.intensity_threshold = intensity_threshold
     candidate.bg_radius = modelfit_kwargs.pop('bg_radius')
     region, y_map = candidate.get_modelfit_region(g, g_superpixels)
     averaging = modelfit_kwargs.pop('averaging')
@@ -76,7 +75,7 @@ def process_candidate(cidx, g, g_superpixels, candidate, intensity_threshold, mo
 
 
 def fork_based_backend(num_forks):
-    def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
+    def _imap(g, unique_candidates, g_superpixels, modelfit_kwargs, out, log_root_dir):
         remaining_indices = list(range(len(unique_candidates)))
         try:
             for ret_idx, ret in enumerate(mapper.fork.imap_unordered(num_forks,
@@ -85,7 +84,6 @@ def fork_based_backend(num_forks):
                                                                      mapper.unroll(range(len(unique_candidates))),
                                                                      g, g_superpixels,
                                                                      mapper.unroll(unique_candidates),
-                                                                     mapper.unroll(intensity_thresholds),
                                                                      modelfit_kwargs)):
                 remaining_indices.remove(ret['cidx'])
                 out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d)' % \
@@ -104,13 +102,13 @@ def _ray_process_candidate(*args):
 
 
 def ray_based_backend():
-    def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
+    def _imap(g, unique_candidates, g_superpixels, modelfit_kwargs, out, log_root_dir):
         n = len(unique_candidates)
         remaining_indices = list(range(n))
         g_id = ray.put(g)
         g_superpixels_id = ray.put(g_superpixels)
         try:
-            futures = [_ray_process_candidate.remote(log_root_dir, cidx, g_id, g_superpixels_id, unique_candidates[cidx], intensity_thresholds[cidx], modelfit_kwargs) for cidx in range(n)]
+            futures = [_ray_process_candidate.remote(log_root_dir, cidx, g_id, g_superpixels_id, unique_candidates[cidx], modelfit_kwargs) for cidx in range(n)]
             for ret_idx, ret in enumerate(aux.get_ray_1by1(futures)):
                 remaining_indices.remove(ret['cidx'])
                 out.intermediate('Processed candidate %d / %d (cache size %d)' % \

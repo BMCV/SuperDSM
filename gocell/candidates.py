@@ -6,6 +6,7 @@ import gocell.modelfit as modelfit
 import gocell.labels   as labels
 import numpy as np
 import collections
+import ray
 
 from gocell.preprocessing import remove_dark_spots_using_cfg, subtract_background_using_cfg
 
@@ -197,12 +198,23 @@ class FilterUniqueCandidates(pipeline.Stage):
         }
 
 
+@ray.remote
+def _compute_threshold(cidx, candidate, g, g_superpixels, method, bandwidth, samples_count, extras):
+    region = candidate.get_region(g, g_superpixels)
+    threshold = labels.ThresholdedLabels.compute_threshold(region, method, bandwidth, samples_count, extras)
+    if isinstance(threshold, np.ndarray):
+        threshold = threshold.reshape(-1)
+        assert len(threshold) == 1
+        threshold = threshold[0]
+    return cidx, threshold
+
+
 class IntensityModels(pipeline.Stage):
 
     def __init__(self):
         super(IntensityModels, self).__init__('intensity_models',
                                               inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
-                                              outputs = ['intensity_thresholds', 'g'])
+                                              outputs = ['g'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         g_raw, g_superpixels, unique_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['unique_candidates']
@@ -218,33 +230,37 @@ class IntensityModels(pipeline.Stage):
         else:
             raise ValueError('unknown smooth method: "%s"' % smooth_method)
 
-        compute_threshold = lambda region: \
-            labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
-                                                               bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
-                                                               samples_count = config.get_value(cfg, 'samples_count',   100 ),
-                                                               extras        = config.get_value(cfg, 'extras'       ,    {} ))
-        intensity_thresholds = []
-        pooling = config.get_value(cfg, 'pooling', 'off')
-        for cidx, candidate in enumerate(unique_candidates):
-            if pooling != 'off':
-                thresholds = []
-                for l in candidate.superpixels:
-                    region_mask = (g_superpixels == l)
-                    region = surface.Surface(g.model.shape, g.model, mask=region_mask)
-                    thresholds.append(compute_threshold(region))
-                threshold = {'min': min, 'mean': np.mean, 'median': np.median}[pooling](thresholds)
-            else:
-                threshold = compute_threshold(candidate.get_region(g, g_superpixels))
-            if isinstance(threshold, np.ndarray):
-                threshold = threshold.reshape(-1)
-                assert len(threshold) == 1
-                threshold = threshold[0]
-            intensity_thresholds.append(threshold)
-            out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
-        out.write('Computed %d intensity models' % len(unique_candidates))
+        n = len(unique_candidates)
+        g_id = ray.put(g)
+        g_superpixels_id = ray.put(g_superpixels)
+        kwargs = dict(method        = config.get_value(cfg, 'method'       , 'otsu'),
+                      bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
+                      samples_count = config.get_value(cfg, 'samples_count',   100 ),
+                      extras        = config.get_value(cfg, 'extras'       ,    {} ))
+        futures = [_compute_threshold.remote(cidx, unique_candidates[cidx], g_id, g_superpixels_id, **kwargs) for cidx in range(n)]
+        for ret_idx, ret in enumerate(aux.get_ray_1by1(futures)):
+            cidx = ret[0]
+            unique_candidates[cidx].intensity_threshold = ret[1]
+            out.intermediate('Computed intensity model %d / %d' % (ret_idx + 1, n))
+        out.write(f'Computed {n} intensity models')
+
+#        compute_threshold = lambda region: \
+#            labels.ThresholdedLabels.compute_threshold(region, method        = config.get_value(cfg, 'method'       , 'otsu'),
+#                                                               bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
+#                                                               samples_count = config.get_value(cfg, 'samples_count',   100 ),
+#                                                               extras        = config.get_value(cfg, 'extras'       ,    {} ))
+#        intensity_thresholds = []
+#        for cidx, candidate in enumerate(unique_candidates):
+#            threshold = compute_threshold(candidate.get_region(g, g_superpixels))
+#            if isinstance(threshold, np.ndarray):
+#                threshold = threshold.reshape(-1)
+#                assert len(threshold) == 1
+#                threshold = threshold[0]
+#            intensity_thresholds.append(threshold)
+#            out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
+#        out.write('Computed %d intensity models' % len(unique_candidates))
 
         return {
-            'intensity_thresholds': intensity_thresholds,
             'g': g
         }
 
@@ -253,15 +269,14 @@ class ProcessCandidates(pipeline.Stage):
 
     def __init__(self, backend):
         super(ProcessCandidates, self).__init__('process_candidates',
-                                                inputs  = ['g', 'g_superpixels', 'unique_candidates', 'intensity_thresholds'],
+                                                inputs  = ['g', 'g_superpixels', 'unique_candidates'],
                                                 outputs = ['processed_candidates'])
         self.backend = backend
 
     def process(self, input_data, cfg, out, log_root_dir):
-        g, g_superpixels, unique_candidates, intensity_thresholds = input_data['g'], \
-                                                                    input_data['g_superpixels'], \
-                                                                    input_data['unique_candidates'], \
-                                                                    input_data['intensity_thresholds']
+        g, g_superpixels, unique_candidates = input_data['g'], \
+                                              input_data['g_superpixels'], \
+                                              input_data['unique_candidates']
 
         modelfit_kwargs = {
             'epsilon':                   config.get_value(cfg, 'epsilon'                  , 1.  ),
@@ -280,17 +295,17 @@ class ProcessCandidates(pipeline.Stage):
         }
 
         candidates = [c.copy() for c in unique_candidates]
-        self.modelfit(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir)
+        self.modelfit(g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir)
         out.write('Processed candidates: %d' % len(candidates))
 
         return {
             'processed_candidates': candidates
         }
 
-    def modelfit(self, g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
+    def modelfit(self, g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir):
         with aux.CvxoptFrame() as batch:
             batch['show_progress'] = (log_root_dir is not None)
-            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir)):
+            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir)):
                 candidates[ret['cidx']].set(ret['candidate'])
 
 
