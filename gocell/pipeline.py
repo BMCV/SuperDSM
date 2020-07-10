@@ -4,6 +4,7 @@ import gocell.surface  as surface
 import gocell.modelfit as modelfit
 import math
 import numpy as np
+import ray
 
 
 class Stage(object):
@@ -85,7 +86,10 @@ def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack
     from gocell.minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
     from gocell.postprocessing import Postprocessing
 
-    if isinstance(backend, int): backend = modelfit.fork_based_backend(num_forks=backend)
+    if isinstance(backend, int):
+        backend = modelfit.fork_based_backend(backend)
+    if (isinstance(backend, str) and backend == 'ray') or backend is ray:
+        backend = modelfit.ray_based_backend()
 
     pipeline = Pipeline()
 

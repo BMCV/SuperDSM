@@ -108,7 +108,7 @@ class Candidate:
         self.result      = state.result.copy() if state.result is not None else None
         self.superpixels = set(state.superpixels)
         self.energy      = state.energy
-        self.smooth_mat  = state.smooth_mat
+        self.smooth_mat  = state.smooth_mat.copy() if state.smooth_mat is not None else None
         self.bg_radius   = state.bg_radius
         self.smooth_matrix_factory = state.smooth_matrix_factory
         self.intensity_threshold   = state.intensity_threshold
@@ -235,6 +235,10 @@ class IntensityModels(pipeline.Stage):
                 threshold = {'min': min, 'mean': np.mean, 'median': np.median}[pooling](thresholds)
             else:
                 threshold = compute_threshold(candidate.get_region(g, g_superpixels))
+            if isinstance(threshold, np.ndarray):
+                threshold = threshold.reshape(-1)
+                assert len(threshold) == 1
+                threshold = threshold[0]
             intensity_thresholds.append(threshold)
             out.intermediate('Computed intensity model %d / %d' % (cidx + 1, len(unique_candidates)))
         out.write('Computed %d intensity models' % len(unique_candidates))

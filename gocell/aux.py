@@ -6,6 +6,7 @@ import scipy.sparse
 import warnings
 import pathlib
 import contextlib
+import ray
 
 from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
@@ -127,20 +128,20 @@ def uplift_smooth_matrix(smoothmat, mask):
     return smoothmat2
 
 
-BUGFIX_ENABLED  = 1
-BUGFIX_DISABLED = 0
-BUGFIX_DISABLED_CRITICAL = -1
-
-
-def is_bugfix_enabled(bugfix):
-    if bugfix < 0:
-        raise AssertionError(
-            "Critical bugfix is disabled, aborting. " + \
-            "Either enable the bugfix (set to BUGFIX_ENABLED) or mark it as non-critical (set to BUGFIX_DISABLED).")
-    elif bugfix == 0:
-        return False  ## disable the bugfix and proceed
-    else:
-        return True   ## enable the bugfix
+#BUGFIX_ENABLED  = 1
+#BUGFIX_DISABLED = 0
+#BUGFIX_DISABLED_CRITICAL = -1
+#
+#
+#def is_bugfix_enabled(bugfix):
+#    if bugfix < 0:
+#        raise AssertionError(
+#            "Critical bugfix is disabled, aborting. " + \
+#            "Either enable the bugfix (set to BUGFIX_ENABLED) or mark it as non-critical (set to BUGFIX_DISABLED).")
+#    elif bugfix == 0:
+#        return False  ## disable the bugfix and proceed
+#    else:
+#        return True   ## enable the bugfix
 
 
 def collapse_smooth_matrices(data):
@@ -149,22 +150,24 @@ def collapse_smooth_matrices(data):
             c.collapse_smooth_matrix()
 
 
+@ray.remote
 def _restore_smooth_matrix(cidx, c, g, g_superpixels):
     with contextlib.redirect_stdout(None):
         c.restore_smooth_matrix(g, g_superpixels)
     return cidx, c
 
 
-def restore_smooth_matrices(processes, data, out=None):
+def restore_smooth_matrices(data, out=None):
     if 'processed_candidates' in data:
         candidates = data['processed_candidates']
+        n = len(candidates)
         out = Output.get(out)
-        for ret_idx, ret in enumerate(mapper.fork.imap_unordered(processes, _restore_smooth_matrix,
-                                                                 mapper.unroll(range(len(candidates))),
-                                                                 mapper.unroll(candidates),
-                                                                 data['g'], data['g_superpixels'])):
-            out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {len(candidates)}... {100 * ret_idx / len(candidates):.1f} %')
-            candidates[ret[0]].smooth_mat = ret[1].smooth_mat
+        g_id = ray.put(data['g'])
+        g_superpixels_id = ray.put(data['g_superpixels'])
+        futures = [_restore_smooth_matrix.remote(cidx, candidates[cidx], g_id, g_superpixels_id) for cidx in range(n)]
+        for ret_idx, ret in enumerate(get_ray_1by1(futures)):
+            out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {n}... {100 * ret_idx / n:.1f} %')
+            candidates[ret[0]].smooth_mat = ret[1].smooth_mat.copy()
 
 
 def mkdir(dir_path):
@@ -173,4 +176,10 @@ def mkdir(dir_path):
 
 def join_path(path1, path2):
     return str(pathlib.Path(path1) / pathlib.Path(path2))
+
+
+def get_ray_1by1(obj_ids):
+    while obj_ids:
+        done, obj_ids = ray.wait(obj_ids)
+        yield ray.get(done[0])
 

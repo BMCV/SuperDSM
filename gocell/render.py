@@ -7,11 +7,6 @@ from skimage import morphology
 from scipy   import ndimage
 
 
-BUGFIX_20180418A = aux.BUGFIX_DISABLED_CRITICAL
-BUGFIX_20180605A = aux.BUGFIX_DISABLED
-BUGFIX_20180614A = aux.BUGFIX_DISABLED
-
-
 def rasterize_regions(regions, background_label=None, radius=3):
     borders = np.zeros(regions.shape, bool)
     background = np.zeros(regions.shape, bool)
@@ -77,7 +72,7 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
 
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
 
-    if not aux.is_bugfix_enabled(BUGFIX_20180614A) or normalize_img:
+    if normalize_img:
         g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
     else:
         g = surface.Surface(data['g_raw'].shape)
@@ -152,14 +147,10 @@ def rasterize_objects(data, candidates_key, dilate=0):
     smooth_mats = [candidate.smooth_mat for candidate in data[candidates_key]]
     x_map = data['g'].get_map(normalized=False)
 
-    # BUGFIX_20180418A is only relevant if dilate != 0
     if dilate == 0:
         dlation, erosion = None, None
     else:
-        if aux.is_bugfix_enabled(BUGFIX_20180418A):
-            dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
-        else:
-            dilation, erosion = (morphology.dilation, morphology.erosion)
+        dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
     for model, smooth_mat in zip(models, smooth_mats):
         fg = (model.s(x_map, smooth_mat) > 0)
@@ -213,10 +204,9 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
 
     # In rare cases it can happen that two or more objects overlap exactly, in which csae the above code
     # will eliminate both objects. We will fix this by checking for such occasions explicitly:
-    if aux.is_bugfix_enabled(BUGFIX_20180605A):
-        for obj in objects:
-            obj_mask = ((result > 0) * 1 - (obj > 0) * 1 < 0)
-            if obj_mask.any(): result[obj_mask] = result.max() + 1
+    for obj in objects:
+        obj_mask = ((result > 0) * 1 - (obj > 0) * 1 < 0)
+        if obj_mask.any(): result[obj_mask] = result.max() + 1
 
     result[result == 0] = background_label
     return result

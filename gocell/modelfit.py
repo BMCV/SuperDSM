@@ -6,6 +6,7 @@ import gocell.modelfit_base as modelfit_base
 import cvxopt, cvxopt.solvers
 import numpy as np
 import contextlib, traceback, io
+import ray
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
@@ -89,6 +90,31 @@ def fork_based_backend(num_forks):
                 remaining_indices.remove(ret['cidx'])
                 out.intermediate('Processed candidate %d / %d (using %d forks, cache size %d)' % \
                     (ret_idx + 1, len(unique_candidates), num_forks, modelfit_kwargs['cachesize']))
+                yield ret
+        except:
+            pass
+            out.write('Remaining candidates: ' + ((','.join(str(i) for i in remaining_indices) if len(remaining_indices) > 0 else 'None')))
+            raise
+    return _imap
+
+
+@ray.remote
+def _ray_process_candidate(*args):
+    return process_candidate_logged(*args)
+
+
+def ray_based_backend():
+    def _imap(g, unique_candidates, g_superpixels, intensity_thresholds, modelfit_kwargs, out, log_root_dir):
+        n = len(unique_candidates)
+        remaining_indices = list(range(n))
+        g_id = ray.put(g)
+        g_superpixels_id = ray.put(g_superpixels)
+        try:
+            futures = [_ray_process_candidate.remote(log_root_dir, cidx, g_id, g_superpixels_id, unique_candidates[cidx], intensity_thresholds[cidx], modelfit_kwargs) for cidx in range(n)]
+            for ret_idx, ret in enumerate(aux.get_ray_1by1(futures)):
+                remaining_indices.remove(ret['cidx'])
+                out.intermediate('Processed candidate %d / %d (cache size %d)' % \
+                    (ret_idx + 1, len(unique_candidates), modelfit_kwargs['cachesize']))
                 yield ret
         except:
             pass

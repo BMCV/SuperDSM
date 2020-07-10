@@ -17,10 +17,6 @@ def mkl_dot(A, B):
     return mkl.dot(A, B)
 
 
-BUGFIX_20200515A = aux.BUGFIX_DISABLED
-BUGFIX_20200626A = aux.BUGFIX_DISABLED
-
-
 class PolynomialModelType:
     
     def get_model(self, params):
@@ -151,16 +147,16 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     assert filter_mask.shape[0] % 2 == 1
     if row_mask is None: row_mask = np.ones(img_shape, bool)
     if col_mask is None: col_mask = np.ones(img_shape, bool)
-    sys.stdout.write('.')
+    print('.', end='')
     p = np.subtract(img_shape, filter_mask.shape[0] // 2 + 1)
-    sys.stdout.write('.')
+    print('.', end='')
     z = np.pad(filter_mask, np.vstack([p, p]).T)
-    sys.stdout.write('.')
+    print('.', end='')
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
-    sys.stdout.write('.')
+    print('.', end='')
     z = z[:, :, col_mask]
     z = z[row_mask]
-    sys.stdout.write('.\n')
+    print('.')
     return z
 
 
@@ -266,7 +262,6 @@ class Energy:
         if self.theta is None:
             valid_h_mask = ~np.isnan(self.h)
             self.theta = np.ones_like(self.t)
-            if not aux.is_bugfix_enabled(BUGFIX_20200515A): self.theta *= -1
             self.theta[valid_h_mask] = self.h[valid_h_mask] / (1 + self.h[valid_h_mask])
     
     def __call__(self, params):
@@ -278,9 +273,8 @@ class Energy:
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
         if self.smooth_mat.shape[1] > 0:
-            objective2 = self.rho * self.term2.sum() / self.smooth_mat.shape[1]
-            if aux.is_bugfix_enabled(BUGFIX_20200626A):
-                objective2 -= self.rho * sqrt(self.epsilon) / self.smooth_mat.shape[1]
+            objective2  = self.rho * self.term2.sum() / self.smooth_mat.shape[1]
+            objective2 -= self.rho * sqrt(self.epsilon) / self.smooth_mat.shape[1]
         else:
             objective2 = 0
         return objective1 + objective2
