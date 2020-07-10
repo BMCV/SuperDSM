@@ -151,11 +151,17 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     assert filter_mask.shape[0] % 2 == 1
     if row_mask is None: row_mask = np.ones(img_shape, bool)
     if col_mask is None: col_mask = np.ones(img_shape, bool)
+    sys.stdout.write('.')
     p = np.subtract(img_shape, filter_mask.shape[0] // 2 + 1)
+    sys.stdout.write('.')
     z = np.pad(filter_mask, np.vstack([p, p]).T)
-    view = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
-    mat  = view[:, :, col_mask][row_mask]
-    return mat
+    sys.stdout.write('.')
+    z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
+    sys.stdout.write('.')
+    z = z[:, :, col_mask]
+    z = z[row_mask]
+    sys.stdout.write('.\n')
+    return z
 
 
 def _create_subsample_grid(mask, subsample):
