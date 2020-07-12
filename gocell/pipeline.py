@@ -86,8 +86,8 @@ def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack
     from gocell.minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
     from gocell.postprocessing import Postprocessing
 
-    if isinstance(backend, int):
-        backend = modelfit.fork_based_backend(backend)
+    if (isinstance(backend, str) and backend == 'serial'):
+        backend = modelfit.serial_backend()
     if (isinstance(backend, str) and backend == 'ray') or backend is ray:
         backend = modelfit.ray_based_backend()
 

@@ -144,32 +144,6 @@ def uplift_smooth_matrix(smoothmat, mask):
 #        return True   ## enable the bugfix
 
 
-def collapse_smooth_matrices(data):
-    if 'processed_candidates' in data:
-        for c in data['processed_candidates']:
-            c.collapse_smooth_matrix()
-
-
-@ray.remote
-def _restore_smooth_matrix(cidx, c, g, g_superpixels):
-    with contextlib.redirect_stdout(None):
-        c.restore_smooth_matrix(g, g_superpixels)
-    return cidx, c
-
-
-def restore_smooth_matrices(data, out=None):
-    if 'processed_candidates' in data:
-        candidates = data['processed_candidates']
-        n = len(candidates)
-        out = Output.get(out)
-        g_id = ray.put(data['g'])
-        g_superpixels_id = ray.put(data['g_superpixels'])
-        futures = [_restore_smooth_matrix.remote(cidx, candidates[cidx], g_id, g_superpixels_id) for cidx in range(n)]
-        for ret_idx, ret in enumerate(get_ray_1by1(futures)):
-            out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {n}... {100 * ret_idx / n:.1f} %')
-            candidates[ret[0]].smooth_mat = ret[1].smooth_mat
-
-
 def mkdir(dir_path):
     pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
 
@@ -182,4 +156,12 @@ def get_ray_1by1(obj_ids):
     while obj_ids:
         done, obj_ids = ray.wait(obj_ids)
         yield ray.get(done[0])
+
+
+def render_candidate_foregrounds(shape, candidates):
+    foreground = np.zeros(shape, bool)
+    for candidate in candidates:
+        sel = candidate.fill_foreground(foreground)
+        yield foreground
+        foreground[sel].fill(False)
 

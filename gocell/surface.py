@@ -71,6 +71,7 @@ class Surface:
     def __len__(self):
         return self.model.size
     
-    def get_map(self, normalized=True):
-        return get_pixel_map(self.model.shape, normalized)
+    def get_map(self, normalized=True, pad=0):
+        assert pad >= 0 and isinstance(pad, int)
+        return get_pixel_map(np.add(self.model.shape, 2 * pad), normalized)
 

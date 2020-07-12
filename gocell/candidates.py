@@ -81,13 +81,12 @@ def count_binary_holes(mask):
 
 class Candidate:
     def __init__(self):
-        self.result      = None
-        self.superpixels = set()
-        self.energy      = np.nan
-        self.bg_radius   = np.nan
-        self.smooth_mat  = None
-        self.smooth_matrix_factory = None
-        self.intensity_threshold   = np.nan
+        self.fg_offset    = None
+        self.fg_fragment  = None
+        self.superpixels  = set()
+        self.energy       = np.nan
+        self.on_boundary  = np.nan
+        self.intensity_threshold = np.nan
     
     def get_mask(self, g_superpixels):
         return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
@@ -96,35 +95,30 @@ class Candidate:
         region_mask = self.get_mask(g_superpixels)
         return surface.Surface(g.model.shape, g.model, mask=region_mask)
 
-    def get_modelfit_region(self, g, g_superpixels):
+    def get_modelfit_region(self, g, g_superpixels, bg_radius):
         assert not np.isnan(self.intensity_threshold)
-        assert not np.isnan(self.bg_radius)
         region  = self.get_region(g, g_superpixels)
         y_map   = labels.ThresholdedLabels(region, self.intensity_threshold).get_map()
-        bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < self.bg_radius)
+        bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
         region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
         return region, y_map
 
-    def set(self, state, smooth_mat_deep=False):
-        self.result      = state.result.copy() if state.result is not None else None
-        self.superpixels = set(state.superpixels)
-        self.energy      = state.energy
-        self.smooth_mat  = state.smooth_mat if state.smooth_mat is None or not smooth_mat_deep else state.smooth_mat.copy()
-        self.bg_radius   = state.bg_radius
-        self.smooth_matrix_factory = state.smooth_matrix_factory
-        self.intensity_threshold   = state.intensity_threshold
+    def set(self, state):
+        self.fg_fragment  = state.fg_fragment.copy() if state.fg_fragment is not None else None
+        self.fg_offset    = state.fg_offset.copy() if state.fg_offset is not None else None
+        self.superpixels  = set(state.superpixels)
+        self.energy       = state.energy
+        self.on_boundary  = state.on_boundary
+        self.intensity_threshold = state.intensity_threshold
         return self
 
     def copy(self):
         return Candidate().set(self)
-
-    def restore_smooth_matrix(self, g, g_superpixels):
-        if self.smooth_mat is None:
-            mask = self.get_modelfit_region(g, g_superpixels)[0].mask
-            self.smooth_mat = self.smooth_matrix_factory.get(mask, uplift=True)
-
-    def collapse_smooth_matrix(self):
-        self.smooth_mat = None
+    
+    def fill_foreground(self, out, value=True):
+        sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
+        out[sel] = value * self.fg_fragment
+        return sel
 
 
 class ComputeCandidates(pipeline.Stage):
@@ -305,9 +299,8 @@ class AnalyzeCandidates(pipeline.Stage):
         superpixels_covered_by = {}
 
         x_map = g.get_map(normalized=False)
-        for cidx, candidate in enumerate(candidates):
-            model_fg = (candidate.result.s(x_map, candidate.smooth_mat) > 0)
-            superpixels_covered_by[candidate] = candidate.superpixels & set(g_superpixels[model_fg])
+        for cidx, foreground in enumerate(aux.render_candidate_foregrounds(g.model.shape, candidates)):
+            superpixels_covered_by[candidates[cidx]] = candidates[cidx].superpixels & set(g_superpixels[foreground])
             out.intermediate('Analyzed candidate %d / %d' % (cidx + 1, len(candidates)))
         out.write('Analyzed %d candidates' % len(candidates))
 

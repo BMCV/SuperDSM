@@ -94,10 +94,11 @@ class PolynomialModel:
         L = U.dot(np.diag(l))
         return b, L.T
     
-    def map_to_image_pixels(self, g, roi):
-        g_max_coord, roi_max_coord = np.array(g.model.shape) - 1., np.array(roi.model.shape) - 1.
+    def map_to_image_pixels(self, g, roi, pad=0):
+        assert pad >= 0 and isinstance(pad, int)
+        g_max_coord, roi_max_coord = 2 * pad + np.array(g.model.shape) - 1., np.array(roi.model.shape) - 1.
         G = np.diag(1. / roi_max_coord)
-        v = -G.dot(roi.offset)
+        v = -G.dot(np.add(roi.offset, pad))
         A = G.dot(self.A).dot(G)
         b = G.dot(self.A.dot(v) + self.b)
         c = np.inner(v, self.A.dot(v)) + 2 * np.inner(self.b, v) + self.c

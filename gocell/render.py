@@ -80,24 +80,20 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
 
     candidates = data[candidates_key]
     if is_legal == True: is_legal = lambda m: True
-    x_maps = override_xmaps if override_xmaps is not None else g.get_map(normalized=False)
-    if isinstance(x_maps, np.ndarray): x_maps = [x_maps] * len(candidates)
-    assert len(x_maps) == len(candidates), 'number of `x_maps` and `candidates` mismatch'
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
     for i in range(3): img[:, :, i] = g.model * g.mask
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()
-    for candidate, x_map in zip(candidates, x_maps):
+    for candidate, foreground in zip(candidates, aux.render_candidate_foregrounds(g.model.shape, candidates)):
         if candidate in merged_candidates: continue
         merged_candidates |= {candidate}
-        model = candidate.result
-        model_shape = (model.s(x_map, candidate.smooth_mat) >= 0)
+        model_shape = foreground
         if labels is not None:
             label = np.bincount(labels[model_shape]).argmax()
-            for candidate1, x_map1 in zip(candidates, x_maps):
+            for candidate1, foreground1 in zip(candidates, aux.render_candidate_foregrounds(g.model.shape, candidates)):
                 if candidate1 in merged_candidates: continue
-                model1_shape = (candidate1.result.s(x_map1) >= 0)
+                model1_shape = foreground1
                 label1 = np.bincount(labels[model1_shape]).argmax()
                 if label != label1: continue
                 merged_candidates |= {candidate1}
@@ -143,21 +139,17 @@ def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_ke
 
 
 def rasterize_objects(data, candidates_key, dilate=0):
-    models = [candidate.result for candidate in data[candidates_key]]
-    smooth_mats = [candidate.smooth_mat for candidate in data[candidates_key]]
-    x_map = data['g'].get_map(normalized=False)
+    candidates = [c for c in data[candidates_key]]
 
     if dilate == 0:
         dlation, erosion = None, None
     else:
         dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
-    for model, smooth_mat in zip(models, smooth_mats):
-        fg = (model.s(x_map, smooth_mat) > 0)
-        if dilate > 0:   fg = dilation(fg, morphology.disk( dilate))
-        elif dilate < 0: fg =  erosion(fg, morphology.disk(-dilate))
-
-        if fg.any(): yield fg
+    for foreground in aux.render_candidate_foregrounds(data['g'].model.shape, candidates):
+        if dilate > 0:   foreground = dilation(foreground, morphology.disk( dilate))
+        elif dilate < 0: foreground =  erosion(foreground, morphology.disk(-dilate))
+        if foreground.any(): yield foreground.copy()
 
 
 def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
