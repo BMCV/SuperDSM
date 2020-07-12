@@ -7,6 +7,7 @@ import cvxopt, cvxopt.solvers
 import numpy as np
 import contextlib, traceback, io
 import ray
+import sys
 
 from skimage.filters import threshold_otsu
 from scipy           import ndimage
