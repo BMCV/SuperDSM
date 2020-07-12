@@ -75,7 +75,7 @@ def process_candidate(cidx, g, g_superpixels, x_map, candidate, modelfit_kwargs)
         candidate.fg_offset   = np.array([rmin, cmin])
         candidate.fg_fragment = foreground[rmin : rmax + 1, cmin : cmax + 1]
     else:
-        candidate.fg_offset   = np.zeros(2)
+        candidate.fg_offset   = np.zeros(2, int)
         candidate.fg_fragment = np.zeros((1, 1), bool)
     candidate.energy      = factor * J(result)
     candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
