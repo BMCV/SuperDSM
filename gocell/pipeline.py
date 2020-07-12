@@ -103,8 +103,8 @@ def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack
     pipeline.append(FilterUniqueCandidates())
     pipeline.append(IntensityModels())
     pipeline.append(ProcessCandidates(backend))
-    pipeline.append(AnalyzeCandidates())
     if selection_type == 'maxsetpack':
+        pipeline.append(AnalyzeCandidates())
         pipeline.append(MaxSetPackWeights())
         pipeline.append(MaxSetPackGreedy())
         pipeline.append(MaxSetPackCheck())

@@ -41,7 +41,7 @@ class Postprocessing(pipeline.Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         g_raw, g_superpixels, accepted_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['accepted_candidates']
-        self.rejection_causes = {}
+        rejection_causes = {}
 
         energy_threshold = threshold_accepted_energies(accepted_candidates, config.get_value(cfg, 'energy_threshold', {}))
         pp1_candidates = []
@@ -49,7 +49,7 @@ class Postprocessing(pipeline.Stage):
             if c.energy < energy_threshold:
                 pp1_candidates.append(c)
             else:
-                self.rejection_causes[c] = 'maximum energy was %f but actual %f' % (energy_threshold, c.energy)
+                rejection_causes[c] = 'maximum energy was %f but actual %f' % (energy_threshold, c.energy)
 
         min_obj_region_overlap = config.get_value(cfg, 'min_obj_region_overlap', 0.5)
         x_map = surface.get_pixel_map(g_superpixels.shape, normalized=False)
@@ -59,12 +59,11 @@ class Postprocessing(pipeline.Stage):
             if region_overlap >= min_obj_region_overlap:
                 pp2_candidates.append(c)
             else:
-                self.rejection_causes[c] = 'min region overlap was %f but actual %f' % (min_obj_region_overlap, region_overlap)
+                rejection_causes[c] = 'min region overlap was %f but actual %f' % (min_obj_region_overlap, region_overlap)
 
         r_map  = ndimage.filters.gaussian_gradient_magnitude(g_raw, config.get_value(cfg, 'r_sigma', 10.))
         r_map -= r_map.min()
         r_map /= r_map.max()
-        self.r_map = r_map
 
         r_map_responses = {}
         r_map_response_func = {'mean': np.mean, 'median': np.median}[config.get_value(cfg, 'boundary_func', 'mean')]
@@ -83,7 +82,7 @@ class Postprocessing(pipeline.Stage):
             if r_map_response >= r_threshold:
                 pp3_candidates.append(c)
             else:
-                self.rejection_causes[c] = 'minimum r_map response was %f but actual %f' % (r_threshold, r_map_response)
+                rejection_causes[c] = 'minimum r_map response was %f but actual %f' % (r_threshold, r_map_response)
 
         min_obj_radius = config.get_value(cfg, 'min_obj_radius', 0)
         max_obj_radius = config.get_value(cfg, 'max_obj_radius', np.inf)
@@ -98,16 +97,18 @@ class Postprocessing(pipeline.Stage):
             is_boundary_object = (c.result.s(x_map_ext, smooth_mat_ext) > 0).any()
             obj_radius = math.sqrt((c.result.s(x_map, c.smooth_mat) > 0).sum() / math.pi)
             if obj_radius > max_obj_radius:
-                self.rejection_causes[c] = 'radius (%s) too large (maximum is %s)' % (str(obj_radius), str(max_obj_radius))
+                rejection_causes[c] = 'radius (%s) too large (maximum is %s)' % (str(obj_radius), str(max_obj_radius))
             else:
                 if not is_boundary_object and obj_radius < min_obj_radius:
-                    self.rejection_causes[c] = 'radius (%s) too small (minimum is %s)' % (str(obj_radius), str(min_obj_radius))
+                    rejection_causes[c] = 'radius (%s) too small (minimum is %s)' % (str(obj_radius), str(min_obj_radius))
                 else:
                     if config.get_value(cfg, 'discard_image_boundary', False) and is_boundary_object:
-                        self.rejection_causes[c] = 'intersects image exterior'
+                        rejection_causes[c] = 'intersects image exterior'
                     else:
                         pp4_candidates.append(c)
 
+        candidate_indices = dict(zip(accepted_candidates, range(len(accepted_candidates))))
+        self.rejection_causes = dict((candidate_indices[c], cause) for c, cause in rejection_causes.items())
         return {
             'postprocessed_candidates': pp4_candidates
         }

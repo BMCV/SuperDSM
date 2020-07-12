@@ -167,7 +167,7 @@ def restore_smooth_matrices(data, out=None):
         futures = [_restore_smooth_matrix.remote(cidx, candidates[cidx], g_id, g_superpixels_id) for cidx in range(n)]
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             out.intermediate(f'Restoring smooth matrix {ret_idx + 1} / {n}... {100 * ret_idx / n:.1f} %')
-            candidates[ret[0]].smooth_mat = ret[1].smooth_mat.copy()
+            candidates[ret[0]].smooth_mat = ret[1].smooth_mat
 
 
 def mkdir(dir_path):
