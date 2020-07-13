@@ -143,7 +143,7 @@ def _create_gaussian_kernel(sigma, shape=None, shape_multiplier=1):
     return ndimage.gaussian_filter(inp, sigma)
 
 
-def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
+def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, max_allocations=np.inf):
     assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
     assert filter_mask.shape[0] % 2 == 1
     if row_mask is None: row_mask = np.ones(img_shape, bool)
@@ -155,9 +155,9 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None):
     print('.', end='')
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
     print('.', end='')
-    z = z[:, :, col_mask]
-    z = z[row_mask]
-    print('.')
+    with aux.SystemSemaphore('smooth-matrix-allocation', limit=max_allocations):
+        z = z[:, :, col_mask]
+        z = z[row_mask]
     return z
 
 
@@ -180,31 +180,32 @@ def _create_subsample_grid(mask, subsample):
     return subsample_grid
 
 
-def _create_masked_smooth_matrix(kernel, mask, subsample=1):
+def _create_masked_smooth_matrix(kernel, mask, subsample=1, max_allocations=np.inf):
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
     subsample_grid = _create_subsample_grid(mask, subsample)
     col_mask = np.logical_and(mask, subsample_grid)
     print(f'{mask.sum()} rows, {col_mask.sum()} columns')
-    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=col_mask)
+    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=col_mask, max_allocations=max_allocations)
     M_sums = M.sum(axis=1)
     M /= M_sums[:, None]
     assert (M.sum(axis=0) > 0).all() and (M.sum(axis=1) > 0).all()
     return M
 
 
-class SmoothMatrixFactory: ## TODO: move to `modelfit.py`
+class SmoothMatrixFactory:
 
-    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample):
+    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, max_allocations=np.inf):
         self.smooth_amount    = smooth_amount
         self.shape_multiplier = shape_multiplier
         self.smooth_subsample = smooth_subsample
+        self.max_allocations  = max_allocations
 
     def get(self, mask, uplift=False):
         print('-- smooth matrix computation starting --')
         if self.smooth_amount < np.inf:
             psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier)
-            mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample)
+            mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample, self.max_allocations)
         else:
             print('using null-matrix')
             mat = np.empty((mask.sum(), 0))

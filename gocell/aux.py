@@ -7,6 +7,8 @@ import warnings
 import pathlib
 import contextlib
 import ray
+import fcntl, hashlib
+import posix_ipc
 
 from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
@@ -164,4 +166,35 @@ def render_candidate_foregrounds(shape, candidates):
         sel = candidate.fill_foreground(foreground)
         yield foreground
         foreground[sel].fill(False)
+
+
+class SystemSemaphore:
+    def __init__(self, name, limit):
+        self.name  = name
+        self.limit = limit
+
+    def __enter__(self):
+        if np.isinf(self.limit):
+            self.lock = None
+        else:
+            self.lock = posix_ipc.Semaphore(f'/{self.name}', posix_ipc.O_CREAT, mode=384, initial_value=self.limit)
+            self.lock.acquire()
+
+    def __exit__(self, _type, value, tb):
+        if self.lock is not None:
+            self.lock.release()
+
+
+class SystemMutex:
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        lock_id = hashlib.md5(self.name.encode('utf8')).hexdigest()
+        self.fp = open(f'/tmp/.lock-{lock_id}.lck', 'wb')
+        fcntl.flock(self.fp.fileno(), fcntl.LOCK_EX)
+
+    def __exit__(self, _type, value, tb):
+        fcntl.flock(self.fp.fileno(), fcntl.LOCK_UN)
+        self.fp.close()
 
