@@ -21,8 +21,7 @@ def imwrite(filepath, img, shape=None, antialias=False):
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
         img = (img * 255).round().astype('uint8')
-    kwargs = {'format_str': 'PNG'} if filepath.lower().endswith('.png') else {}
-    skimage.io.imsave(filepath, img, **kwargs)
+    skimage.io.imsave(filepath, img)
 
 
 def imread(filepath, **kwargs):
