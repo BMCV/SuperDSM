@@ -257,20 +257,21 @@ class ProcessCandidates(pipeline.Stage):
                                               input_data['unique_candidates']
 
         modelfit_kwargs = {
-            'epsilon':                    config.get_value(cfg, 'epsilon'                   , 1.    ),
-            'rho':                        config.get_value(cfg, 'rho'                       , 1e-2  ),
-            'w_sigma_factor':             config.get_value(cfg, 'w_sigma_factor'            , 2.    ),
-            'averaging':                  config.get_value(cfg, 'averaging'                 , True  ),            
-            'bg_radius':                  config.get_value(cfg, 'bg_radius'                 , 100   ),
-            'smooth_amount':              config.get_value(cfg, 'smooth_amount'             , 10    ),
-            'smooth_subsample':           config.get_value(cfg, 'smooth_subsample'          , 20    ),
-            'gaussian_shape_multiplier':  config.get_value(cfg, 'gaussian_shape_multiplier' , 2     ),
-            'sparsity_tol':               config.get_value(cfg, 'sparsity_tol'              , 0     ),
-            'hessian_sparsity_tol':       config.get_value(cfg, 'hessian_sparsity_tol'      , 0     ),
-            'init':                       config.get_value(cfg, 'init'                      , None  ),
-            'cachesize':                  config.get_value(cfg, 'cachesize'                 , 0     ),
-            'cachetest':                  config.get_value(cfg, 'cachetest'                 , None  ),
-            'smooth_mat_max_allocations': config.get_value(cfg, 'smooth_mat_max_allocations', np.inf)
+            'epsilon':                    config.get_value(cfg, 'epsilon'                   ,  1.      ),
+            'rho':                        config.get_value(cfg, 'rho'                       ,  1e-2    ),
+            'w_sigma_factor':             config.get_value(cfg, 'w_sigma_factor'            ,  2.      ),
+            'averaging':                  config.get_value(cfg, 'averaging'                 ,  True    ),            
+            'bg_radius':                  config.get_value(cfg, 'bg_radius'                 ,  100     ),
+            'smooth_amount':              config.get_value(cfg, 'smooth_amount'             ,  10      ),
+            'smooth_subsample':           config.get_value(cfg, 'smooth_subsample'          ,  20      ),
+            'smooth_mat_max_allocations': config.get_value(cfg, 'smooth_mat_max_allocations',  np.inf  ),
+            'smooth_mat_dtype':           config.get_value(cfg, 'smooth_mat_dtype'          , 'float32'),
+            'gaussian_shape_multiplier':  config.get_value(cfg, 'gaussian_shape_multiplier' ,  2       ),
+            'sparsity_tol':               config.get_value(cfg, 'sparsity_tol'              ,  0       ),
+            'hessian_sparsity_tol':       config.get_value(cfg, 'hessian_sparsity_tol'      ,  0       ),
+            'init':                       config.get_value(cfg, 'init'                      ,  None    ),
+            'cachesize':                  config.get_value(cfg, 'cachesize'                 ,  0       ),
+            'cachetest':                  config.get_value(cfg, 'cachetest'                 ,  None    ),
         }
 
         candidates = [c.copy() for c in unique_candidates]

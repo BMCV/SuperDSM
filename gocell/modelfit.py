@@ -14,13 +14,13 @@ from skimage.filters import threshold_otsu
 from scipy           import ndimage
 
 
-def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     print('-- initializing --')
     w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
     w_map[~region.mask] = 0
     w_map_sum = w_map.sum()
     w_map /= float(w_map_sum)
-    smooth_matrix_factory = modelfit_base.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations)
+    smooth_matrix_factory = modelfit_base.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
     J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest}
     if callable(init):

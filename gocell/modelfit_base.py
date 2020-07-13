@@ -150,6 +150,7 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, max_allocatio
     if col_mask is None: col_mask = np.ones(img_shape, bool)
     print('.', end='')
     p = np.subtract(img_shape, filter_mask.shape[0] // 2 + 1)
+    assert (p >= 0).all(), f'filter_mask {filter_mask.shape} too large for img_shape {img_shape}'
     print('.', end='')
     z = np.pad(filter_mask, np.vstack([p, p]).T)
     print('.', end='')
@@ -183,6 +184,7 @@ def _create_subsample_grid(mask, subsample):
 def _create_masked_smooth_matrix(kernel, mask, subsample=1, max_allocations=np.inf):
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
+    if (mask.shape <= np.asarray(kernel.shape) // 2).any(): return None
     subsample_grid = _create_subsample_grid(mask, subsample)
     col_mask = np.logical_and(mask, subsample_grid)
     print(f'{mask.sum()} rows, {col_mask.sum()} columns')
@@ -195,21 +197,24 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1, max_allocations=np.i
 
 class SmoothMatrixFactory:
 
-    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, max_allocations=np.inf):
+    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, max_allocations=np.inf, dtype='float32'):
         self.smooth_amount    = smooth_amount
         self.shape_multiplier = shape_multiplier
         self.smooth_subsample = smooth_subsample
         self.max_allocations  = max_allocations
+        self.dtype            = dtype
 
     def get(self, mask, uplift=False):
         print('-- smooth matrix computation starting --')
+        mat = None
         if self.smooth_amount < np.inf:
-            psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier)
+            psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier).astype(self.dtype)
             mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample, self.max_allocations)
-        else:
+            # NOTE: `mat` will be `None` if `psf` is too large for `mask`
+        if mat is None:
             print('using null-matrix')
             mat = np.empty((mask.sum(), 0))
-        mat = csr_matrix(mat)
+        mat = csr_matrix(mat).astype(np.float64, copy=False)
         if uplift: mat = aux.uplift_smooth_matrix(mat, mask)
         print('-- smooth matrix finished --')
         return mat
