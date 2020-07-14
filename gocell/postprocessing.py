@@ -18,7 +18,7 @@ def threshold_accepted_energies(accepted_candidates, cfg):
     return max([t_otsu, t_gauss])
 
 
-def compute_object_region_overlap(foreground_buf, candidate, x_map, g_superpixels):
+def compute_object_region_overlap(foreground_buf, candidate, g_superpixels):
     sel = candidate.fill_foreground(foreground_buf)
     roi_mask    = candidate.get_mask(g_superpixels)
     roi_overlap = np.logical_and(foreground_buf, roi_mask).sum() / float(foreground_buf.sum())
@@ -26,7 +26,7 @@ def compute_object_region_overlap(foreground_buf, candidate, x_map, g_superpixel
     return roi_overlap
 
 
-def compute_object_boundary(foreground_buf, candidate, x_map):
+def compute_object_boundary(foreground_buf, candidate):
     sel = candidate.fill_foreground(foreground_buf)
     obj_interior = morphology.binary_erosion(foreground_buf, morphology.disk(1))
     obj_boundary = np.logical_xor(foreground_buf, obj_interior)
@@ -55,10 +55,9 @@ class Postprocessing(pipeline.Stage):
 
         foreground_buf = np.zeros(g_raw.shape, bool)
         min_obj_region_overlap = config.get_value(cfg, 'min_obj_region_overlap', 0.5)
-        x_map = surface.get_pixel_map(g_superpixels.shape, normalized=False)
         pp2_candidates = []
         for c in pp1_candidates:
-            region_overlap = compute_object_region_overlap(foreground_buf, c, x_map, g_superpixels)
+            region_overlap = compute_object_region_overlap(foreground_buf, c, g_superpixels)
             if region_overlap >= min_obj_region_overlap:
                 pp2_candidates.append(c)
             else:
@@ -71,7 +70,7 @@ class Postprocessing(pipeline.Stage):
         r_map_responses = {}
         r_map_response_func = {'mean': np.mean, 'median': np.median}[config.get_value(cfg, 'boundary_func', 'mean')]
         for c in pp2_candidates:
-            cc = compute_object_boundary(foreground_buf, c, x_map)
+            cc = compute_object_boundary(foreground_buf, c)
             r_map_responses[c] = r_map_response_func(r_map[cc])
 
         r_threshold = aux.threshold_gauss(r_map_responses.values(), mode='lower',
@@ -91,10 +90,6 @@ class Postprocessing(pipeline.Stage):
         max_obj_radius = config.get_value(cfg, 'max_obj_radius', np.inf)
         pp4_candidates = []
         pp4_shape = np.add(g_superpixels.shape, 2)
-        x_map_ext = surface.get_pixel_map(pp4_shape, normalized=False) - 1
-        x_map_bnd_mask = np.ones(pp4_shape, bool)
-        x_map_bnd_mask[1 : pp4_shape[0] - 1, 1 : pp4_shape[1] - 1] = False
-        x_map_ext = x_map_ext[:, x_map_bnd_mask]
         for c in pp3_candidates:
             is_boundary_object = c.on_boundary
             obj_radius = math.sqrt(c.fg_fragment.sum() / math.pi)
