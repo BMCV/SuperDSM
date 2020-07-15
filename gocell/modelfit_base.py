@@ -1,6 +1,6 @@
 import gocell.surface as surface
 import gocell.aux     as aux
-import gocell.mkl     as mkl
+import gocell._mkl    as mkl
 import numpy as np
 import cvxopt
 import sys

@@ -51,6 +51,7 @@ class Pipeline:
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
         if log_root_dir is not None: aux.mkdir(log_root_dir)
+        if first_stage == self.stages[0].name and data is None: first_stage = None
         out  = aux.Output.get(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
