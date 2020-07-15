@@ -78,7 +78,7 @@ def _process_file(dry, *args, out=None, **kwargs):
         out = ConsoleOutput.get(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
     else:
-        return __process_file(*args, **kwargs)
+        return __process_file(*args, out=out, **kwargs)
 
 
 def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, config, first_stage, out=None):
