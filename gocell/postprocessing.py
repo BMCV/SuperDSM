@@ -103,10 +103,19 @@ class Postprocessing(pipeline.Stage):
                         rejection_causes[c] = 'intersects image exterior'
                     else:
                         pp4_candidates.append(c)
+        
+        if config.get_value(cfg, 'fill_holes', False):
+            pp5_candidates = []
+            for c in pp4_candidates:
+                c = c.copy()
+                c.fg_fragment = ndimage.morphology.binary_fill_holes(c.fg_fragment)
+                pp5_candidates.append(c)
+        else:
+            pp5_candidates = pp4_candidates
 
         candidate_indices = dict(zip(accepted_candidates, range(len(accepted_candidates))))
         self.rejection_causes = dict((candidate_indices[c], cause) for c, cause in rejection_causes.items())
         return {
-            'postprocessed_candidates': pp4_candidates
+            'postprocessed_candidates': pp5_candidates
         }
 
