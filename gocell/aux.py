@@ -156,7 +156,8 @@ def join_path(path1, path2):
 
 def get_ray_1by1(obj_ids):
     while obj_ids:
-        done, obj_ids = ray.wait(obj_ids)
+        done, obj_ids = ray.wait(obj_ids, num_returns=1)
+        assert len(done) == 1
         yield ray.get(done[0])
 
 

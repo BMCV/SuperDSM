@@ -6,6 +6,7 @@ import gocell.render   as render
 import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib
 import ray
 import numpy as np
+import scipy.ndimage as ndi
 
 
 def load_xcf_layer(xcf_path, layername):
@@ -20,7 +21,7 @@ def load_unlabeled_xcf_gt(xcf_path, layername='foreground'):
         warnings.simplefilter('ignore')
         foreground = load_xcf_layer(xcf_path, layername)
     regions = ndi.label(foreground, structure=skimage.morphology.disk(1))[0]
-    assert all((regions == 0) == (foreground == 0))
+    assert np.all((regions == 0) == (foreground == 0))
     return regions
 
 
@@ -95,6 +96,16 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     return result_data
 
 
+def find_first_differing_stage(pipeline, config1, config2):
+    stage_names = [stage.name for stage in pipeline.stages]
+    for stage_name in stage_names:
+        if      (stage_name in config1 and stage_name not in config2) or \
+                (stage_name not in config1 and stage_name in config2) or \
+                (stage_name in config1 and stage_name in config2 and config1[stage_name] != config2[stage_name]):
+            return stage_name
+    return ''
+
+
 class Task:
     def __init__(self, path, data, parent_task=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
@@ -114,6 +125,7 @@ class Task:
             self.     result_path = path / 'data.dill.gz'
             self.      study_path = path / 'study.csv'
             self.     digest_path = path / '.digest'
+            self. digest_cfg_path = path / '.digest.cfg.json'
             self.          config = data['config']
             self.      seg_border = data['seg_border'] if 'seg_border' in data else None
             self.          dilate = data['dilate']
@@ -156,13 +168,15 @@ class Task:
                 if file_id not in data: data[file_id] = None
                 data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
             out2.write('')
-            if first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates'):
+            if first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates') and not self.result_path.exists():
                 out2.write('Skipping writing results')
             else:
                 if not dry:
                     out2.intermediate(f'Writing results... {self.result_path}')
                     with gzip.open(self.result_path, 'wb') as fout:
                         dill.dump(data, fout, byref=True)
+                    with self.digest_cfg_path.open('w') as fout:
+                        json.dump(self.config, fout)
                 out2.write(f'Results written to: {self.result_path}')
             if not dry:
                 study = evaluate(data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
@@ -183,24 +197,40 @@ class Task:
         elif runnable_parent_task.result_path.exists(): return runnable_parent_task
         else: return runnable_parent_task.find_parent_task_with_result()
 
+    def find_pickup_candidates(self, pipeline):
+        pickup_candidates = []
+        previous_task = self.find_parent_task_with_result()
+        if previous_task is not None:
+            first_stage = find_first_differing_stage(pipeline, self.config, previous_task.config)
+            pickup_candidates.append((previous_task, first_stage))
+        if self.result_path.exists() and self.digest_cfg_path.exists():
+            with self.digest_cfg_path.open('r') as fin:
+                config = json.load(fin)
+            first_stage = find_first_differing_stage(pipeline, self.config, config)
+            pickup_candidates.append((self, first_stage))
+        return pickup_candidates
+
+    def find_best_pickup_candidate(self, pipeline):
+        pickup_candidates = self.find_pickup_candidates(pipeline)
+        if len(pickup_candidates) == 0: return None, None
+        pickup_candidate_scores = [pipeline.find(first_stage) for task, first_stage in pickup_candidates]
+        return pickup_candidates[np.argmax(pickup_candidate_scores)]
+
+
     def find_first_stage_name(self, pipeline, dry=False, out=None):
         out = ConsoleOutput.get(out)
-        stage_names = [stage.name for stage in pipeline.stages]
-        previous_task = self.find_parent_task_with_result()
-        if previous_task is None: return None, {}
-        first_stage_name = ''
-        for stage_name in stage_names:
-            if stage_name in self.config and (stage_name not in previous_task.config or \
-                                              self.config[stage_name] != previous_task.config[stage_name]):
-                first_stage_name = stage_name
-                break
-        data = {}
-        if pipeline.find(first_stage_name) >= pipeline.find('process_candidates'):
-            out.write(f'Picking up from: {previous_task.result_path} ({first_stage_name if first_stage_name != "" else "evaluate"})')
+        pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
+        if pickup_task is None or pipeline.find(stage_name) < pipeline.find('process_candidates'):
+            return None, {}
+        else:
+            out.write(f'Picking up from: {pickup_task.result_path} ({stage_name if stage_name != "" else "evaluate"})')
             if not dry:
-                with gzip.open(previous_task.result_path, 'rb') as fin:
+                with gzip.open(pickup_task.result_path, 'rb') as fin:
                     data = dill.load(fin)
-        return first_stage_name, data
+                return stage_name, data
+            else:
+                return None, {}
+
 
     def write_evaluation_results(self, chunk_ids, study):
         measure_names = sorted(study.measures.keys())
