@@ -32,16 +32,6 @@ def load_gt(loader, filepath, **loader_kwargs):
         return load_unlabeled_xcf_gt(filepath, **loader_kwargs)
 
 
-@ray.remote
-def _evaluate_chunk(study, chunk_id, g, candidates, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs):
-    data_chunk = dict(g=g, postprocessed_candidates=candidates)
-    actual = render.rasterize_labels(data_chunk, **rasterize_kwargs)
-    expected = load_gt(gt_loader, filepath=gt_pathpattern % chunk_id, **gt_loader_kwargs)
-    study.set_expected(expected, unique=gt_is_unique)
-    study.process(actual, unique=True, chunk_id=chunk_id)
-    return chunk_id, study
-
-
 def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, out=None):
     out = ConsoleOutput.get(out)
     import segmetrics
@@ -64,13 +54,13 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
     study.add_measure(segmetrics.detection.FalsePositive(), 'd/FP')
     study.add_measure(segmetrics.detection.FalseNegative(), 'd/FN')
 
-    study_id  = ray.put(study)
     chunk_ids = sorted(data.keys())
-    futures   = [_evaluate_chunk.remote(study_id, chunk_id, data[chunk_id]['g'], data[chunk_id]['postprocessed_candidates'], str(gt_pathpattern), gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs) for chunk_id in chunk_ids]
-    for ret_idx, ret in enumerate(aux.get_ray_1by1(futures)):
-        study_chunk = ret[1]
-        study.merge(study_chunk, chunk_ids=[ret[0]])
-        out.intermediate(f'Evaluated {ret_idx + 1} / {len(futures)}')
+    for chunk_idx, chunk_id in enumerate(chunk_ids):
+        actual = render.rasterize_labels(data[chunk_id], **rasterize_kwargs)
+        expected = load_gt(gt_loader, filepath=gt_pathpattern % chunk_id, **gt_loader_kwargs)
+        study.set_expected(expected, unique=gt_is_unique)
+        study.process(actual, unique=True, chunk_id=chunk_id)
+        out.intermediate(f'Evaluated {chunk_idx + 1} / {len(data)}')
     return study
 
 
@@ -145,11 +135,11 @@ class Task:
             ray.shutdown()
         return ValueError(f'unknown backend "{self.backend}"')
 
-    def run(self, dry=False, verbosity=0, out=None):
+    def run(self, dry=False, verbosity=0, force=False, one_shot=False, out=None):
         out = ConsoleOutput.get(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
-        if self.digest_path.exists() and self.digest_path.read_text() == config_digest:
+        if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
             out.write(f'\nSkipping task: {self.path}')
             return
         out.write(f'\nEntering task: {self.path}')
@@ -157,10 +147,11 @@ class Task:
         pipeline = self._initialize()
         try:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
-            out3 = out2.derive(margin=2, muted = (verbosity < 0))
+            out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             for file_id in self.file_ids:
-                out3.write(f'\nProcessing file ID: {file_id}')
-                kwargs = dict( im_filepath = str(self. im_pathpattern) % file_id,
+                im_filepath = str(self. im_pathpattern) % file_id
+                out3.write(f'\nProcessing file: {im_filepath}')
+                kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               log_filepath = str(self.log_pathpattern) % file_id,
                                 seg_border = self.seg_border,
@@ -168,7 +159,7 @@ class Task:
                 if file_id not in data: data[file_id] = None
                 data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
             out2.write('')
-            if first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates') and not self.result_path.exists():
+            if one_shot or (first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates') and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
@@ -179,9 +170,11 @@ class Task:
                         json.dump(self.config, fout)
                 out2.write(f'Results written to: {self.result_path}')
             if not dry:
-                study = evaluate(data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
-                self.write_evaluation_results(data.keys(), study)
-                self.digest_path.write_text(config_digest)
+                shallow_data = {file_id : {key : data[file_id][key] for key in ('g', 'postprocessed_candidates')} for file_id in data.keys()}
+                del data
+                study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
+                self.write_evaluation_results(shallow_data.keys(), study)
+                if not one_shot: self.digest_path.write_text(config_digest)
             out2.write(f'Evaluation study written to: {self.study_path}')
         finally:
             self._shutdown()
@@ -314,6 +307,8 @@ if __name__ == '__main__':
     parser.add_argument('path', help='root directory for batch processing')
     parser.add_argument('--run', help='run batch processing', action='store_true')
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
+    parser.add_argument('--force', help='do not skip tasks', action='store_true')
+    parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     args = parser.parse_args()
 
     loader = BatchLoader()
@@ -325,5 +320,12 @@ if __name__ == '__main__':
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
     for task in loader.tasks:
-        task.run(dry, args.verbosity, out)
+        newpid = os.fork()
+        if newpid == 0:
+            task.run(dry, args.verbosity, args.force, args.oneshot, out)
+            os._exit(0)
+        else:
+            if os.waitpid(newpid, 0)[1] != 0:
+                out.write('An error occurred: interrupting')
+                break
 
