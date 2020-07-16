@@ -155,15 +155,17 @@ class Task:
                               config = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+            out2.write('')
             if first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates'):
-                out2.write('\nSkipping writing results')
+                out2.write('Skipping writing results')
             else:
-                out2.write(f'\nResults written to: {self.result_path}')
                 if not dry:
+                    out2.intermediate(f'Writing results... {self.result_path}')
                     with gzip.open(self.result_path, 'wb') as fout:
                         dill.dump(data, fout, byref=True)
+                out2.write(f'Results written to: {self.result_path}')
             if not dry:
-                study = evaluate(data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate, out=out2))
+                study = evaluate(data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                 self.write_evaluation_results(data.keys(), study)
                 self.digest_path.write_text(config_digest)
             out2.write(f'Evaluation study written to: {self.study_path}')
@@ -254,7 +256,9 @@ class ConsoleOutput:
         return ConsoleOutput() if out is None else out
 
     def intermediate(self, line):
-        if not self.muted: print(' ' * self.margin + line, end='\r')
+        if not self.muted:
+            print(' ' * self.margin + line, end='\r')
+            sys.stdout.flush()
     
     def write(self, line):
         if not self.muted:
