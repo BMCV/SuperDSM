@@ -112,7 +112,7 @@ class Task:
             self. log_pathpattern = path / data['log_pathpattern']
             self.        file_ids = sorted(frozenset(data['file_ids']))
             self.     result_path = path / 'data.dill.gz'
-            self.      study_path = path / 'study.cvs'
+            self.      study_path = path / 'study.csv'
             self.     digest_path = path / '.digest'
             self.          config = data['config']
             self.      seg_border = data['seg_border'] if 'seg_border' in data else None
