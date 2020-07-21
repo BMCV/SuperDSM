@@ -14,34 +14,40 @@ from skimage.filters import threshold_otsu
 from scipy           import ndimage
 
 
-def modelfit(g, y_map, region, w_sigma_factor, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+def modelfit(g, y_map, region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     print('-- initializing --')
-    w_map = modelfit_base.get_roi_weights(y_map, region, std_factor=w_sigma_factor)
-    w_map[~region.mask] = 0
-    w_map_sum = w_map.sum()
-    w_map /= float(w_map_sum)
     smooth_matrix_factory = modelfit_base.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
-    J = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
-    CP_params = {'cachesize': cachesize, 'cachetest': cachetest}
+    J = modelfit_base.Energy(y_map, region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
+    CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
+    print(f'scale: {CP_params["scale"]:g}')
+    fallback = False
     if callable(init):
         params = init(J.smooth_mat.shape[1])
     else:
         if init == 'gocell':
             print('-- convex programming starting: GOCELL --')
-            J_gocell = modelfit_base.Energy(y_map, region, w_map, epsilon, rho, modelfit_base.SmoothMatrixFactory.NULL_FACTORY)
+            J_gocell = modelfit_base.Energy(y_map, region, epsilon, rho, modelfit_base.SmoothMatrixFactory.NULL_FACTORY)
             params = modelfit_base.PolynomialModel(np.array(modelfit_base.CP(J_gocell, np.zeros(6), **CP_params).solve()['x'])).array
+            print(f'solution: {J_gocell(params)}')
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
         print('-- convex programming starting: GOCELLOS --')
-        solution = np.array(modelfit_base.CP(J, params, **CP_params).solve()['x'])
+        solution = modelfit_base.CP(J, params, **CP_params).solve()
+        solution, status = np.array(solution['x']), solution['status']
+        if status == 'unknown' and J(solution) > J(params):
+            fallback = True  # numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
+        else:
+            print(f'solution: {J(solution)}')
     except: # e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
-        print('-- GOCELLOS failed: failing back to GOCELL result --')
         traceback.print_exc(file=sys.stdout)
-        solution = params    # at least something we can work with
+        fallback = True  # at least something we can work with
+    if fallback:
+        print('-- GOCELLOS failed: falling back to GOCELL result --')
+        solution = params
     print('-- finished --')
-    return w_map_sum, J, modelfit_base.PolynomialModel(solution)
+    return J, modelfit_base.PolynomialModel(solution), fallback
 
 
 def process_candidate_logged(log_root_dir, cidx, *args):
@@ -63,8 +69,7 @@ def process_candidate(cidx, g, g_superpixels, x_map, candidate, modelfit_kwargs)
     modelfit_kwargs = aux.copy_dict(modelfit_kwargs)
     region, y_map = candidate.get_modelfit_region(g, g_superpixels, modelfit_kwargs.pop('bg_radius'))
     averaging = modelfit_kwargs.pop('averaging')
-    factor, J, result = modelfit(g, y_map, region, **modelfit_kwargs)
-    if averaging: factor = 1
+    J, result, fallback = modelfit(g, y_map, region, **modelfit_kwargs)
     padded_mask = np.pad(region.mask, 1)
     smooth_mat  = aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
     padded_foreground = (result.map_to_image_pixels(g, region, pad=1).s(x_map, smooth_mat) > 0)
@@ -79,7 +84,7 @@ def process_candidate(cidx, g, g_superpixels, x_map, candidate, modelfit_kwargs)
     else:
         candidate.fg_offset   = np.zeros(2, int)
         candidate.fg_fragment = np.zeros((1, 1), bool)
-    candidate.energy      = factor * J(result)
+    candidate.energy      = J(result)
     candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
     return {
         'cidx': cidx,

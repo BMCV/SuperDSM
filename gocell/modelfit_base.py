@@ -224,14 +224,14 @@ SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
 
 class Energy:
 
-    def __init__(self, y_map, roi, w_map, epsilon, rho, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
+    def __init__(self, y_map, roi, epsilon, rho, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
         self.smooth_mat = smooth_matrix_factory.get(roi.mask)
 
         self.x = self.roi.get_map()[:, roi.mask]
-        self.w = w_map[roi.mask]
+        self.w = np.ones(roi.mask.sum())
         self.y = y_map[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
@@ -280,8 +280,13 @@ class Energy:
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
         if self.smooth_mat.shape[1] > 0:
-            objective2  = self.rho * self.term2.sum() / self.smooth_mat.shape[1]
-            objective2 -= self.rho * sqrt(self.epsilon) / self.smooth_mat.shape[1]
+            objective2  = self.rho * self.term2.sum()
+            objective2 -= self.rho * sqrt(self.epsilon) * len(self.term2)
+            if objective2 < 0:
+                assert np.allclose(0, objective2)
+                objective2 = 0
+            else:
+                assert objective2 >= 0
         else:
             objective2 = 0
         return objective1 + objective2
@@ -296,7 +301,7 @@ class Energy:
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
             grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
-            grad2 += self.rho * (params.ξ / self.term2) / self.smooth_mat.shape[1]
+            grad2 += self.rho * (params.ξ / self.term2)
             grad   = np.concatenate([grad, grad2])
         return grad
     
@@ -314,7 +319,7 @@ class Energy:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
                 [mkl_dot(D2, D1.T), mkl.gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
-            g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3)) / self.smooth_mat.shape[1]
+            g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
             H += sparse_diag(np.concatenate([np.zeros(6), g]))
@@ -367,16 +372,16 @@ class CP:
 
     CHECK_NUMBERS = True
 
-    def __init__(self, energy, params0, cachesize=0, cachetest=None):
-        self.params0 = params0
-        self.gradient = Cache(cachesize, lambda p: (energy(p), cvxopt.matrix(energy.grad(p)).T), equality=cachetest)
-        self.hessian  = Cache(cachesize, lambda p:  energy.hessian(p), equality=cachetest)
+    def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None):
+        self.params0  = params0
+        self.gradient = Cache(cachesize, lambda p: (scale * energy(p), cvxopt.matrix(scale * energy.grad(p)).T), equality=cachetest)
+        self.hessian  = Cache(cachesize, lambda p:  scale * energy.hessian(p), equality=cachetest)
     
     def __call__(self, params=None, w=None):
         if params is None:
             return 0, cvxopt.matrix(self.params0)
         else:
-            p  = np.array(params).reshape(-1)
+            p = np.array(params).reshape(-1)
             l, Dl = self.gradient(p)
             if CP.CHECK_NUMBERS:
                 Dl_array = np.array(Dl)
