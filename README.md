@@ -1,4 +1,4 @@
 # GOCELLOS
 
-Globally Optimal Collaborative Ellipses and Other Shapes
+**G**lobally **o**ptimal **c**ollaborative **ell**ipses and **o**ther **s**hapes
 

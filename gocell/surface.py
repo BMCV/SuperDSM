@@ -22,10 +22,11 @@ class Surface:
                 self.mask = np.array([mask(x) for x in self.ndindex()]).reshape(self.model.shape).astype(bool)
     
     @staticmethod
-    def create_from_image(img):
-        img_diff = img.max() - img.min()
-        if img_diff == 0: img_diff = 1
-        img = (img - img.min()).astype(float) / img_diff
+    def create_from_image(img, normalize=True):
+        if normalize:
+            img_diff = img.max() - img.min()
+            if img_diff == 0: img_diff = 1
+            img = (img - img.min()).astype(float) / img_diff
         return Surface(img.shape, img)
     
     @staticmethod

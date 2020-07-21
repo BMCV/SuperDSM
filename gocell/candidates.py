@@ -1,115 +1,31 @@
-import gocell.pipeline as pipeline
-import gocell.config   as config
-import gocell.aux      as aux
-import gocell.surface  as surface
-import gocell.modelfit as modelfit
-import gocell.labels   as labels
+import gocell.aux
+
+import scipy.ndimage as ndi
 import numpy as np
-import collections
-import ray
-
-from gocell.preprocessing import remove_dark_spots_using_cfg, subtract_background_using_cfg
-
-from skimage import morphology, measure
-from scipy   import ndimage
-
-from scipy.ndimage.filters import gaussian_filter
-import scipy.sparse
-
-
-class SuperpixelAdjacenciesGraph:
-    def __init__(self, g_superpixels, out=None):
-        out = aux.Output.get(out)
-        self.adjacencies, se = {}, morphology.disk(1)
-        for l0 in range(1, g_superpixels.max() + 1):
-            cc = (g_superpixels == l0)
-            cc_dilated = np.logical_and(morphology.binary_dilation(cc, se), np.logical_not(cc))
-            self.adjacencies[l0] = set(g_superpixels[cc_dilated].flatten()) - {0, l0}
-
-            out.intermediate('Processed superpixel %d / %d' % (l0, g_superpixels.max()))
-        out.write('Computed superpixel adjacencies')
-
-
-class SuperpixelCombinationsFactory:
-
-    def __init__(self, adjacencies):
-        self.adjacencies = adjacencies
-
-    def expand(self, combination, accept_superpixel):
-        neighbors = set([s for r in combination for s in self.adjacencies[r]])
-        neighbors = [s for s in neighbors if s not in combination and accept_superpixel(s)]
-        new_combinations = []
-        for neighbor in neighbors:
-            new_combination = frozenset(combination | {neighbor})
-            if new_combination not in self.discovered_combinations:
-                new_combinations.append(new_combination)
-                self.discovered_combinations |= {new_combination}
-        return new_combinations
-    
-    def find_superpixels_within_distance(self, root_superpixel, max_distance):
-        """Performs breadth first search to find all superpixels within `max_distance` of `root_superpixel`.
-        """
-        queue  = collections.deque([(0, root_superpixel)])
-        result = set([root_superpixel])
-        while len(queue) > 0:
-            depth, pivot = queue.popleft()
-            if depth + 1 <= max_distance:
-                neighbors = self.adjacencies[pivot]
-                queue.extend((depth + 1, node) for node in neighbors - result)
-                result |= neighbors
-        return result
-    
-    def create_local_combinations(self, pivot_superpixel, accept_superpixel, max_depth=np.inf):
-        if max_depth >= 0 and not np.isinf(max_depth):
-            region = self.find_superpixels_within_distance(pivot_superpixel, max_depth)
-            accept_superpixel0 = accept_superpixel
-            accept_superpixel  = lambda s: s in region and accept_superpixel0(s)
-        self.discovered_combinations = set([frozenset([pivot_superpixel])])
-        expandable_combinations = [set([pivot_superpixel])]
-        while len(expandable_combinations) > 0:
-            combination = expandable_combinations.pop()
-            expandable_combinations += self.expand(combination, accept_superpixel)
-        return self.discovered_combinations
-
-
-def count_binary_holes(mask):
-    assert mask.dtype == bool or (mask.dtype == 'uint8' and mask.max() <= 1)
-    bg_labels = ndimage.measurements.label(1 - mask)[0]
-    return sum(1 for bg_cc_prop in measure.regionprops(bg_labels) if 0 not in bg_cc_prop.bbox[:2] and \
-               mask.shape[0] != bg_cc_prop.bbox[2] and mask.shape[1] != bg_cc_prop.bbox[3])
+import skimage.morphology as morph
 
 
 class Candidate:
     def __init__(self):
-        self.fg_offset    = None
-        self.fg_fragment  = None
-        self.superpixels  = set()
-        self.energy       = np.nan
-        self.on_boundary  = np.nan
-        self.intensity_threshold = np.nan
+        self.fg_offset   = None
+        self.fg_fragment = None
+        self.footprint   = set()
+        self.energy      = np.nan
+        self.on_boundary = np.nan
     
-    def get_mask(self, g_superpixels):
-        return np.in1d(g_superpixels, list(self.superpixels)).reshape(g_superpixels.shape)
+    def get_mask(self, g_atoms):
+        return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
     def get_region(self, g, g_superpixels):
         region_mask = self.get_mask(g_superpixels)
         return surface.Surface(g.model.shape, g.model, mask=region_mask)
 
-    def get_modelfit_region(self, g, g_superpixels, bg_radius):
-        assert not np.isnan(self.intensity_threshold)
-        region  = self.get_region(g, g_superpixels)
-        y_map   = labels.ThresholdedLabels(region, self.intensity_threshold).get_map()
-        bg_mask = (ndimage.morphology.distance_transform_edt(~region.mask) < bg_radius)
-        region.mask = np.logical_or(region.mask, np.logical_and(y_map < 0, bg_mask))
-        return region, y_map
-
     def set(self, state):
-        self.fg_fragment  = state.fg_fragment.copy() if state.fg_fragment is not None else None
-        self.fg_offset    = state.fg_offset.copy() if state.fg_offset is not None else None
-        self.superpixels  = set(state.superpixels)
-        self.energy       = state.energy
-        self.on_boundary  = state.on_boundary
-        self.intensity_threshold = state.intensity_threshold
+        self.fg_fragment = state.fg_fragment.copy() if state.fg_fragment is not None else None
+        self.fg_offset   = state.fg_offset.copy() if state.fg_offset is not None else None
+        self.footprint   = set(state.footprint)
+        self.energy      = state.energy
+        self.on_boundary = state.on_boundary
         return self
 
     def copy(self):
@@ -121,192 +37,80 @@ class Candidate:
         return sel
 
 
-class ComputeCandidates(pipeline.Stage):
-
-    def __init__(self):
-        super(ComputeCandidates, self).__init__('compute_candidates',
-                                                inputs  = ['seeds', 'g_superpixels', 'g_superpixel_seeds', 'min_region_size'],
-                                                outputs = ['candidates'])
-
-    def process(self, input_data, cfg, out, log_root_dir):
-        candidates = []
-
-        max_superpixel_distance = config.get_value(cfg, 'max_superpixel_distance', 60)
-        max_superpixel_depth    = config.get_value(cfg, 'max_superpixel_depth'   ,  2)
-
-        seeds              = input_data['seeds']
-        g_superpixels      = input_data['g_superpixels']
-        g_superpixel_seeds = input_data['g_superpixel_seeds']
-        min_region_size    = input_data['min_region_size']
-
-        superpixel_adjacencies_graph = SuperpixelAdjacenciesGraph(g_superpixels, out=out)
-        for seed_label, seed in enumerate(seeds, start=1):
-            if not (g_superpixels == seed_label).any(): continue
-
-            superpixel_center = lambda s: seeds[s - 1]
-            accept_superpixel = lambda s: np.linalg.norm(np.subtract(seed, superpixel_center(s))) <= max_superpixel_distance
-            combinations_factory = SuperpixelCombinationsFactory(superpixel_adjacencies_graph.adjacencies)
-            superpixel_combinations = \
-                combinations_factory.create_local_combinations(seed_label, accept_superpixel, max_superpixel_depth)
-
-            for superpixels in superpixel_combinations:
-                candidate = Candidate()
-                candidate.superpixels = superpixels
-                candidate_mask = candidate.get_mask(g_superpixels)
-                if candidate_mask.sum() < min_region_size: continue
-                if len(superpixels) > 1 and count_binary_holes(candidate_mask) > 0: continue
-                candidates.append(candidate)
-
-            out.intermediate('Generated %d candidates from %d / %d seeds' % \
-                (len(candidates), seed_label, g_superpixels.max()))
-
-        out.write('Candidates: %d' % len(candidates))
-        return {
-            'candidates': candidates
-        }
+def _expand_mask_for_backbround(y, mask, margin_step, max_margin):
+    img_boundary_mask = zeros(mask.shape, bool)
+    img_boundary_mask[ 0,  :] = True
+    img_boundary_mask[-1,  :] = True
+    img_boundary_mask[ :,  0] = True
+    img_boundary_mask[ :, -1] = True
+    img_boundary_mask = np.logical_and(img_boundary_mask, y < 0)
+    mask_foreground = np.logical_and(y > 0, mask)
+    mask_boundary   = np.logical_xor(mask, morph.binary_erosion(mask, morph.disk(1)))
+    if not np.logical_and(mask_foreground, mask_boundary).any():
+        return np.logical_or(img_boundary_mask, mask)
+    tmp11 = ndi.distance_transform_edt(~mask_foreground)
+    tmp12 = tmp11 * (y < 0)
+    for thres in range(margin_step, max_margin + 1, margin_step):
+        expansion_mask = np.logical_and(tmp12 > 0, tmp12 <= thres)
+        exterior_mask  = np.logical_and(thres < tmp11, tmp11 < thres + 1)
+        tmp15 = ndi.label(~expansion_mask if thres > 0 else ~mask_boundary)[0]
+        if len(frozenset(tmp15[mask_foreground]) & frozenset(tmp15[exterior_mask])) == 0: break
+    tmp16 = np.logical_or(mask, np.logical_and(np.logical_or(mask, tmp11 <= thres), y < 0))
+    if mask_foreground[img_boundary_mask].any():
+        return np.logical_or(img_boundary_mask, tmp16)
+    else: return tmp16
 
 
-class FilterUniqueCandidates(pipeline.Stage):
+def _get_modelfit_region(candidate, y, g_atoms):
+    region = candidate.get_region(y, g_atoms)
+    bg_mask = _expand_mask_for_backbround(y.model, region.mask, 20, 500)
+    region.mask = np.logical_or(region.mask, np.logical_and(y.model < 0, bg_mask))
+    return region
 
-    def __init__(self):
-        super(FilterUniqueCandidates, self).__init__('filter_unique_candidates',
-                                                     inputs=['candidates'], outputs=['unique_candidates'])
 
-    def process(self, input_data, cfg, out, log_root_dir):
-        candidates = input_data['candidates']
-        unique_candidates = []
-
-        for c0i, c0 in enumerate(candidates):
-            is_unique = True
-            for c1 in candidates[c0i + 1:]:
-                if c1.superpixels == c0.superpixels:
-                    is_unique = False
-                    break
-            if is_unique: unique_candidates.append(c0)
-
-            out.intermediate('Processed candidate %d / %d' % (c0i + 1, len(candidates)))
-
-        out.write('Unique candidates: %d' % len(unique_candidates))
-        return {
-            'unique_candidates': unique_candidates
-        }
+def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, silent=True):
+    region = _get_modelfit_region(candidate, y, g_atoms)
+    def _run(): return gocell.modelfit.modelfit(y, region, **modelfit_kwargs)
+    if silent:
+        with contextlib.redirect_stdout(None): J, result, fallback = _run()
+    else:
+        J, result, fallback = _run()
+    padded_mask = np.pad(region.mask, 1)
+    smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
+    padded_foreground = (result.map_to_image_pixels(g, region, pad=1).s(x_map, smooth_mat) > 0)
+    foreground = padded_foreground[1:-1, 1:-1]
+    if foreground.any():
+        rows = foreground.any(axis=1)
+        cols = foreground.any(axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        candidate.fg_offset   = np.array([rmin, cmin])
+        candidate.fg_fragment = foreground[rmin : rmax + 1, cmin : cmax + 1]
+    else:
+        candidate.fg_offset   = np.zeros(2, int)
+        candidate.fg_fragment = np.zeros((1, 1), bool)
+    candidate.energy      = J(result)
+    candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
+    return candidate, fallback
 
 
 @ray.remote
-def _compute_threshold(cidx, candidate, g, g_superpixels, method, bandwidth, samples_count, extras):
-    region = candidate.get_region(g, g_superpixels)
-    threshold = labels.ThresholdedLabels.compute_threshold(region, method, bandwidth, samples_count, extras)
-    if isinstance(threshold, np.ndarray):
-        threshold = threshold.reshape(-1)
-        assert len(threshold) == 1
-        threshold = threshold[0]
-    return cidx, threshold
+def process_candidate(cidx, *args, **kwargs):
+    return (cidx, *_process_candidate(*args, **kwargs))
 
 
-class IntensityModels(pipeline.Stage):
-
-    def __init__(self):
-        super(IntensityModels, self).__init__('intensity_models',
-                                              inputs  = ['g_raw', 'g_superpixels', 'unique_candidates'],
-                                              outputs = ['g'])
-
-    def process(self, input_data, cfg, out, log_root_dir):
-        g_raw, g_superpixels, unique_candidates = input_data['g_raw'], input_data['g_superpixels'], input_data['unique_candidates']
-
-        g_raw =   remove_dark_spots_using_cfg(g_raw, cfg, out)
-        g_raw = subtract_background_using_cfg(g_raw, cfg, out)
-        
-        smooth_method = config.get_value(cfg, 'smooth_method', 'gaussian')
-        if smooth_method == 'gaussian':
-            g = surface.Surface.create_from_image(gaussian_filter(g_raw, config.get_value(cfg, 'smooth_amount', 1.)))
-        elif smooth_method == 'median':
-            g = surface.Surface.create_from_image(aux.medianf(g_raw, selem=morphology.disk(config.get_value(cfg, 'median_radius', 1))))
-        else:
-            raise ValueError('unknown smooth method: "%s"' % smooth_method)
-
-        n = len(unique_candidates)
-        g_id = ray.put(g)
-        g_superpixels_id = ray.put(g_superpixels)
-        kwargs = dict(method        = config.get_value(cfg, 'method'       , 'otsu'),
-                      bandwidth     = config.get_value(cfg, 'bandwidth'    ,   0.1 ),
-                      samples_count = config.get_value(cfg, 'samples_count',   100 ),
-                      extras        = config.get_value(cfg, 'extras'       ,    {} ))
-        futures = [_compute_threshold.remote(cidx, unique_candidates[cidx], g_id, g_superpixels_id, **kwargs) for cidx in range(n)]
-        for ret_idx, ret in enumerate(aux.get_ray_1by1(futures)):
-            cidx = ret[0]
-            unique_candidates[cidx].intensity_threshold = ret[1]
-            out.intermediate('Computed intensity model %d / %d' % (ret_idx + 1, n))
-        out.write(f'Computed {n} intensity models')
-
-        return {
-            'g': g
-        }
-
-
-class ProcessCandidates(pipeline.Stage):
-
-    def __init__(self, backend):
-        super(ProcessCandidates, self).__init__('process_candidates',
-                                                inputs  = ['g', 'g_superpixels', 'unique_candidates'],
-                                                outputs = ['processed_candidates'])
-        self.backend = backend
-
-    def process(self, input_data, cfg, out, log_root_dir):
-        g, g_superpixels, unique_candidates = input_data['g'], \
-                                              input_data['g_superpixels'], \
-                                              input_data['unique_candidates']
-
-        modelfit_kwargs = {
-            'epsilon':                    config.get_value(cfg, 'epsilon'                   ,  1.      ),
-            'rho':                        config.get_value(cfg, 'rho'                       ,  1e-2    ),
-            'w_sigma_factor':             config.get_value(cfg, 'w_sigma_factor'            ,  2.      ),
-            'averaging':                  config.get_value(cfg, 'averaging'                 ,  True    ),            
-            'bg_radius':                  config.get_value(cfg, 'bg_radius'                 ,  100     ),
-            'smooth_amount':              config.get_value(cfg, 'smooth_amount'             ,  10      ),
-            'smooth_subsample':           config.get_value(cfg, 'smooth_subsample'          ,  20      ),
-            'smooth_mat_max_allocations': config.get_value(cfg, 'smooth_mat_max_allocations',  np.inf  ),
-            'smooth_mat_dtype':           config.get_value(cfg, 'smooth_mat_dtype'          , 'float32'),
-            'gaussian_shape_multiplier':  config.get_value(cfg, 'gaussian_shape_multiplier' ,  2       ),
-            'sparsity_tol':               config.get_value(cfg, 'sparsity_tol'              ,  0       ),
-            'hessian_sparsity_tol':       config.get_value(cfg, 'hessian_sparsity_tol'      ,  0       ),
-            'init':                       config.get_value(cfg, 'init'                      ,  None    ),
-            'cachesize':                  config.get_value(cfg, 'cachesize'                 ,  0       ),
-            'cachetest':                  config.get_value(cfg, 'cachetest'                 ,  None    ),
-        }
-
-        candidates = [c.copy() for c in unique_candidates]
-        self.modelfit(g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir)
-        out.write('Processed candidates: %d' % len(candidates))
-
-        return {
-            'processed_candidates': candidates
-        }
-
-    def modelfit(self, g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir):
-        with aux.CvxoptFrame() as batch:
-            batch['show_progress'] = (log_root_dir is not None)
-            for ret_idx, ret in enumerate(self.backend(g, candidates, g_superpixels, modelfit_kwargs, out, log_root_dir)):
-                candidates[ret['cidx']].set(ret['candidate'])
-
-
-class AnalyzeCandidates(pipeline.Stage):
-
-    def __init__(self):
-        super(AnalyzeCandidates, self).__init__('analyze_candidates',
-                                                inputs  = ['g', 'g_superpixels', 'processed_candidates'],
-                                                outputs = ['superpixels_covered_by'])
-
-    def process(self, input_data, cfg, out, log_root_dir):
-        g, g_superpixels, candidates = input_data['g'], input_data['g_superpixels'], input_data['processed_candidates']
-        superpixels_covered_by = {}
-
-        x_map = g.get_map(normalized=False)
-        for cidx, foreground in enumerate(aux.render_candidate_foregrounds(g.model.shape, candidates)):
-            superpixels_covered_by[candidates[cidx]] = candidates[cidx].superpixels & set(g_superpixels[foreground])
-            out.intermediate('Analyzed candidate %d / %d' % (cidx + 1, len(candidates)))
-        out.write('Analyzed %d candidates' % len(candidates))
-
-        return {
-            'superpixels_covered_by': superpixels_covered_by
-        }
+def process_candidates(candidates, y, g_atoms, modelfit_kwargs, out=None):
+    out = gocell.aux.get_output(out)
+    candidates   = list(candidates)
+    y_id         = ray.put(y)
+    g_atoms_id   = ray.put(g_atoms)
+    x_map_id     = ray.put(y.get_map(normalized=False, pad=1))
+    mf_kwargs_id = ray.put(modelfit_kwargs)
+    futures      = [process_candidate.remote(cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id) for cidx, c in enumerate(candidates)]
+    fallbacks    = 0
+    for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+        candidates[ret[0]].set(ret[1])
+        out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(futures)} ({fallbacks}x fallback)')
+        if ret[2]: fallbacks += 1
+    out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
 

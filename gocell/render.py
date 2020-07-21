@@ -1,10 +1,47 @@
-import gocell.surface as surface
-import gocell.aux     as aux
+import gocell.surface
+import gocell.aux
+
 import numpy as np
 import warnings
 
 from skimage import morphology
 from scipy   import ndimage
+
+import skimage.draw
+
+
+def draw_adjacencies(data, normalize_img=True, endpoint_radius=5):
+    img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3).copy()
+    lines = data['adjacencies'].get_edge_lines(data)
+    shape = img.shape[:2]
+    for line in lines:
+        line_rr, line_cc, line_val = skimage.draw.line_aa(*line[0], *line[1])
+        for i in range(3): img[line_rr, line_cc, i] = (val if i == 0 else 1 - val)
+        for endpoint in line:
+            circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
+            perim_rr, perim_cc, perim_val = skimage.draw.circle_perimeter_aa(*endpoint, endpoint_radius, shape)
+            for i in range(3):
+                img[:,:,i][circle_mask] = (val if i == 0 else 1 - val)
+                img[:,:,i][perim_rr, perim_cc] = perim_val
+    return img
+
+
+def _normalize_image(img):
+    if not np.allclose(img.std(), 0):
+        img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
+    return img - img.min()
+
+
+def _fetch_image_from_data(data, normalize_img=True):
+    img = data['g_raw']
+    if normalize_img: img = _normalize_image(img)
+    return img
+
+
+def render_atoms(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, override_img=None):
+    img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
+    regions = data['g_atoms'] > 0 if discarded_only else data['g_superpixels']
+    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius)
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -31,24 +68,6 @@ def render_regions_over_image(img, regions, background_label=None, bg=(0.6, 1, 0
     return (255 * result).clip(0, 255).astype('uint8')
 
 
-def normalize_image(img):
-    if not np.allclose(img.std(), 0):
-        img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
-    return img - img.min()
-
-
-def fetch_image_from_data(data, normalize_img=True):
-    img = data['g_raw']
-    if normalize_img: img = normalize_image(img)
-    return img
-
-
-def render_superpixels(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, override_img=None):
-    img = fetch_image_from_data(data, normalize_img) if override_img is None else override_img
-    regions = data['g_superpixels'] > 0 if discarded_only else data['g_superpixels']
-    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius)
-
-
 def rasterize_activity_regions(data, candidates_key='postprocessed_candidates'):
     regions = np.zeros(data['g_raw'].shape, 'uint16')
     for label, candidate in enumerate(data[candidates_key], start=1):
@@ -58,7 +77,7 @@ def rasterize_activity_regions(data, candidates_key='postprocessed_candidates'):
 
 
 def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0.1), border_radius=2, **kwargs):
-    img = fetch_image_from_data(data, normalize_img)
+    img = _fetch_image_from_data(data, normalize_img)
     regions = rasterize_activity_regions(data, **kwargs)
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
@@ -73,10 +92,10 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
 
     if normalize_img:
-        g = surface.Surface.create_from_image(fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
+        g = gocell.surface.Surface.create_from_image(_fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
     else:
-        g = surface.Surface(data['g_raw'].shape)
-        g.model = fetch_image_from_data(data, normalize_img) if override_img is None else override_img
+        g = gocell.surface.Surface(data['g_raw'].shape)
+        g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
 
     candidates = data[candidates_key]
     if is_legal == True: is_legal = lambda m: True
@@ -85,13 +104,13 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
     for i in range(3): img[:, :, i] = g.model * g.mask
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()
-    for candidate, foreground in zip(candidates, aux.render_candidate_foregrounds(g.model.shape, candidates)):
+    for candidate, foreground in zip(candidates, gocell.aux.render_candidate_foregrounds(g.model.shape, candidates)):
         if candidate in merged_candidates: continue
         merged_candidates |= {candidate}
         model_shape = foreground
         if labels is not None:
             label = np.bincount(labels[model_shape]).argmax()
-            for candidate1, foreground1 in zip(candidates, aux.render_candidate_foregrounds(g.model.shape, candidates)):
+            for candidate1, foreground1 in zip(candidates, gocell.aux.render_candidate_foregrounds(g.model.shape, candidates)):
                 if candidate1 in merged_candidates: continue
                 model1_shape = foreground1
                 label1 = np.bincount(labels[model1_shape]).argmax()
@@ -116,7 +135,7 @@ def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_ke
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
-    im_seg  = np.dstack([fetch_image_from_data(data, normalize_img=normalize_img) if override_img is None else override_img] * 3).copy()
+    im_seg  = np.dstack([_fetch_image_from_data(data, normalize_img=normalize_img) if override_img is None else override_img] * 3).copy()
     im_seg /= im_seg.max()
     seg_objects = rasterize_labels(data, merge_overlap_threshold=merge_overlap_threshold)
     for l in set(seg_objects.flatten()) - {0}:
@@ -146,7 +165,7 @@ def rasterize_objects(data, candidates_key, dilate=0):
     else:
         dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
-    for foreground in aux.render_candidate_foregrounds(data['g'].model.shape, candidates):
+    for foreground in gocell.aux.render_candidate_foregrounds(data['g'].model.shape, candidates):
         if dilate > 0:   foreground = dilation(foreground, morphology.disk( dilate))
         elif dilate < 0: foreground =  erosion(foreground, morphology.disk(-dilate))
         if foreground.any(): yield foreground.copy()

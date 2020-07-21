@@ -1,10 +1,9 @@
-import gocell.aux      as aux
-import gocell.config   as config
-import gocell.surface  as surface
-import gocell.modelfit as modelfit
+import gocell.aux
+import gocell.config
+import gocell.surface
+
 import math
 import numpy as np
-import ray
 
 
 class Stage(object):
@@ -17,11 +16,11 @@ class Stage(object):
         self.outputs = dict([(key, key) for key in outputs])
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
-        out = aux.Output.get(out)
+        out = gocell.aux.get_output(out)
         input_data = {}
         for data_key, input_data_key in self.inputs.items():
             input_data[input_data_key] = data[data_key]
-        output_data = self.process(input_data, cfg=config.get_value(cfg, self.cfg_key, {}), out=out, log_root_dir=log_root_dir)
+        output_data = self.process(input_data, cfg=gocell.config.get_value(cfg, self.cfg_key, {}), out=out, log_root_dir=log_root_dir)
         assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
         for output_data_key, data_key in self.outputs.items():
             data[data_key] = output_data[output_data_key]
@@ -50,9 +49,9 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
-        if log_root_dir is not None: aux.mkdir(log_root_dir)
+        if log_root_dir is not None: gocell.aux.mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
-        out  = aux.Output.get(out)
+        out  = gocell.aux.get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
         else: assert data is not None, 'data argument must be provided if first_stage is used'
@@ -62,8 +61,7 @@ class Pipeline:
 
     def init(self, g_raw, cfg):
         return {
-            'g_raw': surface.Surface.create_from_image(g_raw).model,  ## does some normalization
-            'min_region_size': 2 * math.pi * config.get_value(cfg, 'min_region_radius', 25)
+            'g_raw': gocell.surface.Surface.create_from_image(g_raw).model  ## does some normalization
         }
 
     def find(self, stage_name, not_found_dummy=np.inf):
@@ -79,43 +77,39 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
 
 
-def create_default_pipeline(backend, log_seeds=False, selection_type='maxsetpack'):
-    from gocell.preprocessing  import Preprocessing
-    from gocell.superpixels    import Seeds, GaussianLaplaceSeeds, Superpixels, SuperpixelsEntropy, SuperpixelsDiscard
-    from gocell.candidates     import ComputeCandidates, FilterUniqueCandidates, IntensityModels, ProcessCandidates, AnalyzeCandidates
-    from gocell.maxsetpack     import MaxSetPackWeights, MaxSetPackGreedy, MaxSetPackCheck
-    from gocell.minsetcover    import MinSetCoverWeights, MinSetCoverGreedy, MinSetCoverCheck
-    from gocell.postprocessing import Postprocessing
-
-    if (isinstance(backend, str) and backend == 'serial'):
-        backend = modelfit.serial_backend()
-    if (isinstance(backend, str) and backend == 'ray') or backend is ray:
-        backend = modelfit.ray_based_backend()
+def create_pipeline(stages):
+    available_inputs = set(['g_raw'])
+    remaining_stages = list(stages)
 
     pipeline = Pipeline()
-
-    pipeline.append(Preprocessing())
-    pipeline.append(GaussianLaplaceSeeds() if log_seeds else Seeds())
-    pipeline.append(Superpixels())
-    if not log_seeds:
-        pipeline.append(SuperpixelsEntropy())
-        pipeline.append(SuperpixelsDiscard())
-    pipeline.append(ComputeCandidates())
-    pipeline.append(FilterUniqueCandidates())
-    pipeline.append(IntensityModels())
-    pipeline.append(ProcessCandidates(backend))
-    if selection_type == 'maxsetpack':
-        pipeline.append(AnalyzeCandidates())
-        pipeline.append(MaxSetPackWeights())
-        pipeline.append(MaxSetPackGreedy())
-        pipeline.append(MaxSetPackCheck())
-    elif selection_type == 'minsetcover':
-        pipeline.append(MinSetCoverWeights())
-        pipeline.append(MinSetCoverGreedy())
-        pipeline.append(MinSetCoverCheck())
-    else:
-        raise ValueError('unknown selection_type "%s"' % selection_type)
-    pipeline.append(Postprocessing())
+    while len(remaining_stages) > 0:
+        next_stage = None
+        for stage in remaining_stages:
+            if frozenset(stage.inputs.keys()).issubset(available_inputs):
+                next_stage = stage
+                break
+        if next_stage is None:
+            raise ValueError('failed to resolve total ordering')
+        remaining_stages.remove(next_stage)
+        pipeline.append(next_stage)
+        available_inputs |= frozenset(next_stage.outputs.keys())
 
     return pipeline
+
+
+def create_default_pipeline():
+    import gocell.preprocessing
+    import gocell.seeds
+    import gocell.atoms
+    import gocell.generations
+
+    stages = [
+        gocell.preprocessing.PreprocessingStage1(),
+        gocell.preprocessing.PreprocessingStage2(),
+        gocell.seeds.SeedStage(),
+        gocell.atoms.AtomStage(),
+        gocell.generations.GenerationStage()
+    ]
+
+    return create_pipeline(stages)
 
