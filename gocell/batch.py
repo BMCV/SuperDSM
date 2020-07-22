@@ -72,7 +72,7 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, config, first_stage, out=None):
+def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, config, first_stage, last_stage, out=None):
     if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
     if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
     aux.mkdir(pathlib.Path(log_filepath).parents[0])
@@ -87,7 +87,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     atomic_stage = pipeline.stages[pipeline.find('atoms')]
     atomic_stage.add_callback('end', write_adjacencies_image)
-    result_data = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, log_root_dir=log_filepath, out=out)[0]
+    result_data = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)[0]
     atomic_stage.remove_callback('end', write_adjacencies_image)
 
     if seg_filepath is not None:
@@ -132,6 +132,7 @@ class Task:
             self.      seg_border = data['seg_border'] if 'seg_border' in data else None
             self.          dilate = data['dilate']
             self. merge_threshold = data['merge_overlap_threshold']
+            self.      last_stage = data['last_stage'] if 'last_stage' in data else None
 
     def _initialize(self):
         ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
@@ -162,11 +163,13 @@ class Task:
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
                               log_filepath = str(self.log_pathpattern) % file_id,
                                 seg_border = self.seg_border,
-                              config = config.derive(self.config, {}))
+                                last_stage = self.last_stage,
+                                    config = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
+                if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
             out2.write('')
-            if one_shot or (first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') and not self.result_path.exists()):
+            if one_shot or ((first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
@@ -176,13 +179,16 @@ class Task:
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
                 out2.write(f'Results written to: {self.result_path}')
-            if not dry:
-                shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in data.keys()}
-                del data
-                study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
-                self.write_evaluation_results(shallow_data.keys(), study)
-                if not one_shot: self.digest_path.write_text(config_digest)
-            out2.write(f'Evaluation study written to: {self.study_path}')
+            if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'):
+                out2.write('Skipping evaluation')
+            else:
+                if not dry:
+                    shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in data.keys()}
+                    del data
+                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
+                    self.write_evaluation_results(shallow_data.keys(), study)
+                    if not one_shot: self.digest_path.write_text(config_digest)
+                out2.write(f'Evaluation study written to: {self.study_path}')
         finally:
             self._shutdown()
 
