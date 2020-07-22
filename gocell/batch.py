@@ -166,7 +166,7 @@ class Task:
                 if file_id not in data: data[file_id] = None
                 data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
             out2.write('')
-            if one_shot or (first_stage is not None and pipeline.find(first_stage) > pipeline.find('process_candidates') and not self.result_path.exists()):
+            if one_shot or (first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
@@ -177,7 +177,7 @@ class Task:
                         json.dump(self.config, fout)
                 out2.write(f'Results written to: {self.result_path}')
             if not dry:
-                shallow_data = {file_id : {key : data[file_id][key] for key in ('g', 'postprocessed_candidates')} for file_id in data.keys()}
+                shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in data.keys()}
                 del data
                 study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                 self.write_evaluation_results(shallow_data.keys(), study)
@@ -220,7 +220,7 @@ class Task:
     def find_first_stage_name(self, pipeline, dry=False, out=None):
         out = ConsoleOutput.get(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
-        if pickup_task is None or pipeline.find(stage_name) < pipeline.find('process_candidates'):
+        if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms'):
             return None, {}
         else:
             out.write(f'Picking up from: {pickup_task.result_path} ({stage_name if stage_name != "" else "evaluate"})')

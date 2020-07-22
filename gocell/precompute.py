@@ -21,7 +21,7 @@ class PrecomputeStage(gocell.pipeline.Stage):
         g_atoms      = input_data['g_atoms']
         adjacencies  = input_data['adjacencies']
 
-        generations, costs, cover = gocell.generations.compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, 'bruteforce', cfg, out)
+        generations, costs, cover = gocell.generations.compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, 'bruteforce', cfg, out=out)
 
         return {
             'y_surface': y_surface,
@@ -52,6 +52,8 @@ class MinSetCoverStage(gocell.pipeline.Stage):
 
         cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies)
         cover.update(candidates, out=out)
+
+        out.write(f'\nSolution costs: {cover.costs[-1]:,g}')
 
         return {
             'cover': cover

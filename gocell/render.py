@@ -125,7 +125,7 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
         g = gocell.surface.Surface(data['g_raw'].shape)
         g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
 
-    if isinstance(candidates, str): candidates = data[candidates_key]
+    if isinstance(candidates, str): candidates = data[candidates]
     if is_legal == True: is_legal = lambda m: True
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
@@ -193,7 +193,7 @@ def rasterize_objects(data, candidates_key, dilate=0):
     else:
         dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
-    for foreground in gocell.aux.render_candidate_foregrounds(data['g'].model.shape, candidates):
+    for foreground in gocell.aux.render_candidate_foregrounds(data['g_raw'].shape, candidates):
         if dilate > 0:   foreground = dilation(foreground, morphology.disk( dilate))
         elif dilate < 0: foreground =  erosion(foreground, morphology.disk(-dilate))
         if foreground.any(): yield foreground.copy()
@@ -230,7 +230,7 @@ def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_over
     # Finally, we merge the rasterized objects
     objects_by_label = dict((i[0], [objects[k] for k in i[1]]) for i in obj_indices_by_label.items())
     objects  = [(np.sum(same_label_objects, axis=0) > 0) for same_label_objects in objects_by_label.values()]
-    result   = np.zeros(data['g'].model.shape, 'uint16')
+    result   = np.zeros(data['g_raw'].shape, 'uint16')
     if len(objects) > 0:
         overlaps = (np.sum(objects, axis=0) > 1)
         for l, obj in enumerate(objects, 1): result[obj] = l

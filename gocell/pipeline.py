@@ -21,11 +21,11 @@ class Stage(object):
             for cb in self._callbacks[name]:
                 cb(name, *args, **kwargs)
 
-    def add_callback(name, cb):
+    def add_callback(self, name, cb):
         if name not in self._callbacks: self._callbacks[name] = []
         self._callbacks[name].append(cb)
 
-    def remove_callback(name, cb):
+    def remove_callback(self, name, cb):
         if name in self._callbacks: self._callbacks[name].remove(cb)
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
@@ -126,6 +126,7 @@ def create_default_pipeline():
     import gocell.atoms
     import gocell.generations
     import gocell.precompute
+    import gocell.postprocessing
 
     stages = [
         gocell.preprocessing.PreprocessingStage1(),
@@ -133,8 +134,9 @@ def create_default_pipeline():
         gocell.seeds.SeedStage(),
         gocell.atoms.AtomicStage(),
         gocell.generations.GenerationStage(),
-#        gocell.precompute.PrecomputeStage(),
-#        gocell.precompute.MinSetCoverStage(),
+        gocell.precompute.PrecomputeStage(),
+        gocell.precompute.MinSetCoverStage(),
+        gocell.postprocessing.Postprocessing(),
     ]
 
     return create_pipeline(stages)
