@@ -39,16 +39,18 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     lines = data['adjacencies'].get_edge_lines(data)
     shape = img.shape[:2]
     for endpoint in data['seeds']:
-        circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
         perim_mask  = skimage.draw.circle(*endpoint, endpoint_radius + endpoint_edge_thickness, shape)
         for i in range(3):
             img[:,:,i][ perim_mask] = endpoint_edge_color[i]
-            img[:,:,i][circle_mask] = endpoint_color     [i]
     for line in lines:
         line_buf  = draw_line(line[0], line[1], edge_thickness, shape=shape)
         line_mask = (line_buf > 0)
         line_vals = line_buf[line_mask]
         for i in range(3): img[:, :, i][line_mask] = (line_vals) * edge_color[i]
+    for endpoint in data['seeds']:
+        circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
+        for i in range(3):
+            img[:,:,i][circle_mask] = endpoint_color[i]
     return (255 * img).clip(0, 255).astype('uint8')
 
 

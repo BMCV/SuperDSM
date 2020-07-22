@@ -14,17 +14,37 @@ class Stage(object):
         self.cfg_key = cfg_key
         self.inputs  = dict([(key, key) for key in  inputs])
         self.outputs = dict([(key, key) for key in outputs])
+        self._callbacks = {}
+
+    def _callback(self, name, *args, **kwargs):
+        if name in self._callbacks:
+            for cb in self._callbacks[name]:
+                cb(name, *args, **kwargs)
+
+    def add_callback(name, cb):
+        if name not in self._callbacks: self._callbacks[name] = []
+        self._callbacks[name].append(cb)
+
+    def remove_callback(name, cb):
+        if name in self._callbacks: self._callbacks[name].remove(cb)
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
         out = gocell.aux.get_output(out)
-        out.intermediate(f'Starting stage "{self.name}"')
-        input_data = {}
-        for data_key, input_data_key in self.inputs.items():
-            input_data[input_data_key] = data[data_key]
-        output_data = self.process(input_data, cfg=gocell.config.get_value(cfg, self.cfg_key, {}), out=out, log_root_dir=log_root_dir)
-        assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
-        for output_data_key, data_key in self.outputs.items():
-            data[data_key] = output_data[output_data_key]
+        cfg = gocell.config.get_value(cfg, self.cfg_key, {})
+        if gocell.config.get_value(cfg, 'enabled', self.ENABLED_BY_DEFAULT):
+            out.intermediate(f'Starting stage "{self.name}"')
+            self._callback('start', data)
+            input_data = {}
+            for data_key, input_data_key in self.inputs.items():
+                input_data[input_data_key] = data[data_key]
+            output_data = self.process(input_data, cfg=cfg, out=out, log_root_dir=log_root_dir)
+            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
+            for output_data_key, data_key in self.outputs.items():
+                data[data_key] = output_data[output_data_key]
+            self._callback('end', data)
+        else:
+            out.write(f'Skipping disabled stage "{self.name}"')
+            self._callback('skip', data)
 
     def process(self, input_data, cfg, out, log_root_dir):
         raise ValueError('not implemented')
@@ -105,13 +125,16 @@ def create_default_pipeline():
     import gocell.seeds
     import gocell.atoms
     import gocell.generations
+    import gocell.precompute
 
     stages = [
         gocell.preprocessing.PreprocessingStage1(),
         gocell.preprocessing.PreprocessingStage2(),
         gocell.seeds.SeedStage(),
         gocell.atoms.AtomicStage(),
-        gocell.generations.GenerationStage()
+        gocell.generations.GenerationStage(),
+#        gocell.precompute.PrecomputeStage(),
+#        gocell.precompute.MinSetCoverStage(),
     ]
 
     return create_pipeline(stages)

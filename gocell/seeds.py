@@ -23,6 +23,8 @@ def _get_local_maxima(image, footprint_radius, abs_threshold=1e-2, max_count=np.
 
 class SeedStage(gocell.pipeline.Stage):
 
+    ENABLED_BY_DEFAULT = True
+
     def __init__(self):
         super(SeedStage, self).__init__('find_seeds',
                                         inputs  = ['y'],

@@ -10,6 +10,8 @@ import warnings
 
 class AtomicStage(gocell.pipeline.Stage):
 
+    ENABLED_BY_DEFAULT = True
+
     def __init__(self):
         super(AtomicStage, self).__init__('atoms',
                                           inputs  = ['y', 'foreground_labels', 'seeds'],

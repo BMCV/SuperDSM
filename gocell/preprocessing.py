@@ -8,6 +8,8 @@ import numpy as np
 
 class PreprocessingStage1(gocell.pipeline.Stage):
 
+    ENABLED_BY_DEFAULT = True
+
     def __init__(self):
         super(PreprocessingStage1, self).__init__('preprocess1',
                                                   inputs  = ['g_raw'],
@@ -29,6 +31,8 @@ class PreprocessingStage1(gocell.pipeline.Stage):
 
 
 class PreprocessingStage2(gocell.pipeline.Stage):
+
+    ENABLED_BY_DEFAULT = True
 
     def __init__(self):
         super(PreprocessingStage2, self).__init__('preprocess2',

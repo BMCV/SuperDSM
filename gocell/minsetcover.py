@@ -61,13 +61,6 @@ class MinSetCover:
     def get_atom(self, atom_label):
         return self.atoms[atom_label]
 
-#    def update_cluster(self, new_candidates, cluster=None, out=None):
-#        if cluster is None: cluster = self.adjacencies.get_cluster_label(list(candidates[0].footprint)[0])
-#        candidates = self.candidates_by_cluster[cluster]
-#        candidates += new_candidates
-#        partial_solution = _solve_minsetcover(candidates, self.alpha, out)
-#        self.solution_by_cluster[cluster] = partial_solution
-
     def _update_partial_solution(self, cluster_label, out):
         candidates = self.candidates_by_cluster[cluster_label]
         partial_solution = _solve_minsetcover(candidates, self.alpha, out)

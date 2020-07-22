@@ -72,12 +72,24 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, config, first_stage, out=None):
-    aux.mkdir(pathlib.Path(seg_filepath).parents[0])
+def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, config, first_stage, out=None):
+    if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
+    if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
     aux.mkdir(pathlib.Path(log_filepath).parents[0])
+
     g_raw = io.imread(im_filepath)
-    out = ConsoleOutput.get(out)
+    out   = ConsoleOutput.get(out)
+
+    def write_adjacencies_image(name, data):
+        if adj_filepath is not None:
+            img = render.render_adjacencies(data)
+            io.imwrite(adj_filepath, img)
+
+    atomic_stage = pipeline.stages[pipeline.find('atoms')]
+    atomic_stage.add_callback('end', write_adjacencies_image)
     result_data = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, log_root_dir=log_filepath, out=out)[0]
+    atomic_stage.remove_callback('end', write_adjacencies_image)
+
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
         im_result = render.render_model_shapes_over_image(result_data, border=seg_border)
@@ -103,13 +115,13 @@ class Task:
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         if self.runnable:
-            self.         backend = data['backend']
             self.  im_pathpattern = os.path.expanduser(data['im_pathpattern'])
             self.  gt_pathpattern = os.path.expanduser(data['gt_pathpattern'])
             self.    gt_is_unique = data['gt_is_unique']
             self.       gt_loader = data['gt_loader']
             self.gt_loader_kwargs = data['gt_loader_kwargs'] if 'gt_loader_kwargs' in data else {}
             self. seg_pathpattern = path / data['seg_pathpattern'] if 'seg_pathpattern' in data else None
+            self. adj_pathpattern = path / data['adj_pathpattern'] if 'adj_pathpattern' in data else None
             self. log_pathpattern = path / data['log_pathpattern']
             self.        file_ids = sorted(frozenset(data['file_ids']))
             self.     result_path = path / 'data.dill.gz'
@@ -122,18 +134,12 @@ class Task:
             self. merge_threshold = data['merge_overlap_threshold']
 
     def _initialize(self):
-        if self.backend == 'ray':
-            ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
-            _pipeline = pipeline.create_default_pipeline('ray', selection_type='minsetcover')
-            del _pipeline.stages[_pipeline.find('superpixels_entropy')]
-            del _pipeline.stages[_pipeline.find('superpixels_discard')]
-            return _pipeline
-        return ValueError(f'unknown backend "{self.backend}"')
+        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
+        _pipeline = pipeline.create_default_pipeline()
+        return _pipeline
 
     def _shutdown(self):
-        if self.backend == 'ray':
-            ray.shutdown()
-        return ValueError(f'unknown backend "{self.backend}"')
+        ray.shutdown()
 
     def run(self, dry=False, verbosity=0, force=False, one_shot=False, out=None):
         out = ConsoleOutput.get(out)
@@ -153,6 +159,7 @@ class Task:
                 out3.write(f'\nProcessing file: {im_filepath}')
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
+                              adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
                               log_filepath = str(self.log_pathpattern) % file_id,
                                 seg_border = self.seg_border,
                               config = config.derive(self.config, {}))
