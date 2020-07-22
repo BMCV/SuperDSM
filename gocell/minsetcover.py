@@ -24,7 +24,7 @@ def _solve_minsetcover(candidates, alpha, out=None):
     out.write(f'Greedy MINSETCOVER - Accepted candidates: {len(accepted_candidates)}')
 
     replacements_count = 0
-    for c_new in sorted([c for c in candidates if c is not in accepted_candidates], key=lambda c: w(c)):
+    for c_new in sorted([c for c in candidates if c not in accepted_candidates], key=lambda c: w(c)):
         valid_replacement, blockers = True, set()
         for c in accepted_candidates:
             overlap = len(c.footprint & c_new.footprint)
@@ -55,34 +55,40 @@ class MinSetCover:
         self.atoms = {_get_atom_label(atom): atom for atom in atoms}
         self.alpha = alpha
         self.adjacencies = adjacencies
-        self.candidates_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label()) == cluster] for cluster in adjacencies.cluster_labels}
+        self.candidates_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
         self.  solution_by_cluster = {cluster: self.candidates_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
     def get_atom(self, atom_label):
         return self.atoms[atom_label]
 
-    def update_cluster(self, new_candidates, cluster=None, out=None):
-        if cluster is None: cluster = self.adjacencies.get_cluster_label(list(candidates[0].footprint)[0])
-        candidates = self.candidates_by_cluster[cluster]
-        candidates += new_candidates
+#    def update_cluster(self, new_candidates, cluster=None, out=None):
+#        if cluster is None: cluster = self.adjacencies.get_cluster_label(list(candidates[0].footprint)[0])
+#        candidates = self.candidates_by_cluster[cluster]
+#        candidates += new_candidates
+#        partial_solution = _solve_minsetcover(candidates, self.alpha, out)
+#        self.solution_by_cluster[cluster] = partial_solution
+
+    def _update_partial_solution(self, cluster_label, out):
+        candidates = self.candidates_by_cluster[cluster_label]
         partial_solution = _solve_minsetcover(candidates, self.alpha, out)
-        self.solution_by_cluster[cluster] = partial_solution
+        self.solution_by_cluster[cluster_label] = partial_solution
 
     def update(self, new_candidates, out=None):
-        new_candidates_by_cluster = {}
+        invalidated_clusters = []
         for new_candidate in new_candidates:
-            cluster = self.adjacencies.get_cluster_label(list(new_candidate.footprint)[0])
-            new_candidates_by_cluster[cluster] = new_candidate
-        for cluster in new_candidates_by_cluster.keys():
-            self.update_cluster(new_candidates_by_cluster[cluster], cluster=cluster, out=out)
+            cluster_label = self.adjacencies.get_cluster_label(list(new_candidate.footprint)[0])
+            invalidated_clusters.append(cluster_label)
+            self.candidates_by_cluster[cluster_label].append(new_candidate)
+        for cluster_label in frozenset(invalidated_clusters):
+            self._update_partial_solution(cluster_label, out)
 
     def get_cluster_costs(self, cluster_label):
-        partial_solution = self.solution_by_cluster[cluster]
+        partial_solution = self.solution_by_cluster[cluster_label]
         return sum(c.energy for c in partial_solution) + self.alpha * len(partial_solution)
 
     @property
     def solution(self):
-        return sum(list(partial_solution) for partial_solution in self.solution_by_cluster.values(), [])
+        return sum((list(partial_solution) for partial_solution in self.solution_by_cluster.values()), [])
 
     @property
     def costs(self):

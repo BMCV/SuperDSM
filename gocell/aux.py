@@ -31,11 +31,11 @@ from IPython.display      import clear_output
 #    return i, h
 #
 #
-#def copy_dict(d):
-#    """Returns a copy of dict `d`.
-#    """
-#    assert isinstance(d, dict), 'not a "dict" object'
-#    return dict(d.items())
+def copy_dict(d):
+    """Returns a copy of dict `d`.
+    """
+    assert isinstance(d, dict), 'not a "dict" object'
+    return {item[0]: copy_dict(item[1]) if isinstance(item[1], dict) else item[1] for item in d.items()}
 
 
 def is_jupyter_notebook():
@@ -57,21 +57,22 @@ def get_output(out=None):
 
 class JupyterOutput:
 
-    def __init__(self, parent=None, maxlen=np.inf):
+    def __init__(self, parent=None, maxlen=np.inf, muted=False):
         self.lines     = []
         self.current   = None
         self.parent    = parent
         self.maxlen    = maxlen
         self.truncated = 0
+        self._muted    = muted
+
+    @property
+    def muted(self):
+        return self._muted or (self.parent is not None and self.parent.muted)
     
-    def derive(self, maxlen=np.inf):
-        child = Output(parent=self, maxlen=maxlen)
+    def derive(self, muted=False, maxlen=np.inf):
+        child = JupyterOutput(parent=self, maxlen=maxlen, muted=muted)
         if self.current is not None: child.lines.append(self.current)
         return child
-    
-    @staticmethod
-    def get(out):
-        return Output() if out is None else out
     
     def clear(self, flush=False):
         clear_output(not flush)
@@ -89,6 +90,7 @@ class JupyterOutput:
             self.truncated += 1
     
     def intermediate(self, line, flush=True):
+        if self.muted: return
         self.truncate(offset=+1)
         self.clear()
         self.current = line
@@ -96,6 +98,7 @@ class JupyterOutput:
         if flush: sys.stdout.flush()
     
     def write(self, line, keep_current=False):
+        if self.muted: return
         if keep_current and self.current is not None: self.lines.append(self.current)
         self.lines.append(line)
         self.truncate()

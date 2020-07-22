@@ -1,5 +1,9 @@
 import gocell.aux
+import gocell.surface
+import gocell.modelfit
 
+import ray
+import sys, io, contextlib, traceback
 import scipy.ndimage as ndi
 import numpy as np
 import skimage.morphology as morph
@@ -18,7 +22,7 @@ class Candidate:
 
     def get_region(self, g, g_superpixels):
         region_mask = self.get_mask(g_superpixels)
-        return surface.Surface(g.model.shape, g.model, mask=region_mask)
+        return gocell.surface.Surface(g.model.shape, g.model, mask=region_mask)
 
     def set(self, state):
         self.fg_fragment = state.fg_fragment.copy() if state.fg_fragment is not None else None
@@ -38,7 +42,7 @@ class Candidate:
 
 
 def _expand_mask_for_backbround(y, mask, margin_step, max_margin):
-    img_boundary_mask = zeros(mask.shape, bool)
+    img_boundary_mask = np.zeros(mask.shape, bool)
     img_boundary_mask[ 0,  :] = True
     img_boundary_mask[-1,  :] = True
     img_boundary_mask[ :,  0] = True
@@ -68,16 +72,12 @@ def _get_modelfit_region(candidate, y, g_atoms):
     return region
 
 
-def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, silent=True):
+def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs):
     region = _get_modelfit_region(candidate, y, g_atoms)
-    def _run(): return gocell.modelfit.modelfit(y, region, **modelfit_kwargs)
-    if silent:
-        with contextlib.redirect_stdout(None): J, result, fallback = _run()
-    else:
-        J, result, fallback = _run()
+    J, result, fallback = _modelfit(region, **modelfit_kwargs)
     padded_mask = np.pad(region.mask, 1)
     smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
-    padded_foreground = (result.map_to_image_pixels(g, region, pad=1).s(x_map, smooth_mat) > 0)
+    padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
     foreground = padded_foreground[1:-1, 1:-1]
     if foreground.any():
         rows = foreground.any(axis=1)
@@ -95,22 +95,70 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, silent=Tru
 
 
 @ray.remote
-def process_candidate(cidx, *args, **kwargs):
-    return (cidx, *_process_candidate(*args, **kwargs))
+def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
+    if log_root_dir is not None:
+        log_filename = gocell.aux.join_path(log_root_dir, f'{cidx}.txt')
+        with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
+            with contextlib.redirect_stdout(log_file):
+                try:
+                    result = _process_candidate(*args, **kwargs)
+                except:
+                    traceback.print_exc(file=log_file)
+                    raise
+    else:
+        with contextlib.redirect_stdout(None):
+            result = _process_candidate(*args, **kwargs)
+    return (cidx, *result)
 
 
-def process_candidates(candidates, y, g_atoms, modelfit_kwargs, out=None):
+def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=None):
     out = gocell.aux.get_output(out)
     candidates   = list(candidates)
     y_id         = ray.put(y)
     g_atoms_id   = ray.put(g_atoms)
     x_map_id     = ray.put(y.get_map(normalized=False, pad=1))
     mf_kwargs_id = ray.put(modelfit_kwargs)
-    futures      = [process_candidate.remote(cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id) for cidx, c in enumerate(candidates)]
+    futures      = [_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id) for cidx, c in enumerate(candidates)]
     fallbacks    = 0
     for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
         candidates[ret[0]].set(ret[1])
         out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(futures)} ({fallbacks}x fallback)')
         if ret[2]: fallbacks += 1
     out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
+
+
+def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+    print('-- initializing --')
+    smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
+    J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
+    CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
+    print(f'scale: {CP_params["scale"]:g}')
+    fallback = False
+    if callable(init):
+        params = init(J.smooth_mat.shape[1])
+    else:
+        if init == 'gocell':
+            print('-- convex programming starting: GOCELL --')
+            J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
+            params = gocell.modelfit.PolynomialModel(np.array(gocell.modelfit.CP(J_gocell, np.zeros(6), **CP_params).solve()['x'])).array
+            print(f'solution: {J_gocell(params)}')
+        else:
+            params = np.zeros(6)
+        params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
+    try:
+        print('-- convex programming starting: GOCELLOS --')
+        solution = gocell.modelfit.CP(J, params, **CP_params).solve()
+        solution, status = np.array(solution['x']), solution['status']
+        if status == 'unknown' and J(solution) > J(params):
+            fallback = True  # numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
+        else:
+            print(f'solution: {J(solution)}')
+    except: # e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+        traceback.print_exc(file=sys.stdout)
+        fallback = True  # at least something we can work with
+    if fallback:
+        print('-- GOCELLOS failed: falling back to GOCELL result --')
+        solution = params
+    print('-- finished --')
+    return J, gocell.modelfit.PolynomialModel(solution), fallback
 

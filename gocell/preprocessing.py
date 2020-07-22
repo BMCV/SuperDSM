@@ -9,9 +9,9 @@ import numpy as np
 class PreprocessingStage1(gocell.pipeline.Stage):
 
     def __init__(self):
-        super(PreprocessingStage, self).__init__('preprocess1',
-                                                 inputs  = ['g_raw'],
-                                                 outputs = ['y', 'foreground_labels'])
+        super(PreprocessingStage1, self).__init__('preprocess1',
+                                                  inputs  = ['g_raw'],
+                                                  outputs = ['y'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         g_raw = input_data['g_raw']
@@ -28,34 +28,36 @@ class PreprocessingStage1(gocell.pipeline.Stage):
         }
 
 
-class PreprocessingStage2(gocell.pipeline.Stage)
+class PreprocessingStage2(gocell.pipeline.Stage):
 
     def __init__(self):
-        super(PreprocessingStage, self).__init__('preprocess2',
-                                                 inputs  = ['y', 'seeds', 'foreground_abs_threshold'],
-                                                 outputs = ['y', 'foreground_labels'])
+        super(PreprocessingStage2, self).__init__('preprocess2',
+                                                  inputs  = ['y', 'seeds', 'foreground_abs_threshold'],
+                                                  outputs = ['y', 'foreground_labels'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        abs_threshold = data['foreground_abs_threshold']
+        abs_threshold = input_data['foreground_abs_threshold']
 
-        tmp1 = (data['y'] >= 0)
+        tmp1 = (input_data['y'] >= 0)
         tmp2 = ndi.morphology.binary_dilation(tmp1)
         tmp3 = ndi.label(tmp2)[0]
-        tmp4 = zeros_like(tmp3)
+        tmp4 = np.zeros_like(tmp3)
 
-        for seed in data['seeds']:
+        for seed in input_data['seeds']:
             seed = tuple(seed)
             l = tmp3[seed]
             cc = (tmp3 == l)
             tmp4[cc] = l
 
-        tmp10 = np.logical_and(data['y'] > 0, data['y'] < abs_threshold * data['y'].max())
-        tmp10 = np.logical_and(tmp10, data['foreground_labels'] == 0)
-        data['y'][tmp10] = 0
+        foreground_labels = tmp4
+
+        tmp10 = np.logical_and(input_data['y'] > 0, input_data['y'] < abs_threshold * input_data['y'].max())
+        tmp10 = np.logical_and(tmp10, foreground_labels == 0)
+        input_data['y'][tmp10] = 0
 
         return {
-            'foreground_labels': tmp4,
-            'y': y
+            'foreground_labels': foreground_labels,
+            'y': input_data['y']
         }
 
 

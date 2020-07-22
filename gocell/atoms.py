@@ -2,21 +2,24 @@ import gocell.aux
 import gocell.config
 import gocell.pipeline
 
+import numpy as np
 import skimage.morphology as morph
+import scipy.ndimage as ndi
+import warnings
 
 
-class AtomStage(gocell.pipeline.Stage)
+class AtomicStage(gocell.pipeline.Stage):
 
     def __init__(self):
-        super(PreprocessingStage, self).__init__('atoms',
-                                                 inputs  = ['y', 'foreground_labels', 'seeds'],
-                                                 outputs = ['g_clusters', 'g_atoms', 'adjacencies'])
+        super(AtomicStage, self).__init__('atoms',
+                                          inputs  = ['y', 'foreground_labels', 'seeds'],
+                                          outputs = ['g_clusters', 'g_atoms', 'adjacencies'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        shape = data['y'].shape
+        shape = input_data['y'].shape
 
         # Apply watershed transform using image intensities
-        cc_distances = ndi.distance_transform_edt(data['foreground_labels'] == 0)
+        cc_distances = ndi.distance_transform_edt(input_data['foreground_labels'] == 0)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
             g_clusters = morph.watershed(cc_distances)
@@ -24,23 +27,23 @@ class AtomStage(gocell.pipeline.Stage)
 
         # Rasterize atom seeds
         g_atom_seeds = np.zeros(shape, 'uint16')
-        for seed_idx, seed in enumerate(data['seeds']):
+        for seed_idx, seed in enumerate(input_data['seeds']):
             g_atom_seeds[tuple(seed)] = seed_idx + 1
 
-        g_atoms = zeros_like(g_clusters)
+        g_atoms = np.zeros_like(g_clusters)
         for cluster_l in frozenset(g_clusters.reshape(-1)):
-            cluster_mask = (data['g_clusters'] == cluster_l)
+            cluster_mask = (g_clusters == cluster_l)
 
             # Apply watershed transform using image intensities
-            distances = data['y'].max() - data['y'].clip(0, np.inf)
+            distances = input_data['y'].max() - input_data['y'].clip(0, np.inf)
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', FutureWarning)
                 g_cluster_atoms = morph.watershed(distances, g_atom_seeds * cluster_mask, mask=cluster_mask)
                 for l in frozenset(g_cluster_atoms.reshape(-1)) - {0}:
                     cc = (g_cluster_atoms == l)
                     g_atoms[cc] = g_atom_seeds[cc].max()
-            out.intermediate(f'Processing cluster: {cluster_l} / {g_clusters.max()}')
-        out.write('Atoms: %d' % g_atoms.max())
+            out.intermediate(f'Extracting atoms from cluster {cluster_l} / {g_clusters.max()}')
+        out.write(f'Extracted atoms: {g_atoms.max()}')
 
         adjacencies = AtomAdjacencyGraph(g_atoms, g_clusters, out)
         return {
@@ -53,7 +56,7 @@ class AtomStage(gocell.pipeline.Stage)
 class AtomAdjacencyGraph:
 
     def __init__(self, g_atoms, g_clusters, out=None):
-        out = gocell.aux.Output.get(out)
+        out = gocell.aux.get_output(out)
         self._adjacencies, se = {}, morph.disk(1)
         self._atoms_by_cluster, self._cluster_by_atom = {}, {}
         for l0 in range(1, g_atoms.max() + 1):
@@ -93,7 +96,7 @@ class AtomAdjacencyGraph:
         for l in frozenset(data['g_atoms'].reshape(-1)):
             seed_l = data['seeds'][l - 1]
             if not accept(l): continue
-            for k in adjacencies[l]:
+            for k in self[l]:
                 seed_k = data['seeds'][k - 1]
                 if not accept(k): continue
                 lines.append([seed_l, seed_k])

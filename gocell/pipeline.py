@@ -17,6 +17,7 @@ class Stage(object):
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
         out = gocell.aux.get_output(out)
+        out.intermediate(f'Starting stage "{self.name}"')
         input_data = {}
         for data_key, input_data_key in self.inputs.items():
             input_data[input_data_key] = data[data_key]
@@ -49,8 +50,10 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
+        cfg = gocell.aux.copy_dict(cfg)
         if log_root_dir is not None: gocell.aux.mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
+        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].name
         out  = gocell.aux.get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
@@ -107,7 +110,7 @@ def create_default_pipeline():
         gocell.preprocessing.PreprocessingStage1(),
         gocell.preprocessing.PreprocessingStage2(),
         gocell.seeds.SeedStage(),
-        gocell.atoms.AtomStage(),
+        gocell.atoms.AtomicStage(),
         gocell.generations.GenerationStage()
     ]
 

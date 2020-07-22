@@ -10,20 +10,46 @@ from scipy   import ndimage
 import skimage.draw
 
 
-def draw_adjacencies(data, normalize_img=True, endpoint_radius=5):
-    img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3).copy()
+def draw_line(p1, p2, thickness, shape):
+    assert thickness >= 1
+    threshold = (thickness + 1) / 2
+    if np.allclose(threshold, round(threshold)):
+        box = np.array((np.min((p1, p2), axis=0), np.max((p1, p2), axis=0)))
+        buf = np.zeros(1 + box[1] - box[0])
+        p1  = p1 - box[0]
+        p2  = p2 - box[0]
+        rr, cc = skimage.draw.line(*p1, *p2)
+        buf[rr, cc] = 1
+        buf = ndimage.distance_transform_edt(buf == 0) < threshold
+        result = np.zeros(shape)
+        result[box[0,0] : box[1,0] + 1, box[0,1] : box[1,1] + 1] = buf
+        return result
+    else:
+        thickness1 = 2 * int((thickness + 1) // 2) - 1
+        thickness2 = thickness1 + 2
+        buf1 = draw_line(p1, p2, thickness1, shape)
+        buf2 = draw_line(p1, p2, thickness2, shape)
+        return (buf2 * (thickness - thickness1) / (thickness2 - thickness1) + buf1).clip(0, 1)
+
+
+def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radius=5, endpoint_edge_thickness=2,
+                       edge_color=(1,0,0), endpoint_color=(1,0,0), endpoint_edge_color=(0,0,0)):
+    img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3)
+    img = img / img.max()
     lines = data['adjacencies'].get_edge_lines(data)
     shape = img.shape[:2]
+    for endpoint in data['seeds']:
+        circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
+        perim_mask  = skimage.draw.circle(*endpoint, endpoint_radius + endpoint_edge_thickness, shape)
+        for i in range(3):
+            img[:,:,i][ perim_mask] = endpoint_edge_color[i]
+            img[:,:,i][circle_mask] = endpoint_color     [i]
     for line in lines:
-        line_rr, line_cc, line_val = skimage.draw.line_aa(*line[0], *line[1])
-        for i in range(3): img[line_rr, line_cc, i] = (val if i == 0 else 1 - val)
-        for endpoint in line:
-            circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
-            perim_rr, perim_cc, perim_val = skimage.draw.circle_perimeter_aa(*endpoint, endpoint_radius, shape)
-            for i in range(3):
-                img[:,:,i][circle_mask] = (val if i == 0 else 1 - val)
-                img[:,:,i][perim_rr, perim_cc] = perim_val
-    return img
+        line_buf  = draw_line(line[0], line[1], edge_thickness, shape=shape)
+        line_mask = (line_buf > 0)
+        line_vals = line_buf[line_mask]
+        for i in range(3): img[:, :, i][line_mask] = (line_vals) * edge_color[i]
+    return (255 * img).clip(0, 255).astype('uint8')
 
 
 def _normalize_image(img):
@@ -40,7 +66,7 @@ def _fetch_image_from_data(data, normalize_img=True):
 
 def render_atoms(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, override_img=None):
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
-    regions = data['g_atoms'] > 0 if discarded_only else data['g_superpixels']
+    regions = data['g_atoms'] > 0 if discarded_only else data['g_atoms']
     return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius)
 
 
@@ -85,7 +111,7 @@ def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0
 COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
 
 
-def render_model_shapes_over_image(data, candidates_key='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
+def render_model_shapes_over_image(data, candidates='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
     is_legal = True        ## other values are currently not generated
     override_xmaps = None  ## other values are currently not required
 
@@ -97,7 +123,7 @@ def render_model_shapes_over_image(data, candidates_key='postprocessed_candidate
         g = gocell.surface.Surface(data['g_raw'].shape)
         g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
 
-    candidates = data[candidates_key]
+    if isinstance(candidates, str): candidates = data[candidates_key]
     if is_legal == True: is_legal = lambda m: True
 
     img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
