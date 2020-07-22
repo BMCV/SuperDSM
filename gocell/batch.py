@@ -115,24 +115,24 @@ class Task:
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         if self.runnable:
-            self.  im_pathpattern = os.path.expanduser(data['im_pathpattern'])
-            self.  gt_pathpattern = os.path.expanduser(data['gt_pathpattern'])
-            self.    gt_is_unique = data['gt_is_unique']
-            self.       gt_loader = data['gt_loader']
-            self.gt_loader_kwargs = data['gt_loader_kwargs'] if 'gt_loader_kwargs' in data else {}
-            self. seg_pathpattern = path / data['seg_pathpattern'] if 'seg_pathpattern' in data else None
-            self. adj_pathpattern = path / data['adj_pathpattern'] if 'adj_pathpattern' in data else None
-            self. log_pathpattern = path / data['log_pathpattern']
-            self.        file_ids = sorted(frozenset(data['file_ids']))
+            self.  im_pathpattern = os.path.expanduser(self.data['im_pathpattern'])
+            self.  gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern'])
+            self.    gt_is_unique = self.data['gt_is_unique']
+            self.       gt_loader = self.data['gt_loader']
+            self.gt_loader_kwargs = self.data['gt_loader_kwargs'] if 'gt_loader_kwargs' in self.data else {}
+            self. seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
+            self. adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
+            self. log_pathpattern = path / self.data['log_pathpattern']
+            self.        file_ids = sorted(frozenset(self.data['file_ids']))
             self.     result_path = path / 'data.dill.gz'
             self.      study_path = path / 'study.csv'
             self.     digest_path = path / '.digest'
             self. digest_cfg_path = path / '.digest.cfg.json'
-            self.          config = data['config']
-            self.      seg_border = data['seg_border'] if 'seg_border' in data else None
-            self.          dilate = data['dilate']
-            self. merge_threshold = data['merge_overlap_threshold']
-            self.      last_stage = data['last_stage'] if 'last_stage' in data else None
+            self.          config = self.data['config']
+            self.      seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
+            self.          dilate = self.data['dilate']
+            self. merge_threshold = self.data['merge_overlap_threshold']
+            self.      last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
 
     def _initialize(self):
         ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
