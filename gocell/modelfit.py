@@ -76,7 +76,7 @@ class PolynomialModel:
         A  = U.dot(np.diag((ev(halfaxis1_len), ev(halfaxis2_len)))).dot(U.T)
         b  = A.dot(center)
         c  = np.inner(center, b) - 1
-        return PolynomialModel(ξ, A, -b, c)
+        return PolynomialModel(ξ, -A, b, -c)
 
     def is_measurable(self):
         return (np.linalg.eigvalsh(self.A) < 0).all()

@@ -127,6 +127,17 @@ def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, ou
     out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
 
 
+def _estimate_initialization(region):
+    fg = region.model.copy()
+    fg[~region.mask] = 0
+    fg = (fg > 0)
+    roi_xmap = region.get_map()
+    fg_center = np.round(ndi.center_of_mass(fg)).astype(int)##
+    fg_center = roi_xmap[:, fg_center[0], fg_center[1]]
+    halfaxes_lengths = (roi_xmap[:, fg] - fg_center[:, None]).std(axis=1)
+    return gocell.modelfit.PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
+
+
 def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     print('-- initializing --')
     smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
@@ -140,7 +151,22 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         if init == 'gocell':
             print('-- convex programming starting: GOCELL --')
             J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
-            params = gocell.modelfit.PolynomialModel(np.array(gocell.modelfit.CP(J_gocell, np.zeros(6), **CP_params).solve()['x'])).array
+            for retry in [False, True]:
+                if not retry:
+                    params = np.zeros(6)
+                else:
+                    print(f'-- retry --')
+                    params = _estimate_initialization(region)
+                    params_value = J_gocell(params)
+                    print(f'initialization: {params_value}')
+                    params = params.array
+                    if params_value > J_gocell(solution):
+                        print('initialization worse than previous solution - skipping retry')
+                        break
+                solution = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
+                solution, status = np.array(solution['x']), solution['status']
+                if status == 'optimal': break
+            params = gocell.modelfit.PolynomialModel(np.array(solution)).array
             print(f'solution: {J_gocell(params)}')
         else:
             params = np.zeros(6)
