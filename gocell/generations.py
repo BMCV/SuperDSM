@@ -40,14 +40,15 @@ class GenerationStage(gocell.pipeline.Stage):
                                               outputs = ['y_surface', 'generations', 'cover', 'costs'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface    = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False)
-        g_atoms      = input_data['g_atoms']
-        adjacencies  = input_data['adjacencies']
-        alpha        = gocell.config.get_value(cfg,        'alpha',    0)
-        conservative = gocell.config.get_value(cfg, 'conservative', True)
+        y_surface       = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False)
+        g_atoms         = input_data['g_atoms']
+        adjacencies     = input_data['adjacencies']
+        conservative    = gocell.config.get_value(cfg,    'conservative', True)
+        alpha           = gocell.config.get_value(cfg,           'alpha', 0)
+        try_lower_alpha = gocell.config.get_value(cfg, 'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
 
         mode = 'conservative' if conservative else 'fast'
-        generations, costs, cover = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, out)
+        generations, costs, cover = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, out)
 
         return {
             'y_surface':   y_surface,
@@ -57,7 +58,7 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, out=None):
     out = gocell.aux.get_output(out)
 
     modelfit_kwargs = {
@@ -76,7 +77,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         cover = None
         costs = None
     else:
-        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies)
+        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha)
         costs = [cover.costs]
         out.write(f'Solution costs: {costs[-1]:,g}')
 

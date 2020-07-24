@@ -39,10 +39,11 @@ class MinSetCoverStage(gocell.pipeline.Stage):
                                                outputs = ['cover'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface   = input_data['y_surface']
-        adjacencies = input_data['adjacencies']
-        candidates  = input_data['precomputed_candidates']
-        alpha       = gocell.config.get_value(cfg, 'alpha', 0)
+        y_surface       = input_data['y_surface']
+        adjacencies     = input_data['adjacencies']
+        candidates      = input_data['precomputed_candidates']
+        alpha           = gocell.config.get_value(cfg,           'alpha', 0)
+        try_lower_alpha = gocell.config.get_value(cfg, 'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
 
         atoms = []
         for atom_label in adjacencies.atom_labels:
@@ -50,7 +51,7 @@ class MinSetCoverStage(gocell.pipeline.Stage):
             c.footprint = {atom_label}
             atoms.append(c)
 
-        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies)
+        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha)
         cover.update(candidates, out=out)
 
         out.write(f'\nSolution costs: {cover.costs[-1]:,g}')
