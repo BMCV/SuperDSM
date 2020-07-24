@@ -148,16 +148,24 @@ class ConsoleOutput:
 
 class CvxoptFrame:
 
+    def __init__(self, **defaults):
+        self._defaults  = copy_dict(defaults)
+        self._interface = None
+
     def __enter__(self):
-        self.options = copy_dict(cvxopt.solvers.options)
+        self._interface = cvxopt.solvers.options
+        self._options = copy_dict(self._interface)
+        for key in self._defaults:
+            self[key] = self._defaults[key]
         return self
 
     def __setitem__(self, key, value):
-        cvxopt.solvers.options[key] = value
+        self._interface[key] = value
 
     def __exit__(self, *args):
-        cvxopt.solvers.options.clear()
-        cvxopt.solvers.options.update(self.options)
+        self._interface.clear()
+        self._interface.update(self._options)
+        self._interface = None
 
 
 #def threshold_gauss(data, tolerance, mode):
