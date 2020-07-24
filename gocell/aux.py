@@ -236,3 +236,21 @@ class SystemMutex:
         fcntl.flock(self.fp.fileno(), fcntl.LOCK_UN)
         self.fp.close()
 
+
+def find_candidate_by_footprint(candidates, atom_labels, cmp='=='):
+    result = []
+    atom_labels = frozenset(atom_labels)
+    for c in candidates:
+        match = False
+
+        if isinstance(cmp, str) and len(atom_labels & c.footprint) > 0 and eval(f'atom_labels {cmp} c.footprint'):
+            match = True
+
+        elif callable(cmp) and cmp(atom_labels, c.footprint):
+            match = True
+
+        if match:
+            result.append(c)
+            if cmp == '==': break
+    return result
+
