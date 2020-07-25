@@ -4,6 +4,7 @@ import gocell.surface
 
 import math
 import numpy as np
+import time
 
 
 class Stage(object):
@@ -78,9 +79,14 @@ class Pipeline:
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
         else: assert data is not None, 'data argument must be provided if first_stage is used'
+        timings = {}
         for stage in self.stages:
-            if ctrl.step(stage.name): stage(data, cfg, out=out, log_root_dir=log_root_dir)
-        return data, cfg
+            if ctrl.step(stage.name):
+                t0 = time.time()
+                stage(data, cfg, out=out, log_root_dir=log_root_dir)
+                dt = time.time() - t0
+                timings[stage.name] = dt
+        return data, cfg, timings
 
     def init(self, g_raw, cfg):
         return {

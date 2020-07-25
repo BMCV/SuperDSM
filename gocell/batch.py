@@ -9,6 +9,13 @@ import numpy as np
 import scipy.ndimage as ndi
 
 
+def _format_runtime(seconds):
+    seconds = int(round(seconds))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f'{hours:02}:{minutes:02}:{seconds:02}'
+
+
 def load_xcf_layer(xcf_path, layername):
     with tempfile.NamedTemporaryFile() as png_file:
         subprocess.call(['xcf2png', xcf_path, layername, '-o', png_file.name])
@@ -68,6 +75,7 @@ def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = ConsoleOutput.get(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
+        return None, None
     else:
         return __process_file(*args, out=out, **kwargs)
 
@@ -87,7 +95,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     atomic_stage = pipeline.stages[pipeline.find('atoms')]
     atomic_stage.add_callback('end', write_adjacencies_image)
-    result_data = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)[0]
+    result_data, _, timings = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
     atomic_stage.remove_callback('end', write_adjacencies_image)
 
     if seg_filepath is not None:
@@ -95,7 +103,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
         im_result = render.render_model_shapes_over_image(result_data, border=seg_border)
         aux.mkdir(pathlib.Path(seg_filepath).parents[0])
         io.imwrite(seg_filepath, im_result)
-    return result_data
+    return result_data, timings
 
 
 def find_first_differing_stage(pipeline, config1, config2):
@@ -126,6 +134,7 @@ class Task:
             self.        file_ids = sorted(frozenset(self.data['file_ids']))
             self.     result_path = path / 'data.dill.gz'
             self.      study_path = path / 'study.csv'
+            self.    timings_path = path / 'timings.csv'
             self.     digest_path = path / '.digest'
             self. digest_cfg_path = path / '.digest.cfg.json'
             self.          config = self.data['config']
@@ -155,6 +164,7 @@ class Task:
         try:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
+            timings = {}
             for file_id in self.file_ids:
                 im_filepath = str(self. im_pathpattern) % file_id
                 out3.write(f'\nProcessing file: {im_filepath}')
@@ -167,12 +177,13 @@ class Task:
                                     config = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
-                data[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                data[file_id], timings[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
             out2.write('')
             if one_shot or ((first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
+                    self.write_timings(timings)
                     out2.intermediate(f'Writing results... {self.result_path}')
                     with gzip.open(self.result_path, 'wb') as fout:
                         dill.dump(data, fout, byref=True)
@@ -222,7 +233,6 @@ class Task:
         pickup_candidate_scores = [pipeline.find(first_stage) for task, first_stage in pickup_candidates]
         return pickup_candidates[np.argmax(pickup_candidate_scores)]
 
-
     def find_first_stage_name(self, pipeline, dry=False, out=None):
         out = ConsoleOutput.get(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
@@ -237,7 +247,6 @@ class Task:
             else:
                 return None, {}
 
-
     def write_evaluation_results(self, chunk_ids, study):
         measure_names = sorted(study.measures.keys())
         rows = [['ID'] + measure_names]
@@ -251,6 +260,23 @@ class Task:
             val = fnc(study[measure_name])
             rows[-1].append(val)
         with self.study_path.open('w', newline='') as fout:
+            csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            for row in rows:
+                csv_writer.writerow(row)
+
+    def write_timings(self, timings):
+        file_ids = timings.keys()
+        stage_names = sorted(list(timings.values())[0].keys())
+        rows = [['ID'] + stage_names + ['total']]
+        totals = np.zeros(len(stage_names) + 1)
+        for file_id in file_ids:
+            vals  = [timings[file_id][stage_name] for stage_name in stage_names]
+            vals += [sum(vals)]
+            row   = [file_id] + [_format_runtime(val) for val in vals]
+            rows.append(row)
+            totals += np.asarray(vals)
+        rows.append([''] + [_format_runtime(val) for val in totals])
+        with self.timings_path.open('w', newline='') as fout:
             csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for row in rows:
                 csv_writer.writerow(row)
@@ -322,7 +348,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
-    parser.add_argument('--task', help='run only a single task', type=str, default=None)
+    parser.add_argument('--task', help='run only a single task', type=str, default=[], action='append')
     args = parser.parse_args()
 
     loader = BatchLoader()
@@ -334,7 +360,7 @@ if __name__ == '__main__':
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
     for task in loader.tasks:
-        if args.task is not None and pathlib.Path(args.task) != task.path: continue
+        if len(args.task) > 0 and all(task.path != pathlib.Path(path) for path in args.task): continue
         newpid = os.fork()
         if newpid == 0:
             task.run(dry, args.verbosity, args.force, args.oneshot, out)
