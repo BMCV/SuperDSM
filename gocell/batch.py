@@ -226,7 +226,7 @@ class Task:
     def find_first_stage_name(self, pipeline, dry=False, out=None):
         out = ConsoleOutput.get(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
-        if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms'):
+        if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms') + 1:
             return None, {}
         else:
             out.write(f'Picking up from: {pickup_task.result_path} ({stage_name if stage_name != "" else "evaluate"})')
@@ -322,6 +322,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
+    parser.add_argument('--task', help='run only a single task', type=str, default=None)
     args = parser.parse_args()
 
     loader = BatchLoader()
@@ -333,6 +334,7 @@ if __name__ == '__main__':
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
     for task in loader.tasks:
+        if args.task is not None and pathlib.Path(args.task) != task.path: continue
         newpid = os.fork()
         if newpid == 0:
             task.run(dry, args.verbosity, args.force, args.oneshot, out)
