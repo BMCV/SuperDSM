@@ -199,6 +199,16 @@ def join_path(path1, path2):
     return str(pathlib.Path(path1) / pathlib.Path(path2))
 
 
+def is_subpath(path, subpath):
+    if isinstance(   path, str):    path = pathlib.Path(   path)
+    if isinstance(subpath, str): subpath = pathlib.Path(subpath)
+    try:
+        subpath.relative_to(path)
+        return True
+    except ValueError:
+        return False
+
+
 def get_ray_1by1(obj_ids):
     while obj_ids:
         done, obj_ids = ray.wait(obj_ids, num_returns=1)

@@ -340,6 +340,13 @@ class ConsoleOutput:
         return ConsoleOutput(muted, self, self.margin + margin)
 
 
+def get_path(root_path, path):
+    if isinstance(root_path, str): root_path = pathlib.Path(root_path)
+    if isinstance(     path, str):      path = pathlib.Path(     path)
+    if path.is_absolute(): return path
+    return pathlib.Path(root_path) / path
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -348,11 +355,15 @@ if __name__ == '__main__':
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
-    parser.add_argument('--task', help='run only a single task', type=str, default=[], action='append')
+    parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
+    parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     args = parser.parse_args()
 
     loader = BatchLoader()
     loader.load(args.path)
+
+    args.task     = [get_path(args.path,     task_path) for     task_path in args.task    ]
+    args.task_dir = [get_path(args.path, task_dir_path) for task_dir_path in args.task_dir]
 
     dry = not args.run
     out = ConsoleOutput()
@@ -360,7 +371,7 @@ if __name__ == '__main__':
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
     for task in loader.tasks:
-        if len(args.task) > 0 and all(task.path != pathlib.Path(path) for path in args.task): continue
+        if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not aux.is_subpath(path, task.path) for path in args.task_dir): continue
         newpid = os.fork()
         if newpid == 0:
             task.run(dry, args.verbosity, args.force, args.oneshot, out)
