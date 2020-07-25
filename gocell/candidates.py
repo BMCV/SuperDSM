@@ -138,6 +138,10 @@ def _estimate_initialization(region):
     return gocell.modelfit.PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
 
 
+def _print_cvxopt_solution(solution):
+    print({key: solution[key] for key in ('status', 'gap', 'relative gap', 'primal objective', 'dual objective', 'primal slack', 'dual slack', 'primal infeasibility', 'dual infeasibility')})
+
+
 def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     print('-- initializing --')
     smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
@@ -163,8 +167,9 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
                     if params_value > J_gocell(solution):
                         print('initialization worse than previous solution - skipping retry')
                         break
-                solution = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
-                solution, status = np.array(solution['x']), solution['status']
+                solution_info = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
+                solution, status = np.array(solution_info['x']), solution_info['status']
+                _print_cvxopt_solution(solution_info)
                 if status == 'optimal': break
             params = gocell.modelfit.PolynomialModel(np.array(solution)).array
             print(f'solution: {J_gocell(params)}')
@@ -173,8 +178,9 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
         print('-- convex programming starting: GOCELLOS --')
-        solution = gocell.modelfit.CP(J, params, **CP_params).solve()
-        solution, status = np.array(solution['x']), solution['status']
+        solution_info = gocell.modelfit.CP(J, params, **CP_params).solve()
+        solution, status = np.array(solution_info['x']), solution_info['status']
+        _print_cvxopt_solution(solution_info)
         if status == 'unknown' and J(solution) > J(params):
             fallback = True  # numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
         else:
