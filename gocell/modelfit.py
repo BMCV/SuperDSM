@@ -381,6 +381,11 @@ class CP:
                     H = cvxopt.matrix(w[0] * H)
                 return l, Dl, H
     
-    def solve(self):
+    def solve(self, **options):
         return cvxopt.solvers.cp(self)
+#        dims = dict(l=0, q=[], s=[2])
+#        h = cvxopt.matrix(np.zeros(4))
+#        G = cvxopt.spmatrix(np.ones(4), [0,1,2,3], [0,2,2,1], size=(4, len(self.params0)))
+#        with aux.CvxoptFrame(feastol=1e-5, reltol=1e-4, abstol=1e-4):
+#            return cvxopt.solvers.cp(self, G, h, dims)
 

@@ -90,7 +90,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
-            img = render.render_adjacencies(data)
+            img = render.render_adjacencies(data, override_img=render.render_ymap(data), edge_color=(0,1,0), endpoint_color=(0,1,0))
             io.imwrite(adj_filepath, img)
 
     atomic_stage = pipeline.stages[pipeline.find('atoms')]
@@ -249,7 +249,7 @@ class Task:
 
     def write_evaluation_results(self, chunk_ids, study):
         measure_names = sorted(study.measures.keys())
-        rows = [['ID'] + measure_names]
+        rows = [[str(self.path)], ['ID'] + measure_names]
         for chunk_id in chunk_ids:
             row = [chunk_id] + [np.mean(study.results[measure_name][chunk_id]) for measure_name in measure_names]
             rows.append(row)
@@ -267,7 +267,7 @@ class Task:
     def write_timings(self, timings):
         file_ids = timings.keys()
         stage_names = sorted(list(timings.values())[0].keys())
-        rows = [['ID'] + stage_names + ['total']]
+        rows = [[str(self.path)], ['ID'] + stage_names + ['total']]
         totals = np.zeros(len(stage_names) + 1)
         for file_id in file_ids:
             vals  = [timings[file_id][stage_name] for stage_name in stage_names]

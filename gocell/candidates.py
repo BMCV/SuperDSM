@@ -51,7 +51,8 @@ def _expand_mask_for_backbround(y, mask, margin_step, max_margin):
     mask_foreground = np.logical_and(y > 0, mask)
     mask_boundary   = np.logical_xor(mask, morph.binary_erosion(mask, morph.disk(1)))
     if not np.logical_and(mask_foreground, mask_boundary).any():
-        return np.logical_or(img_boundary_mask, mask)
+#        return np.logical_or(img_boundary_mask, mask)
+        return mask
     tmp11 = ndi.distance_transform_edt(~mask_foreground)
     tmp12 = tmp11 * (y < 0)
     for thres in range(margin_step, max_margin + 1, margin_step):
@@ -155,6 +156,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         if init == 'gocell':
             print('-- convex programming starting: GOCELL --')
             J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
+            params = _estimate_initialization(region).array
             for retry in [False, True]:
                 if not retry:
                     params = np.zeros(6)
@@ -182,12 +184,12 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         solution, status = np.array(solution_info['x']), solution_info['status']
         _print_cvxopt_solution(solution_info)
         if status == 'unknown' and J(solution) > J(params):
-            fallback = True  # numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
+            fallback = True ## numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
         else:
             print(f'solution: {J(solution)}')
-    except: # e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+    except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
         traceback.print_exc(file=sys.stdout)
-        fallback = True  # at least something we can work with
+        fallback = True  ## at least something we can continue the work with
     if fallback:
         print('-- GOCELLOS failed: falling back to GOCELL result --')
         solution = params

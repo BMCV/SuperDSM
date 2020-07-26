@@ -3,6 +3,7 @@ import gocell.pipeline
 
 import math
 import scipy.ndimage as ndi
+import skimage.morphology as morph
 import numpy as np
 
 
@@ -58,7 +59,7 @@ class PreprocessingStage2(gocell.pipeline.Stage):
         abs_threshold = input_data['foreground_abs_threshold']
 
         tmp1 = (input_data['y'] >= 0)
-        tmp2 = ndi.morphology.binary_dilation(tmp1)
+        tmp2 = morph.binary_dilation(tmp1)
         tmp3 = ndi.label(tmp2)[0]
         tmp4 = np.zeros_like(tmp3)
 

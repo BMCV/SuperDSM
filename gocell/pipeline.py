@@ -38,14 +38,18 @@ class Stage(object):
             input_data = {}
             for data_key, input_data_key in self.inputs.items():
                 input_data[input_data_key] = data[data_key]
+            t0 = time.time()
             output_data = self.process(input_data, cfg=cfg, out=out, log_root_dir=log_root_dir)
+            dt = time.time() - t0
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
             for output_data_key, data_key in self.outputs.items():
                 data[data_key] = output_data[output_data_key]
             self._callback('end', data)
+            return dt
         else:
             out.write(f'Skipping disabled stage "{self.name}"')
             self._callback('skip', data)
+            return 0
 
     def process(self, input_data, cfg, out, log_root_dir):
         raise ValueError('not implemented')
@@ -82,9 +86,7 @@ class Pipeline:
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.name):
-                t0 = time.time()
-                stage(data, cfg, out=out, log_root_dir=log_root_dir)
-                dt = time.time() - t0
+                dt = stage(data, cfg, out=out, log_root_dir=log_root_dir)
                 timings[stage.name] = dt
         return data, cfg, timings
 

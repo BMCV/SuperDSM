@@ -2,12 +2,13 @@ import gocell.surface
 import gocell.aux
 
 import numpy as np
-import warnings
+import warnings, math
 
 from skimage import morphology
 from scipy   import ndimage
 
 import skimage.draw
+import matplotlib.pyplot as plt
 
 
 def draw_line(p1, p2, thickness, shape):
@@ -15,6 +16,10 @@ def draw_line(p1, p2, thickness, shape):
     threshold = (thickness + 1) / 2
     if np.allclose(threshold, round(threshold)):
         box = np.array((np.min((p1, p2), axis=0), np.max((p1, p2), axis=0)))
+        n = math.ceil(threshold) - 1
+        box[0] -= n
+        box[1] += n
+        box = box.clip(0, np.subtract(shape, 1))
         buf = np.zeros(1 + box[1] - box[0])
         p1  = p1 - box[0]
         p2  = p2 - box[0]
@@ -33,9 +38,14 @@ def draw_line(p1, p2, thickness, shape):
 
 
 def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radius=5, endpoint_edge_thickness=2,
-                       edge_color=(1,0,0), endpoint_color=(1,0,0), endpoint_edge_color=(0,0,0)):
-    img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3)
-    img = img / img.max()
+                       edge_color=(1,0,0), endpoint_color=(1,0,0), endpoint_edge_color=(0,0,0), override_img=None):
+    if override_img is not None:
+        assert override_img.ndim == 3 and override_img.shape[2] >= 3
+        img = override_img[:, :, :3].copy()
+        if (img > 1).any(): img /= 255
+    else:
+        img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3)
+        img = img / img.max()
     lines = data['adjacencies'].get_edge_lines(data)
     shape = img.shape[:2]
     for endpoint in data['seeds']:
@@ -54,6 +64,15 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     return (255 * img).clip(0, 255).astype('uint8')
 
 
+def render_ymap(data, clim=None):
+    y = data['y']
+    if clim is None: clim = (-y.std(), +y.std())
+    y  = y.clip(*clim)
+    y -= y.min()
+    y /= y.max()
+    return plt.cm.bwr(y)
+
+
 def _normalize_image(img):
     if not np.allclose(img.std(), 0):
         img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
@@ -66,10 +85,10 @@ def _fetch_image_from_data(data, normalize_img=True):
     return img
 
 
-def render_atoms(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, override_img=None):
+def render_atoms(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     regions = data['g_atoms'] > 0 if discarded_only else data['g_atoms']
-    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius)
+    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -84,14 +103,18 @@ def rasterize_regions(regions, background_label=None, radius=3):
     return borders, background
 
 
-def render_regions_over_image(img, regions, background_label=None, bg=(0.6, 1, 0.6, 0.3), **kwargs):
-    assert img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1), 'image has wrong dimensions'
-    result = np.zeros((img.shape[0], img.shape[1], 3))
-    for i in range(3): result[:, :, i] = img
+def render_regions_over_image(img, regions, background_label=None, color=(0,1,0), bg=(0.6, 1, 0.6, 0.3), **kwargs):
+    assert img.ndim == 2 or (img.ndim == 3 and img.shape[2] in (1,3)), f'image has wrong dimensions: {img.shape}'
+    if img.ndim == 2 or img.shape[2] == 1:
+        result = np.zeros((img.shape[0], img.shape[1], 3))
+        for i in range(3): result[:, :, i] = img
+    else:
+        result = img.copy()
     borders, background = rasterize_regions(regions, background_label, **kwargs)
-    borders = borders.astype(int)
-    result[:, :, 1]  = (1 - borders) * result[:, :, 1] + borders
-    for i in [0, 2]: result[:, :, i] *=  1 - borders
+    for i in range(3): result[:, :, i][borders] = color[i]
+    #borders = borders.astype(int)
+    #for i in range(3): result[:, :, i]  = color[i] * ((1 - borders) * result[:, :, 1] + borders)
+    #for i in   [0, 2]: result[:, :, i] *=  1 - borders
     for i in range(3): result[background, i] = bg[i] * bg[3] + result[background, i] * (1 - bg[3])
     return (255 * result).clip(0, 255).astype('uint8')
 
