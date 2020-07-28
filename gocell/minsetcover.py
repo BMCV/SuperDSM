@@ -1,7 +1,7 @@
 import gocell.aux
 
 
-def __solve_minsetcover(candidates, alpha, merge=True, out=None):
+def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     accepted_candidates  = []  ## primal variable
     remaining_candidates = list(candidates)
     uncovered_atoms      = set.union(*[c.footprint for c in candidates])
@@ -48,13 +48,13 @@ def __solve_minsetcover(candidates, alpha, merge=True, out=None):
 DEFAULT_TRY_LOWER_ALPHA = 1
 
 
-def _solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, out=None):
+def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, out=None):
     out = gocell.aux.get_output(out)
-    solution1 = gocell.minsetcover.__solve_minsetcover(candidates, alpha, merge, out)
+    solution1 = gocell.minsetcover._solve_minsetcover(candidates, alpha, merge, out)
     if try_lower_alpha > 0 and alpha > 0:
         new_alpha = alpha * 0.8
         out.write(f'MINSETCOVER retry with lower alpha: {new_alpha:g}')
-        solution2 = _solve_minsetcover(candidates, new_alpha, merge, try_lower_alpha - 1, out)
+        solution2 = solve_minsetcover(candidates, new_alpha, merge, try_lower_alpha - 1, out)
         solution1_value = sum(c.energy for c in solution1) + alpha * len(solution1)
         solution2_value = sum(c.energy for c in solution2) + alpha * len(solution2)
         if solution2_value < solution1_value:
@@ -83,7 +83,7 @@ class MinSetCover:
 
     def _update_partial_solution(self, cluster_label, out):
         candidates = self.candidates_by_cluster[cluster_label]
-        partial_solution = _solve_minsetcover(candidates, self.alpha, try_lower_alpha=self.try_lower_alpha, out=out)
+        partial_solution = solve_minsetcover(candidates, self.alpha, try_lower_alpha=self.try_lower_alpha, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
 
     def update(self, new_candidates, out=None):

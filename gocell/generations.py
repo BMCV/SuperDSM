@@ -3,6 +3,7 @@ import gocell.pipeline
 import gocell.aux
 import gocell.candidates
 import gocell.minsetcover
+import gocell.maxsetpack
 
 import scipy.ndimage as ndi
 import numpy as np
@@ -110,7 +111,7 @@ def _iterate_generation(cover, previous_generation, y, g_atoms, adjacencies, mod
             adjacent_atoms |= adjacencies[atom] - candidate.footprint
             
         cluster_label = adjacencies.get_cluster_label(list(candidate.footprint)[0])
-        max_cluster_costs = cover.get_cluster_costs(cluster_label) if mode != 'bruteforce' else np.inf
+        current_cluster_costs = cover.get_cluster_costs(cluster_label) if mode != 'bruteforce' else np.inf
         
         for new_atom_label in adjacent_atoms:
             new_candidate = gocell.candidates.Candidate()
@@ -125,12 +126,14 @@ def _iterate_generation(cover, previous_generation, y, g_atoms, adjacencies, mod
                     remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
                     min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
                     if mode == 'conservative':
-                        max_new_candidate_energy = max_cluster_costs - cover.alpha - min_remaining_atom_costs
+                        max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
                     elif mode == 'fast':
                         max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
                     else:
                         raise ValueError(f'unknown mode "{mode}"')
-                    if max_new_candidate_energy < candidate.energy + cover.get_atom(new_atom_label).energy:
+                    new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in previous_generation if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
+                    min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
+                    if max_new_candidate_energy < min_new_candidate_energy:
                         discarded += 1
                     else:
                         new_candidate_thresholds.append(max_new_candidate_energy)
