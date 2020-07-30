@@ -21,7 +21,7 @@ class PrecomputeStage(gocell.pipeline.Stage):
         g_atoms      = input_data['g_atoms']
         adjacencies  = input_data['adjacencies']
 
-        generations, costs, cover = gocell.generations.compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, 'bruteforce', cfg, out=out)
+        generations, costs, cover = gocell.generations.compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, 'bruteforce', cfg, out=out)[:3]
 
         return {
             'y_surface': y_surface,
