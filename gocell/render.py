@@ -65,7 +65,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
 
 
 def render_ymap(data, clim=None):
-    y = data['y']
+    y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
     y  = y.clip(*clim)
     y -= y.min()
