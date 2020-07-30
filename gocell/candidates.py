@@ -3,7 +3,7 @@ import gocell.surface
 import gocell.modelfit
 
 import ray
-import sys, io, contextlib, traceback
+import sys, io, contextlib, traceback, time
 import scipy.ndimage as ndi
 import numpy as np
 import skimage.morphology as morph
@@ -11,11 +11,12 @@ import skimage.morphology as morph
 
 class Candidate:
     def __init__(self):
-        self.fg_offset   = None
-        self.fg_fragment = None
-        self.footprint   = set()
-        self.energy      = np.nan
-        self.on_boundary = np.nan
+        self.fg_offset       = None
+        self.fg_fragment     = None
+        self.footprint       = set()
+        self.energy          = np.nan
+        self.on_boundary     = np.nan
+        self.processing_time = np.nan
     
     def get_mask(self, g_atoms):
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
@@ -25,11 +26,12 @@ class Candidate:
         return gocell.surface.Surface(g.model.shape, g.model, mask=region_mask)
 
     def set(self, state):
-        self.fg_fragment = state.fg_fragment.copy() if state.fg_fragment is not None else None
-        self.fg_offset   = state.fg_offset.copy() if state.fg_offset is not None else None
-        self.footprint   = set(state.footprint)
-        self.energy      = state.energy
-        self.on_boundary = state.on_boundary
+        self.fg_fragment     = state.fg_fragment.copy() if state.fg_fragment is not None else None
+        self.fg_offset       = state.fg_offset.copy() if state.fg_offset is not None else None
+        self.footprint       = set(state.footprint)
+        self.energy          = state.energy
+        self.on_boundary     = state.on_boundary
+        self.processing_time = state.processing_time
         return self
 
     def copy(self):
@@ -75,7 +77,9 @@ def _get_modelfit_region(candidate, y, g_atoms):
 
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs):
     region = _get_modelfit_region(candidate, y, g_atoms)
+    t0 = time.time()
     J, result, fallback = _modelfit(region, **modelfit_kwargs)
+    dt = time.time() - t0
     padded_mask = np.pad(region.mask, 1)
     smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
     padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
@@ -92,6 +96,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs):
         candidate.fg_fragment = np.zeros((1, 1), bool)
     candidate.energy      = J(result)
     candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
+    candidate.processing_time = dt
     return candidate, fallback
 
 
