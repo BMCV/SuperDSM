@@ -87,7 +87,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         generation_number = 1 + len(generations)
         out.write(f'\nGeneration {generation_number}:')
         
-        new_generation = _iterate_generation(cover, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
+        new_generation = _iterate_generation(cover, generations, y_surface, g_atoms, adjacencies, modelfit_kwargs, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
         if len(new_generation) == 0: break
 
         generations.append(new_generation)
@@ -99,12 +99,14 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
     return generations, costs, cover
 
 
-def _iterate_generation(cover, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, log_root_dir, mode, out):
+def _iterate_generation(cover, generations, y, g_atoms, adjacencies, modelfit_kwargs, log_root_dir, mode, out):
     next_generation = []
     new_candidates  = []
     new_candidate_thresholds = []
     discarded = 0
     existing_candidate_footprints = set()
+    previous_generation = generations[-1]
+    candidates = sum(generations, [])
     for cidx, candidate in enumerate(previous_generation):
         adjacent_atoms = set()
         for atom in candidate.footprint:
@@ -125,13 +127,14 @@ def _iterate_generation(cover, previous_generation, y, g_atoms, adjacencies, mod
                 else:
                     remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
                     min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
+                    min_remaining_costs = min((min_remaining_atom_costs + cover.alpha, sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if len(c.footprint & new_candidate.footprint) == 0], out=out.derive(muted=True)))))
                     if mode == 'conservative':
                         max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
                     elif mode == 'fast':
                         max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
                     else:
                         raise ValueError(f'unknown mode "{mode}"')
-                    new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in previous_generation if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
+                    new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
                     min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
                     if max_new_candidate_energy < min_new_candidate_energy:
                         discarded += 1
