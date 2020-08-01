@@ -58,7 +58,6 @@ def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
         cc = (foreground_clusters == l)
         if mask[cc].any():
             current_cluster_foreground[cc] = True
-            break
     image_background_within_margin = np.logical_and(image_background_within_margin, ndi.distance_transform_edt(~current_cluster_foreground) <= max_background_margin)
     current_cluster_foreground = morph.binary_dilation(current_cluster_foreground, morph.disk(1))
     tmp02 = ndi.label(image_background_within_margin)[0]
