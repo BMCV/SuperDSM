@@ -42,40 +42,48 @@ class Candidate:
         return sel
 
 
-def _expand_mask_for_backbround(y, mask, margin_step, max_margin):
+def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
     img_boundary_mask = np.zeros(mask.shape, bool)
     img_boundary_mask[ 0,  :] = True
     img_boundary_mask[-1,  :] = True
     img_boundary_mask[ :,  0] = True
     img_boundary_mask[ :, -1] = True
-    img_boundary_mask = np.logical_and(img_boundary_mask, y < 0)
-    mask_foreground = np.logical_and(y > 0, mask)
-    mask_boundary   = np.logical_xor(mask, morph.binary_erosion(mask, morph.disk(1)))
-    if not np.logical_and(mask_foreground, mask_boundary).any():
-#        return np.logical_or(img_boundary_mask, mask)
-        return mask
-    tmp11 = ndi.distance_transform_edt(~mask_foreground)
-    tmp12 = tmp11 * (y < 0)
-    for thres in range(margin_step, max_margin + 1, margin_step):
-        expansion_mask = np.logical_and(tmp12 > 0, tmp12 <= thres)
-        exterior_mask  = np.logical_and(thres < tmp11, tmp11 < thres + 1)
-        tmp15 = ndi.label(~expansion_mask if thres > 0 else ~mask_boundary)[0]
-        if len(frozenset(tmp15[mask_foreground]) & frozenset(tmp15[exterior_mask])) == 0: break
-    tmp16 = np.logical_or(mask, np.logical_and(np.logical_or(mask, tmp11 <= thres), y < 0))
-    if mask_foreground[img_boundary_mask].any():
-        return np.logical_or(img_boundary_mask, tmp16)
-    else: return tmp16
+    mask_foreground  = np.logical_and(y.model > 0, mask)
+    image_foreground = np.logical_and(y.model > 0, y.mask)
+    tmp01 = (ndi.distance_transform_edt(~image_foreground) <= min_background_margin)
+    image_background_within_margin = np.logical_and(tmp01, y.model < 0)
+    foreground_clusters = ndi.label(image_foreground)[0]
+    current_cluster_foreground = np.zeros(mask.shape, bool)
+    for l in frozenset(foreground_clusters.reshape(-1)) - {0}:
+        cc = (foreground_clusters == l)
+        if mask[cc].any():
+            current_cluster_foreground[cc] = True
+            break
+    image_background_within_margin = np.logical_and(image_background_within_margin, ndi.distance_transform_edt(~current_cluster_foreground) <= max_background_margin)
+    current_cluster_foreground = morph.binary_dilation(current_cluster_foreground, morph.disk(1))
+    tmp02 = ndi.label(image_background_within_margin)[0]
+    for l in frozenset(tmp02.reshape(-1)) - {0}:
+        cc = (tmp02 == l)
+        if current_cluster_foreground[cc].any():
+            bg_mask = cc
+            break
+    economical_mask = np.logical_or(bg_mask, mask_foreground)
+    if img_boundary_mask[current_cluster_foreground].any():
+        economical_mask = np.logical_or(np.logical_and(img_boundary_mask, y.model < 0), economical_mask)
+    return economical_mask
 
 
-def _get_modelfit_region(candidate, y, g_atoms):
+def _get_modelfit_region(candidate, y, g_atoms, min_background_margin, max_background_margin):
     region = candidate.get_region(y, g_atoms)
-    bg_mask = _expand_mask_for_backbround(y.model, region.mask, 20, 500)
-    region.mask = np.logical_or(region.mask, np.logical_and(y.model < 0, bg_mask))
+    region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
     return region
 
 
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
-    region = _get_modelfit_region(candidate, y, g_atoms)
+    modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
+    min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
+    max_background_margin =      modelfit_kwargs.pop('max_background_margin')
+    region = _get_modelfit_region(candidate, y, g_atoms, min_background_margin, max_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
     t0 = time.time()

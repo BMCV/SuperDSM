@@ -3,7 +3,6 @@ import gocell.aux     as aux
 import gocell._mkl    as mkl
 import numpy as np
 import cvxopt
-import sys
 import skimage.util
 
 from math         import sqrt
@@ -133,7 +132,7 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
     z = np.pad(filter_mask, np.vstack([p, p]).T)
     print('.', end='')
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
-    print('.', end='')
+    print('.', end='\n')
     with aux.SystemSemaphore.get_lock(lock):
         z = z[:, :, col_mask]
         z = z[row_mask]
@@ -209,7 +208,7 @@ class Energy:
         self.smooth_mat = smooth_matrix_factory.get(roi.mask)
 
         self.x = self.roi.get_map()[:, roi.mask]
-        self.w = np.ones(roi.mask.sum())
+        self.w = np.ones(roi.mask.sum(), 'uint8')
         self.y = roi.model[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
@@ -235,7 +234,7 @@ class Energy:
         self.t     = self.y * s
         self.theta = None # invalidate
         
-        valid_t_mask = self.t >= -np.log(sys.float_info.max)
+        valid_t_mask = (self.t >= -np.log(np.finfo(self.t.dtype).max))
         self.h = np.full(self.t.shape, np.nan)
         self.h[valid_t_mask] = np.exp(-self.t[valid_t_mask])
 

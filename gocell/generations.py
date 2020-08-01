@@ -19,7 +19,9 @@ MODELFIT_KWARGS_DEFAULTS = {
     'scale': 1000,
     'smooth_subsample': 20,
     'gaussian_shape_multiplier': 2,
-    'smooth_mat_dtype': 'float32'
+    'smooth_mat_dtype': 'float32',
+    'min_background_margin': 20,
+    'max_background_margin': 100
 }
 
 

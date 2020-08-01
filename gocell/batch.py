@@ -142,8 +142,11 @@ class Task:
             self.          dilate = self.data['dilate']
             self. merge_threshold = self.data['merge_overlap_threshold']
             self.      last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
+            self.         environ = self.data['environ'] if 'environ' in self.data else {}
 
     def _initialize(self):
+        for key, val in self.environ.items():
+            os.environ[key] = str(val)
         ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
         _pipeline = pipeline.create_default_pipeline()
         return _pipeline
