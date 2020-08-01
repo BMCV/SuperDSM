@@ -371,10 +371,12 @@ if __name__ == '__main__':
     dry = not args.run
     out = ConsoleOutput()
     runnable_tasks = [task for task in loader.tasks if task.runnable]
+    run_task_count = 0
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
     for task in loader.tasks:
         if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not aux.is_subpath(path, task.path) for path in args.task_dir): continue
+        run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
             task.run(dry, args.verbosity, args.force, args.oneshot, out)
@@ -383,4 +385,5 @@ if __name__ == '__main__':
             if os.waitpid(newpid, 0)[1] != 0:
                 out.write('An error occurred: interrupting')
                 break
+    out.write(f'\nRan {run_task_count} task(s)')
 
