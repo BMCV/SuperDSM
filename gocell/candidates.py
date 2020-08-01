@@ -76,6 +76,8 @@ def _get_modelfit_region(candidate, y, g_atoms):
 
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
     region = _get_modelfit_region(candidate, y, g_atoms)
+    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'modelfit_kwargs'):
+        print(f'{infoline}: {eval(infoline)}')
     t0 = time.time()
     J, result, fallback = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
     dt = time.time() - t0
@@ -151,8 +153,14 @@ def _print_cvxopt_solution(solution):
     print({key: solution[key] for key in ('status', 'gap', 'relative gap', 'primal objective', 'dual objective', 'primal slack', 'dual slack', 'primal infeasibility', 'dual infeasibility')})
 
 
+def _fmt_timestamp(): return time.strftime('%X')
+
+
+def _print_heading(line): print(f'-- {_fmt_timestamp()} -- {line} --')
+
+
 def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
-    print('-- initializing --')
+    _print_heading('initializing')
     smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
     J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
@@ -162,7 +170,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         params = init(J.smooth_mat.shape[1])
     else:
         if init == 'gocell':
-            print('-- convex programming starting: GOCELL --')
+            _print_heading('convex programming starting: GOCELL')
             J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
             params = _estimate_initialization(region).array
             for retry in [False, True]:
@@ -187,7 +195,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
-        print('-- convex programming starting: GOCELLOS --')
+        _print_heading('convex programming starting: GOCELLOS')
         solution_info = gocell.modelfit.CP(J, params, **CP_params).solve()
         solution, status = np.array(solution_info['x']), solution_info['status']
         _print_cvxopt_solution(solution_info)
@@ -199,8 +207,8 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         traceback.print_exc(file=sys.stdout)
         fallback = True  ## at least something we can continue the work with
     if fallback:
-        print('-- GOCELLOS failed: falling back to GOCELL result --')
+        _print_heading('GOCELLOS failed: falling back to GOCELL result')
         solution = params
-    print('-- finished --')
+    _print_heading('finished')
     return J, gocell.modelfit.PolynomialModel(solution), fallback
 
