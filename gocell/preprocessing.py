@@ -53,7 +53,7 @@ class PreprocessingStage2(gocell.pipeline.Stage):
     def __init__(self):
         super(PreprocessingStage2, self).__init__('preprocess2',
                                                   inputs  = ['y', 'seeds', 'foreground_abs_threshold'],
-                                                  outputs = ['y', 'foreground_labels'])
+                                                  outputs = ['y', 'y_mask', 'foreground_labels'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         abs_threshold = input_data['foreground_abs_threshold']
@@ -77,7 +77,8 @@ class PreprocessingStage2(gocell.pipeline.Stage):
 
         return {
             'foreground_labels': foreground_labels,
-            'y': input_data['y']
+            'y': input_data['y'],
+            'y_mask': ~tmp10
         }
 
 

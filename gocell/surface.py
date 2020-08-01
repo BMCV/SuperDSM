@@ -20,14 +20,19 @@ class Surface:
             self.mask = np.ones(self.model.shape).astype(bool)
             if mask is not None:
                 self.mask = np.array([mask(x) for x in self.ndindex()]).reshape(self.model.shape).astype(bool)
+
+    def get_region(self, mask):
+        mask = np.logical_and(self.mask, mask)
+        return Surface(self.model.shape, self.model, mask=mask)
     
     @staticmethod
-    def create_from_image(img, normalize=True):
+    def create_from_image(img, mask=None, normalize=True):
+        assert mask is None or (isinstance(mask, np.ndarray) and mask.dtype == bool)
         if normalize:
             img_diff = img.max() - img.min()
             if img_diff == 0: img_diff = 1
             img = (img - img.min()).astype(float) / img_diff
-        return Surface(img.shape, img)
+        return Surface(img.shape, img, mask=mask)
     
     @staticmethod
     def create_from_file(filepath):

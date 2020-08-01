@@ -19,7 +19,6 @@ MODELFIT_KWARGS_DEFAULTS = {
     'scale': 1000,
     'smooth_subsample': 20,
     'gaussian_shape_multiplier': 2,
-    'smooth_mat_max_allocations': np.inf,
     'smooth_mat_dtype': 'float32'
 }
 
@@ -37,11 +36,11 @@ class GenerationStage(gocell.pipeline.Stage):
 
     def __init__(self):
         super(GenerationStage, self).__init__('generations',
-                                              inputs  = ['y', 'g_atoms', 'adjacencies'],
+                                              inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies'],
                                               outputs = ['y_surface', 'generations', 'cover', 'costs', 'candidates'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface       = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False)
+        y_surface       = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
         g_atoms         = input_data['g_atoms']
         adjacencies     = input_data['adjacencies']
         conservative    = gocell.config.get_value(cfg,    'conservative', True)
@@ -152,6 +151,7 @@ def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adja
         else:
             discarded += 1
             new_candidate.fg_fragment = None ## save memory, we will only only need the footprint and the energy of the candidate
+            new_candidate.cidx = new_candidate_idx ## for debugging purposes
     out.write(f'Next generation: {len(next_generation)} (discarded: {discarded})')
     return next_generation, new_candidates
 

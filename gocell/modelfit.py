@@ -121,7 +121,7 @@ def _create_gaussian_kernel(sigma, shape=None, shape_multiplier=1):
     return ndimage.gaussian_filter(inp, sigma)
 
 
-def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, max_allocations=np.inf):
+def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
     assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
     assert filter_mask.shape[0] % 2 == 1
     if row_mask is None: row_mask = np.ones(img_shape, bool)
@@ -134,7 +134,7 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, max_allocatio
     print('.', end='')
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
     print('.', end='')
-    with aux.SystemSemaphore('smooth-matrix-allocation', limit=max_allocations):
+    with aux.SystemSemaphore.get_lock(lock):
         z = z[:, :, col_mask]
         z = z[row_mask]
     return z
@@ -159,14 +159,14 @@ def _create_subsample_grid(mask, subsample):
     return subsample_grid
 
 
-def _create_masked_smooth_matrix(kernel, mask, subsample=1, max_allocations=np.inf):
+def _create_masked_smooth_matrix(kernel, mask, subsample=1, lock=None):
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
     if (mask.shape <= np.asarray(kernel.shape) // 2).any(): return None
     subsample_grid = _create_subsample_grid(mask, subsample)
     col_mask = np.logical_and(mask, subsample_grid)
     print(f'{mask.sum()} rows, {col_mask.sum()} columns')
-    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=col_mask, max_allocations=max_allocations)
+    M = _convmat(kernel, mask.shape, row_mask=mask, col_mask=col_mask, lock=lock)
     M_sums = M.sum(axis=1)
     M /= M_sums[:, None]
     assert (M.sum(axis=0) > 0).all() and (M.sum(axis=1) > 0).all()
@@ -175,11 +175,11 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1, max_allocations=np.i
 
 class SmoothMatrixFactory:
 
-    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, max_allocations=np.inf, dtype='float32'):
+    def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, lock=None, dtype='float32'):
         self.smooth_amount    = smooth_amount
         self.shape_multiplier = shape_multiplier
         self.smooth_subsample = smooth_subsample
-        self.max_allocations  = max_allocations
+        self.lock             = lock
         self.dtype            = dtype
 
     def get(self, mask, uplift=False):
@@ -187,7 +187,7 @@ class SmoothMatrixFactory:
         mat = None
         if self.smooth_amount < np.inf:
             psf = _create_gaussian_kernel(self.smooth_amount, shape_multiplier=self.shape_multiplier).astype(self.dtype)
-            mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample, self.max_allocations)
+            mat = _create_masked_smooth_matrix(psf, mask, self.smooth_subsample, self.lock)
             # NOTE: `mat` will be `None` if `psf` is too large for `mask`
         if mat is None:
             print('using null-matrix')

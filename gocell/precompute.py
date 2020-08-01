@@ -13,11 +13,11 @@ class PrecomputeStage(gocell.pipeline.Stage):
 
     def __init__(self):
         super(PrecomputeStage, self).__init__('precompute',
-                                              inputs  = ['y', 'g_atoms', 'adjacencies'],
+                                              inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies'],
                                               outputs = ['y_surface', 'precomputed_candidates'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface    = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False)
+        y_surface    = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
         g_atoms      = input_data['g_atoms']
         adjacencies  = input_data['adjacencies']
 

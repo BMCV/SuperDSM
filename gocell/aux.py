@@ -229,16 +229,34 @@ class SystemSemaphore:
         self.name  = name
         self.limit = limit
 
+    @staticmethod
+    def get_lock(lock):
+        class NullLock:
+            def __enter__(self): pass
+            def __exit__ (self, _type, value, tb): pass
+        if lock is None: return NullLock()
+        else: return lock
+
     def __enter__(self):
         if np.isinf(self.limit):
-            self.lock = None
+            create_lock = lambda flags: None
         else:
-            self.lock = posix_ipc.Semaphore(f'/{self.name}', posix_ipc.O_CREAT, mode=384, initial_value=self.limit)
-            self.lock.acquire()
+            create_lock = lambda flags: posix_ipc.Semaphore(f'/{self.name}', flags, mode=384, initial_value=self.limit)
+        self._lock = create_lock(posix_ipc.O_CREAT | posix_ipc.O_EXCL)
+        class Lock:
+            def __init__(self, create_lock):
+                self._create_lock = create_lock
+
+            def __enter__(self):
+                self._lock = self._create_lock(posix_ipc.O_CREAT)
+                if self._lock is not None: self._lock.acquire()
+
+            def __exit__(self, _type, value, tb):
+                if self._lock is not None: self._lock.release()
+        return Lock(create_lock)
 
     def __exit__(self, _type, value, tb):
-        if self.lock is not None:
-            self.lock.release()
+        if self._lock is not None: self._lock.unlink()
 
 
 class SystemMutex:

@@ -22,8 +22,7 @@ class Candidate:
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
     def get_region(self, g, g_superpixels):
-        region_mask = self.get_mask(g_superpixels)
-        return gocell.surface.Surface(g.model.shape, g.model, mask=region_mask)
+        return g.get_region(self.get_mask(g_superpixels))
 
     def set(self, state):
         self.fg_fragment     = state.fg_fragment.copy() if state.fg_fragment is not None else None
@@ -75,10 +74,10 @@ def _get_modelfit_region(candidate, y, g_atoms):
     return region
 
 
-def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs):
+def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
     region = _get_modelfit_region(candidate, y, g_atoms)
     t0 = time.time()
-    J, result, fallback = _modelfit(region, **modelfit_kwargs)
+    J, result, fallback = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
     dt = time.time() - t0
     padded_mask = np.pad(region.mask, 1)
     smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
@@ -119,17 +118,21 @@ def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
 
 def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=None):
     out = gocell.aux.get_output(out)
-    candidates   = list(candidates)
-    y_id         = ray.put(y)
-    g_atoms_id   = ray.put(g_atoms)
-    x_map_id     = ray.put(y.get_map(normalized=False, pad=1))
-    mf_kwargs_id = ray.put(modelfit_kwargs)
-    futures      = [_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id) for cidx, c in enumerate(candidates)]
-    fallbacks    = 0
-    for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
-        candidates[ret[0]].set(ret[1])
-        out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(futures)} ({fallbacks}x fallback)')
-        if ret[2]: fallbacks += 1
+    modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
+    smooth_mat_max_allocations = modelfit_kwargs.pop('smooth_mat_max_allocations', np.inf)
+    with gocell.aux.SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
+        candidates   = list(candidates)
+        y_id         = ray.put(y)
+        g_atoms_id   = ray.put(g_atoms)
+        x_map_id     = ray.put(y.get_map(normalized=False, pad=1))
+        mf_kwargs_id = ray.put(modelfit_kwargs)
+        lock_id      = ray.put(smooth_mat_allocation_lock)
+        futures      = [_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
+        fallbacks    = 0
+        for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+            candidates[ret[0]].set(ret[1])
+            out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(futures)} ({fallbacks}x fallback)')
+            if ret[2]: fallbacks += 1
     out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
 
 
@@ -148,9 +151,9 @@ def _print_cvxopt_solution(solution):
     print({key: solution[key] for key in ('status', 'gap', 'relative gap', 'primal objective', 'dual objective', 'primal slack', 'dual slack', 'primal infeasibility', 'dual infeasibility')})
 
 
-def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_max_allocations, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     print('-- initializing --')
-    smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_max_allocations, smooth_mat_dtype)
+    smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
     J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
     print(f'scale: {CP_params["scale"]:g}')
