@@ -154,14 +154,14 @@ class Task:
     def _shutdown(self):
         ray.shutdown()
 
-    def run(self, dry=False, verbosity=0, force=False, one_shot=False, out=None):
+    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, out=None):
         out = ConsoleOutput.get(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
-            out.write(f'\nSkipping task: {self.path}')
+            out.write(f'\nSkipping task: {self.path} ({run_count})')
             return
-        out.write(f'\nEntering task: {self.path}')
+        out.write(f'\nEntering task: {self.path} ({run_count})')
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         try:
@@ -379,7 +379,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(dry, args.verbosity, args.force, args.oneshot, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
