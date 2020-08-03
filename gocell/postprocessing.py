@@ -1,4 +1,9 @@
 import gocell.pipeline
+import gocell.config
+
+import ray
+import math
+import numpy as np
 
 
 class Postprocessing(gocell.pipeline.Stage):
@@ -7,14 +12,51 @@ class Postprocessing(gocell.pipeline.Stage):
 
     def __init__(self):
         super(Postprocessing, self).__init__('postprocess',
-                                             inputs  = ['cover'],
+                                             inputs  = ['cover', 'y_surface', 'g_atoms'],
                                              outputs = ['postprocessed_candidates'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        cover = input_data['cover']
+        max_energy_rate         = gocell.config.get_value(cfg,         'max_energy_rate', np.inf)
+        discard_image_boundary  = gocell.config.get_value(cfg,  'discard_image_boundary',  False)
+        min_boundary_obj_radius = gocell.config.get_value(cfg, 'min_boundary_obj_radius',      0)
+        min_obj_radius          = gocell.config.get_value(cfg,          'min_obj_radius',      0)
+        max_obj_radius          = gocell.config.get_value(cfg,          'max_obj_radius', np.inf)
+
+        cover     = input_data['cover']
+        params_id = ray.put(dict(y = input_data['y_surface'], g_atoms = input_data['g_atoms']))
+        futures   = [_measure_candidate.remote(cidx, c, params_id) for cidx, c in enumerate(cover.solution)]
+
+        postprocessed_candidates = []
+        for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+            candidate, measures = cover.solution[ret[0]], ret[1]
+            obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
+            out.intermediate(f'Post-processing candidates... {ret_idx + 1} / {len(futures)}')
+
+            if measures['energy_rate'] > max_energy_rate:
+                continue
+            if candidate.on_boundary:
+                if discard_image_boundary or not(min_boundary_obj_radius <= obj_radius < max_obj_radius):
+                    continue
+            else:
+                if not min_obj_radius <= obj_radius <= max_obj_radius:
+                    continue
+
+            postprocessed_candidates.append(candidate)
+
+        out.write(f'Remaining candidates: {len(postprocessed_candidates)} of {len(cover.solution)}')
+
         return {
-            'postprocessed_candidates': cover.solution
+            'postprocessed_candidates': postprocessed_candidates
         }
+
+
+@ray.remote
+def _measure_candidate(cidx, candidate, params):
+    region      = candidate.get_modelfit_region(params['y'], params['g_atoms'])
+    energy_rate = candidate.energy / region.mask.sum()
+    return cidx, {
+        'energy_rate': energy_rate
+    }
 
 
 #import gocell.pipeline as pipeline

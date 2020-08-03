@@ -17,12 +17,27 @@ class Candidate:
         self.energy          = np.nan
         self.on_boundary     = np.nan
         self.processing_time = np.nan
+        self._default_kwargs = {}
+
+    def _update_default_kwarg(self, kwarg_name, value):
+        if value is None:
+            if kwarg_name in self._default_kwargs:
+                return self._default_kwargs[kwarg_name]
+            else:
+                raise ValueError(f'kwarg "{kwarg_name}" not set yet')
+        elif kwarg_name not in self._default_kwargs:
+            self._default_kwargs[kwarg_name] = value
+        return value
     
     def get_mask(self, g_atoms):
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
-    def get_region(self, g, g_superpixels):
-        return g.get_region(self.get_mask(g_superpixels))
+    def get_modelfit_region(self, y, g_atoms, min_background_margin=None, max_background_margin=None):
+        min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
+        max_background_margin = self._update_default_kwarg('max_background_margin', max_background_margin)
+        region = y.get_region(self.get_mask(g_atoms))
+        region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
+        return region
 
     def set(self, state):
         self.fg_fragment     = state.fg_fragment.copy() if state.fg_fragment is not None else None
@@ -31,6 +46,7 @@ class Candidate:
         self.energy          = state.energy
         self.on_boundary     = state.on_boundary
         self.processing_time = state.processing_time
+        self._default_kwargs = gocell.aux.copy_dict(state._default_kwargs)
         return self
 
     def copy(self):
@@ -72,17 +88,11 @@ def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
     return economical_mask
 
 
-def _get_modelfit_region(candidate, y, g_atoms, min_background_margin, max_background_margin):
-    region = candidate.get_region(y, g_atoms)
-    region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
-    return region
-
-
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
     max_background_margin =      modelfit_kwargs.pop('max_background_margin')
-    region = _get_modelfit_region(candidate, y, g_atoms, min_background_margin, max_background_margin)
+    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
     t0 = time.time()

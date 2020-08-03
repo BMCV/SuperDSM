@@ -100,7 +100,9 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
-        im_result = render.render_model_shapes_over_image(result_data, border=seg_border)
+        candidates = result_data['cover'].solution
+        colors = {c: ('g' if c in result_data['postprocessed_candidates'] else 'r') for c in candidates}
+        im_result = render.render_model_shapes_over_image(result_data, candidates=candidates, border=seg_border, colors=colors)
         aux.mkdir(pathlib.Path(seg_filepath).parents[0])
         io.imwrite(seg_filepath, im_result)
     return result_data, timings
@@ -197,7 +199,7 @@ class Task:
                 out2.write('Skipping evaluation')
             else:
                 if not dry:
-                    shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in data.keys()}
+                    shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
                     del data
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
