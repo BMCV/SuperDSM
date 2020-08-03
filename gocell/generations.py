@@ -153,7 +153,7 @@ def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adja
         else:
             discarded += 1
             new_candidate.fg_fragment = None ## save memory, we will only only need the footprint and the energy of the candidate
-            new_candidate.cidx = new_candidate_idx ## for debugging purposes
+        new_candidate.cidx = new_candidate_idx ## for debugging purposes
     out.write(f'Next generation: {len(next_generation)} (discarded: {discarded})')
     return next_generation, new_candidates
 

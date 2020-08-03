@@ -76,12 +76,12 @@ def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
             current_cluster_foreground[cc] = True
     image_background_within_margin = np.logical_and(image_background_within_margin, ndi.distance_transform_edt(~current_cluster_foreground) <= max_background_margin)
     current_cluster_foreground = morph.binary_dilation(current_cluster_foreground, morph.disk(1))
-    tmp02 = ndi.label(image_background_within_margin)[0]
+    tmp02   = ndi.label(image_background_within_margin)[0]
+    bg_mask = np.zeros_like(mask)
     for l in frozenset(tmp02.reshape(-1)) - {0}:
         cc = (tmp02 == l)
         if current_cluster_foreground[cc].any():
-            bg_mask = cc
-            break
+            bg_mask[cc] = True
     economical_mask = np.logical_or(bg_mask, mask_foreground)
     if img_boundary_mask[current_cluster_foreground].any():
         economical_mask = np.logical_or(np.logical_and(img_boundary_mask, y.model < 0), economical_mask)
