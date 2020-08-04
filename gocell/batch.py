@@ -376,7 +376,7 @@ if __name__ == '__main__':
     run_task_count = 0
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
-    for task in loader.tasks:
+    for task in runnable_tasks:
         if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not aux.is_subpath(path, task.path) for path in args.task_dir): continue
         run_task_count += 1
         newpid = os.fork()
