@@ -101,7 +101,8 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
         candidates = result_data['cover'].solution
-        colors = {c: ('g' if c in result_data['postprocessed_candidates'] else 'r') for c in candidates}
+        postprocessed_footprints = frozenset([frozenset(c.original.footprint) for c in result_data['postprocessed_candidates']])
+        colors = {c: ('g' if c.footprint in postprocessed_footprints else 'r') for c in candidates}
         im_result = render.render_model_shapes_over_image(result_data, candidates=candidates, border=seg_border, colors=colors)
         aux.mkdir(pathlib.Path(seg_filepath).parents[0])
         io.imwrite(seg_filepath, im_result)

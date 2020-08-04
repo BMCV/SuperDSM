@@ -182,7 +182,7 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     return (255 * img).clip(0, 255).astype('uint8')
 
 
-def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_key='postprocessed_candidates', normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+def render_result_over_image(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
@@ -208,8 +208,8 @@ def render_result_over_image(data, merge_overlap_threshold=np.inf, candidates_ke
     return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
 
-def rasterize_objects(data, candidates_key, dilate=0):
-    candidates = [c for c in data[candidates_key]]
+def rasterize_objects(data, candidates, dilate=0):
+    if isinstance(candidates, str): candidates = [c for c in data[candidates]]
 
     if dilate == 0:
         dlation, erosion = None, None
@@ -222,9 +222,9 @@ def rasterize_objects(data, candidates_key, dilate=0):
         if foreground.any(): yield foreground.copy()
 
 
-def rasterize_labels(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
+def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
     assert background_label <= 0
-    objects = [obj for obj in rasterize_objects(data, candidates_key, dilate)]
+    objects = [obj for obj in rasterize_objects(data, candidates, dilate)]
 
     # First, we determine which objects overlap sufficiently
     merge_list = []

@@ -9,10 +9,19 @@ import numpy as np
 import skimage.morphology as morph
 
 
-class Candidate:
+class BaseCandidate:
     def __init__(self):
-        self.fg_offset       = None
-        self.fg_fragment     = None
+        self.fg_offset   = None
+        self.fg_fragment = None
+    
+    def fill_foreground(self, out, value=True):
+        sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
+        out[sel] = value * self.fg_fragment
+        return sel
+
+
+class Candidate(BaseCandidate):
+    def __init__(self):
         self.footprint       = set()
         self.energy          = np.nan
         self.on_boundary     = np.nan
@@ -51,11 +60,6 @@ class Candidate:
 
     def copy(self):
         return Candidate().set(self)
-    
-    def fill_foreground(self, out, value=True):
-        sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
-        out[sel] = value * self.fg_fragment
-        return sel
 
 
 def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
@@ -88,6 +92,16 @@ def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
     return economical_mask
 
 
+def extract_foreground_fragment(fg_mask):
+    rows = fg_mask.any(axis=1)
+    cols = fg_mask.any(axis=0)
+    rmin, rmax  = np.where(rows)[0][[0, -1]]
+    cmin, cmax  = np.where(cols)[0][[0, -1]]
+    fg_offset   = np.array([rmin, cmin])
+    fg_fragment = fg_mask[rmin : rmax + 1, cmin : cmax + 1]
+    return fg_offset, fg_fragment
+
+
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
@@ -103,12 +117,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
     padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
     foreground = padded_foreground[1:-1, 1:-1]
     if foreground.any():
-        rows = foreground.any(axis=1)
-        cols = foreground.any(axis=0)
-        rmin, rmax = np.where(rows)[0][[0, -1]]
-        cmin, cmax = np.where(cols)[0][[0, -1]]
-        candidate.fg_offset   = np.array([rmin, cmin])
-        candidate.fg_fragment = foreground[rmin : rmax + 1, cmin : cmax + 1]
+        candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
     else:
         candidate.fg_offset   = np.zeros(2, int)
         candidate.fg_fragment = np.zeros((1, 1), bool)
