@@ -6,7 +6,7 @@ import scipy.ndimage      as ndi
 import skimage.morphology as morph
 
 import ray
-import math
+import math, os
 import numpy as np
 
 
@@ -29,6 +29,7 @@ class Postprocessing(gocell.pipeline.Stage):
         mask_max_distance       = gocell.config.get_value(cfg,       'mask_max_distance',       0)
         mask_smoothness         = gocell.config.get_value(cfg,         'mask_smoothness',       3)
         exterior_scale          = gocell.config.get_value(cfg,          'exterior_scale',       5)
+        exterior_offset         = gocell.config.get_value(cfg,         'exterior_offset',       5)
         min_contrast_response   = gocell.config.get_value(cfg,   'min_contrast_response', -np.inf)
 
         params = {
@@ -37,6 +38,7 @@ class Postprocessing(gocell.pipeline.Stage):
             'g_atoms':           input_data['g_atoms'],
             'g_smooth':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
             'exterior_scale':    exterior_scale,
+            'exterior_offset':   exterior_offset,
             'mask_stdamp':       mask_stdamp,
             'mask_max_distance': mask_max_distance,
         }
@@ -46,6 +48,7 @@ class Postprocessing(gocell.pipeline.Stage):
         futures    = [_process_candidate.remote(cidx, c, params_id) for cidx, c in enumerate(candidates)]
 
         postprocessed_candidates = []
+        rejection_causes = {}
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             candidate, candidate_results = candidates[ret[0]], ret[1]
             candidate = PostprocessedCandidate(candidate)
@@ -53,23 +56,36 @@ class Postprocessing(gocell.pipeline.Stage):
             if candidate_results['fg_fragment'] is not None and candidate_results['fg_offset'] is not None:
                 candidate.fg_fragment = candidate_results['fg_fragment'].copy()
                 candidate.fg_offset   = candidate_results['fg_offset'  ].copy()
-                if not candidate.fg_fragment.any(): continue
+                if not candidate.fg_fragment.any():
+                    rejection_causes[candidate] = f'empty foreground'
+                    continue
 
             obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
 
             if candidate_results['energy_rate'] > max_energy_rate:
+                rejection_causes[candidate] = f'energy rate too high ({candidate_results["energy_rate"]})'
                 continue
             if candidate_results['contrast_response'] < min_contrast_response:
+                rejection_causes[candidate] = f'contrast response too low ({candidate_results["contrast_response"]})'
                 continue
             if candidate.original.on_boundary:
                 if discard_image_boundary or not(min_boundary_obj_radius <= obj_radius < max_obj_radius):
+                    rejection_causes[candidate] = f'boundary object and/or too small/large (radius: {obj_radius})'
                     continue
             else:
                 if not min_obj_radius <= obj_radius <= max_obj_radius:
+                    rejection_causes[candidate] = f'object too small/large (radius: {obj_radius})'
                     continue
 
             postprocessed_candidates.append(candidate)
             out.intermediate(f'Post-processing candidates... {ret_idx + 1} / {len(futures)}')
+
+        log_filename = gocell.aux.join_path(log_root_dir, 'postprocessing.txt')
+        with open(log_filename, 'w') as log_file:
+            for c, cause in rejection_causes.items():
+                location = (c.fg_offset + np.divide(c.fg_fragment.shape, 2)).round().astype(int)
+                log_line = f'object at x={location[1]}, y={location[0]} discarded: {cause}'
+                log_file.write(f'{log_line}{os.linesep}')
 
         out.write(f'Remaining candidates: {len(postprocessed_candidates)} of {len(candidates)}')
 
@@ -85,16 +101,19 @@ class PostprocessedCandidate(gocell.candidates.BaseCandidate):
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(candidate, g, exterior_scale):
+def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
+    g = g / g.std()
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
-    exterior_distance_map = ndi.distance_transform_edt(~mask) / exterior_scale
-    exterior_mask = np.logical_xor(mask, exterior_distance_map <= 10)
+    interior_mean = g[mask].mean()
+    exterior_distance_map = (ndi.distance_transform_edt(~mask) - exterior_offset).clip(0, np.inf) / exterior_scale
+    exterior_mask = np.logical_xor(mask, exterior_distance_map <= 5)
+    exterior_mask = np.logical_and(exterior_mask, g < interior_mean)
     exterior_weights = np.zeros(g.shape)
     exterior_weights[exterior_mask] = np.exp(-exterior_distance_map[exterior_mask])
-    exterior_mean = (g * exterior_weights).sum() / exterior_weights.sum()
-    interior_mean =  g[mask].mean()
-    return interior_mean - exterior_mean
+    exterior_weights /= exterior_weights.sum()
+    exterior_mean = (g * exterior_weights).sum()
+    return interior_mean / exterior_mean - 1
 
 
 @ray.remote
