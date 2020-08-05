@@ -120,7 +120,7 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
 def _process_candidate(cidx, candidate, params):
     region      = candidate.get_modelfit_region(params['y'], params['g_atoms'])
     energy_rate = candidate.energy / region.mask.sum()
-    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'])
+    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'])
     fg_offset, fg_fragment = _process_mask(candidate, params['g_smooth'], params['mask_max_distance'], params['mask_stdamp'])
     return cidx, {
         'energy_rate':       energy_rate,
