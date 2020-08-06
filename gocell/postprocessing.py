@@ -31,6 +31,7 @@ class Postprocessing(gocell.pipeline.Stage):
         exterior_scale          = gocell.config.get_value(cfg,          'exterior_scale',       5)
         exterior_offset         = gocell.config.get_value(cfg,         'exterior_offset',       5)
         min_contrast_response   = gocell.config.get_value(cfg,   'min_contrast_response', -np.inf)
+        max_intensity_mean      = gocell.config.get_value(cfg,      'max_intensity_mean',  np.inf)
 
         params = {
             'y':                 input_data['y_surface'],
@@ -68,6 +69,9 @@ class Postprocessing(gocell.pipeline.Stage):
             if candidate_results['contrast_response'] < min_contrast_response:
                 rejection_causes[candidate] = f'contrast response too low ({candidate_results["contrast_response"]})'
                 continue
+            if candidate_results['intensity_mean'] > max_intensity_mean:
+                rejection_causes[candidate] = f'foreground intensity too high ({candidate_results["intensity_mean"]})'
+                continue
             if candidate.original.on_boundary:
                 if discard_image_boundary or not(min_boundary_obj_radius <= obj_radius < max_obj_radius):
                     rejection_causes[candidate] = f'boundary object and/or too small/large (radius: {obj_radius})'
@@ -80,12 +84,13 @@ class Postprocessing(gocell.pipeline.Stage):
             postprocessed_candidates.append(candidate)
             out.intermediate(f'Post-processing candidates... {ret_idx + 1} / {len(futures)}')
 
-        log_filename = gocell.aux.join_path(log_root_dir, 'postprocessing.txt')
-        with open(log_filename, 'w') as log_file:
-            for c, cause in rejection_causes.items():
-                location = (c.fg_offset + np.divide(c.fg_fragment.shape, 2)).round().astype(int)
-                log_line = f'object at x={location[1]}, y={location[0]} discarded: {cause}'
-                log_file.write(f'{log_line}{os.linesep}')
+        if log_root_dir is not None:
+            log_filename = gocell.aux.join_path(log_root_dir, 'postprocessing.txt')
+            with open(log_filename, 'w') as log_file:
+                for c, cause in rejection_causes.items():
+                    location = (c.fg_offset + np.divide(c.fg_fragment.shape, 2)).round().astype(int)
+                    log_line = f'object at x={location[1]}, y={location[0]} discarded: {cause}'
+                    log_file.write(f'{log_line}{os.linesep}')
 
         out.write(f'Remaining candidates: {len(postprocessed_candidates)} of {len(candidates)}')
 
@@ -122,11 +127,14 @@ def _process_candidate(cidx, candidate, params):
     energy_rate = candidate.energy / region.mask.sum()
     contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'])
     fg_offset, fg_fragment = _process_mask(candidate, params['g_smooth'], params['mask_max_distance'], params['mask_stdamp'])
+    intensity_mean = params['g'][candidate.fg_offset[0] : candidate.fg_offset[0] + candidate.fg_fragment.shape[0],
+                                 candidate.fg_offset[1] : candidate.fg_offset[1] + candidate.fg_fragment.shape[1]][candidate.fg_fragment].mean()
     return cidx, {
         'energy_rate':       energy_rate,
         'contrast_response': contrast_response,
         'fg_offset':         fg_offset,
-        'fg_fragment':       fg_fragment
+        'fg_fragment':       fg_fragment,
+        'intensity_mean':    intensity_mean
     }
 
 

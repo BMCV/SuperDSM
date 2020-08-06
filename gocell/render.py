@@ -182,6 +182,20 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     return (255 * img).clip(0, 255).astype('uint8')
 
 
+def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5):
+    if isinstance(postprocessed_candidates, str): postprocessed_candidates = data[postprocessed_candidates]
+    candidates, colors = [], {}
+    for candidate in data['cover'].solution:
+        postprocessed_candidate = [c for c in postprocessed_candidates if c.original is candidate]
+        if len(postprocessed_candidate) > 0:
+            candidates.append(postprocessed_candidate[0])
+            colors[postprocessed_candidate[0]] = 'g'
+        else:
+            candidates.append(candidate)
+            colors[candidate] = 'r'
+    return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors)
+
+
 def render_result_over_image(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
