@@ -20,28 +20,42 @@ class Postprocessing(gocell.pipeline.Stage):
                                              outputs = ['postprocessed_candidates'])
 
     def process(self, input_data, cfg, out, log_root_dir):
+        # simple post-processing
         max_energy_rate         = gocell.config.get_value(cfg,         'max_energy_rate',  np.inf)
         discard_image_boundary  = gocell.config.get_value(cfg,  'discard_image_boundary',   False)
         min_boundary_obj_radius = gocell.config.get_value(cfg, 'min_boundary_obj_radius',       0)
         min_obj_radius          = gocell.config.get_value(cfg,          'min_obj_radius',       0)
         max_obj_radius          = gocell.config.get_value(cfg,          'max_obj_radius',  np.inf)
-        mask_stdamp             = gocell.config.get_value(cfg,             'mask_stdamp',       2)
-        mask_max_distance       = gocell.config.get_value(cfg,       'mask_max_distance',       0)
-        mask_smoothness         = gocell.config.get_value(cfg,         'mask_smoothness',       3)
-        exterior_scale          = gocell.config.get_value(cfg,          'exterior_scale',       5)
-        exterior_offset         = gocell.config.get_value(cfg,         'exterior_offset',       5)
         min_contrast_response   = gocell.config.get_value(cfg,   'min_contrast_response', -np.inf)
-        max_intensity_mean      = gocell.config.get_value(cfg,      'max_intensity_mean',  np.inf)
+
+        # mask-based post-processing
+        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp', 2)
+        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance', 0)
+        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness', 3)
+        exterior_scale    = gocell.config.get_value(cfg,    'exterior_scale', 5)
+        exterior_offset   = gocell.config.get_value(cfg,   'exterior_offset', 5)
+
+        # autofluorescence glare removal
+        glare_detection_smoothness = gocell.config.get_value(cfg, 'glare_detection_smoothness',      3)
+        glare_detection_num_layers = gocell.config.get_value(cfg, 'glare_detection_num_layers',      5)
+        glare_detection_min_layer  = gocell.config.get_value(cfg,  'glare_detection_min_layer',    0.5)
+        min_glare_radius           = gocell.config.get_value(cfg,           'min_glare_radius', np.inf)
+        min_boundary_glare_radius  = gocell.config.get_value(cfg,  'min_boundary_glare_radius', min_glare_radius)
 
         params = {
-            'y':                 input_data['y_surface'],
-            'g':                 input_data['g_raw'],
-            'g_atoms':           input_data['g_atoms'],
-            'g_smooth':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
-            'exterior_scale':    exterior_scale,
-            'exterior_offset':   exterior_offset,
-            'mask_stdamp':       mask_stdamp,
-            'mask_max_distance': mask_max_distance,
+            'y':                          input_data['y_surface'],
+            'g':                          input_data['g_raw'],
+            'g_atoms':                    input_data['g_atoms'],
+            'g_mask_processing':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
+            'g_glare_detection':          ndi.gaussian_filter(input_data['g_raw'], glare_detection_smoothness),
+            'exterior_scale':             exterior_scale,
+            'exterior_offset':            exterior_offset,
+            'mask_stdamp':                mask_stdamp,
+            'mask_max_distance':          mask_max_distance,
+            'min_glare_radius':           min_glare_radius,
+            'min_boundary_glare_radius':  min_boundary_glare_radius,
+            'glare_detection_min_layer':  glare_detection_min_layer,
+            'glare_detection_num_layers': glare_detection_num_layers
         }
 
         candidates = [c for c in input_data['cover'].solution if c.fg_fragment.any()]
@@ -49,7 +63,7 @@ class Postprocessing(gocell.pipeline.Stage):
         futures    = [_process_candidate.remote(cidx, c, params_id) for cidx, c in enumerate(candidates)]
 
         postprocessed_candidates = []
-        rejection_causes = {}
+        log_entries = []
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             candidate, candidate_results = candidates[ret[0]], ret[1]
             candidate = PostprocessedCandidate(candidate)
@@ -58,27 +72,28 @@ class Postprocessing(gocell.pipeline.Stage):
                 candidate.fg_fragment = candidate_results['fg_fragment'].copy()
                 candidate.fg_offset   = candidate_results['fg_offset'  ].copy()
                 if not candidate.fg_fragment.any():
-                    rejection_causes[candidate] = f'empty foreground'
+                    log_entries.append((candidate, f'empty foreground'))
                     continue
 
-            obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
-
+            if candidate_results['is_glare']:
+                log_entries.append((candidate, f'glare removed (radius: {candidate_results["obj_radius"]})'))
+                continue
             if candidate_results['energy_rate'] > max_energy_rate:
-                rejection_causes[candidate] = f'energy rate too high ({candidate_results["energy_rate"]})'
+                log_entries.append((candidate, f'energy rate too high ({candidate_results["energy_rate"]})'))
                 continue
             if candidate_results['contrast_response'] < min_contrast_response:
-                rejection_causes[candidate] = f'contrast response too low ({candidate_results["contrast_response"]})'
-                continue
-            if candidate_results['intensity_mean'] > max_intensity_mean:
-                rejection_causes[candidate] = f'foreground intensity too high ({candidate_results["intensity_mean"]})'
+                log_entries.append((candidate, f'contrast response too low ({candidate_results["contrast_response"]})'))
                 continue
             if candidate.original.on_boundary:
-                if discard_image_boundary or not(min_boundary_obj_radius <= obj_radius < max_obj_radius):
-                    rejection_causes[candidate] = f'boundary object and/or too small/large (radius: {obj_radius})'
+                if discard_image_boundary:
+                    log_entries.append((candidate, f'boundary object discarded'))
+                    continue
+                if not(min_boundary_obj_radius <= candidate_results['obj_radius'] <= max_obj_radius):
+                    log_entries.append((candidate, f'boundary object and/or too small/large (radius: {candidate_results["obj_radius"]})'))
                     continue
             else:
-                if not min_obj_radius <= obj_radius <= max_obj_radius:
-                    rejection_causes[candidate] = f'object too small/large (radius: {obj_radius})'
+                if not min_obj_radius <= candidate_results['obj_radius'] <= max_obj_radius:
+                    log_entries.append((candidate, f'object too small/large (radius: {candidate_results["obj_radius"]})'))
                     continue
 
             postprocessed_candidates.append(candidate)
@@ -87,9 +102,9 @@ class Postprocessing(gocell.pipeline.Stage):
         if log_root_dir is not None:
             log_filename = gocell.aux.join_path(log_root_dir, 'postprocessing.txt')
             with open(log_filename, 'w') as log_file:
-                for c, cause in rejection_causes.items():
+                for c, comment in log_entries:
                     location = (c.fg_offset + np.divide(c.fg_fragment.shape, 2)).round().astype(int)
-                    log_line = f'object at x={location[1]}, y={location[0]} discarded: {cause}'
+                    log_line = f'object at x={location[1]}, y={location[0]}: {comment}'
                     log_file.write(f'{log_line}{os.linesep}')
 
         out.write(f'Remaining candidates: {len(postprocessed_candidates)} of {len(candidates)}')
@@ -121,24 +136,57 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
     return interior_mean / exterior_mean - 1
 
 
+#def _get_largest_cc(img):
+#    fg_top_labels    = ndi.label(img)[0]
+#    fg_top_cc_sizes  = {l: (fg_top_labels == l).sum() for l in frozenset(fg_top_labels.reshape(-1)) - {0}}
+#    largest_cc_label = max(fg_top_cc_sizes.keys(), key=fg_top_cc_sizes.get)
+#    return (fg_top_labels == largest_cc_label)
+
+
+def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
+    g_sect = g[candidate.fg_offset[0] : candidate.fg_offset[0] + candidate.fg_fragment.shape[0],
+               candidate.fg_offset[1] : candidate.fg_offset[1] + candidate.fg_fragment.shape[1]]
+    mask = morph.binary_erosion(candidate.fg_fragment, morph.disk(2))
+    g_sect_data = g_sect[mask]
+    get_layer   = lambda prop: np.logical_and(mask, g_sect > (g_sect_data.max() - g_sect_data.min()) * prop + g_sect_data.min())
+    count_cc    = lambda mask: ndi.label(mask)[0].max()
+    is_subset   = lambda mask_sub, mask_sup: (np.logical_or(mask_sub, mask_sup) == mask_sub).all()
+    props       = np.linspace(min_layer, 1, num_layers, endpoint=False)
+    prev_layer  = None
+    is_glare    = True
+    for prop in props:
+        layer = get_layer(prop)
+        if count_cc(layer) > 1:
+            is_glare = False
+            break
+        prev_layer = layer
+    return is_glare
+
+
 @ray.remote
 def _process_candidate(cidx, candidate, params):
-    region      = candidate.get_modelfit_region(params['y'], params['g_atoms'])
-    energy_rate = candidate.energy / region.mask.sum()
+    obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
+    is_glare   = False
+    if params['min_boundary_glare_radius' if candidate.on_boundary else 'min_glare_radius'] < obj_radius:
+        is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
+    region       = candidate.get_modelfit_region(params['y'], params['g_atoms'])
+    energy_rate  = candidate.energy / region.mask.sum()
     contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'])
-    fg_offset, fg_fragment = _process_mask(candidate, params['g_smooth'], params['mask_max_distance'], params['mask_stdamp'])
-    intensity_mean = params['g'][candidate.fg_offset[0] : candidate.fg_offset[0] + candidate.fg_fragment.shape[0],
-                                 candidate.fg_offset[1] : candidate.fg_offset[1] + candidate.fg_fragment.shape[1]][candidate.fg_fragment].mean()
+    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'])
+
     return cidx, {
         'energy_rate':       energy_rate,
         'contrast_response': contrast_response,
         'fg_offset':         fg_offset,
         'fg_fragment':       fg_fragment,
-        'intensity_mean':    intensity_mean
+        'obj_radius':        obj_radius,
+        'is_glare':          is_glare
     }
 
 
 def _retain_intersections(superset_mask, subset_mask, copy=False):
+    """Retains all connected components in `superset_mask` which intersect `subset_mask`
+    """
     result = superset_mask.copy() if copy else superset_mask
     supersets = ndi.label(superset_mask)[0]
     for l in frozenset(supersets.reshape(-1)) - {0}:

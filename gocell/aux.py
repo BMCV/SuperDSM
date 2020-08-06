@@ -290,3 +290,13 @@ def find_candidate_by_footprint(candidates, atom_labels, cmp='=='):
             if cmp == '==': break
     return result
 
+
+def find_candidate_by_position(candidates, x, y):
+    result = []
+    for candidate in candidates:
+        r = y - candidate.fg_offset[0]
+        c = x - candidate.fg_offset[1]
+        if 0 <= r < candidate.fg_fragment.shape[0] and 0 <= c < candidate.fg_fragment.shape[1] and candidate.fg_fragment[r, c]:
+            result.append(candidate)
+    return result
+

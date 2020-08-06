@@ -39,7 +39,7 @@ def load_gt(loader, filepath, **loader_kwargs):
         return load_unlabeled_xcf_gt(filepath, **loader_kwargs)
 
 
-def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, out=None):
+def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, fast=False, out=None):
     out = ConsoleOutput.get(out)
     import segmetrics
 
@@ -49,17 +49,18 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
     segmetrics.detection.FalseNegative.ACCUMULATIVE = False
 
     study = segmetrics.study.Study()
-    study.add_measure(segmetrics.regional.Dice()        , 'Dice')
-    study.add_measure(segmetrics.regional.ISBIScore()   , 'SEG')
-    study.add_measure(segmetrics.regional.RandIndex()   , 'Rand')
-    study.add_measure(segmetrics.regional.JaccardIndex(), 'Jaccard')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           ), 'NSD')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e')), 'HSD (a2e)')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a')), 'HSD (e2a)')
+    study.add_measure(segmetrics. regional.Dice()         , 'Dice')
+    study.add_measure(segmetrics. regional.RandIndex()    , 'Rand')
+    study.add_measure(segmetrics. regional.JaccardIndex() , 'Jaccard')
+    study.add_measure(segmetrics. regional.ISBIScore()    , 'SEG')
     study.add_measure(segmetrics.detection.FalseSplit()   , 'd/Split')
     study.add_measure(segmetrics.detection.FalseMerge()   , 'd/Merge')
     study.add_measure(segmetrics.detection.FalsePositive(), 'd/FP')
     study.add_measure(segmetrics.detection.FalseNegative(), 'd/FN')
+    if not fast:
+        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           ), 'NSD')
+        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e')), 'HSD (a2e)')
+        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a')), 'HSD (e2a)')
 
     chunk_ids = sorted(data.keys())
     for chunk_idx, chunk_id in enumerate(chunk_ids):
@@ -154,7 +155,7 @@ class Task:
     def _shutdown(self):
         ray.shutdown()
 
-    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, out=None):
+    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, out=None):
         out = ConsoleOutput.get(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
@@ -199,7 +200,7 @@ class Task:
                 if not dry:
                     shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
                     del data
-                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
+                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=fast_evaluation, out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
                 out2.write(f'Evaluation study written to: {self.study_path}')
@@ -358,9 +359,13 @@ if __name__ == '__main__':
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
+    parser.add_argument('--fast-evaluation', help='only use fast measures for evaluation', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     args = parser.parse_args()
+
+    if args.fast_evaluation and not args.oneshot:
+        parser.error('Using "--fast-evaluation" only allowed if "--oneshot" is used')
 
     loader = BatchLoader()
     loader.load(args.path)
@@ -379,7 +384,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
