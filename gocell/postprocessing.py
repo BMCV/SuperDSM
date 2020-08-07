@@ -195,14 +195,35 @@ def _retain_intersections(superset_mask, subset_mask, copy=False):
     return result
 
 
+#def _process_mask(candidate, g, max_distance, stdamp):
+#    if stdamp <= 0 or max_distance <= 0:
+#        return None, None
+#    mask = np.zeros(g.shape, bool)
+#    candidate.fill_foreground(mask)
+#    boundary_mask = np.logical_xor(morph.binary_dilation(mask, morph.disk(1)), morph.binary_erosion(mask, morph.disk(1)))
+#    boundary_distance   = 1 + ndi.distance_transform_edt(~boundary_mask)
+#    extra_mask_superset = (boundary_distance <= max_distance)
+#    g_fg_data = g[mask]
+#    fg_mean   = g_fg_data.mean()
+#    fg_amp    = g_fg_data.std() * stdamp
+#    extra_fg  = np.logical_and(fg_mean - fg_amp <= g, g <= fg_mean + fg_amp)
+#    extra_bg  = np.logical_not(extra_fg)
+#    extra_fg  = np.logical_and(extra_mask_superset, extra_fg)
+#    extra_bg  = np.logical_and(extra_mask_superset, extra_bg)
+#    extra_fg  = _retain_intersections(extra_fg, boundary_mask)
+#    extra_bg  = _retain_intersections(extra_bg, boundary_mask)
+#    mask[extra_fg] = True
+#    mask[extra_bg] = False
+#    fg_offset, fg_fragment = gocell.candidates.extract_foreground_fragment(mask)
+#    return fg_offset, fg_fragment
+
+
 def _process_mask(candidate, g, max_distance, stdamp):
     if stdamp <= 0 or max_distance <= 0:
         return None, None
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
-    boundary_mask = np.logical_xor(morph.binary_dilation(mask, morph.disk(1)), morph.binary_erosion(mask, morph.disk(1)))
-    boundary_distance   = 1 + ndi.distance_transform_edt(~boundary_mask)
-    extra_mask_superset = (boundary_distance <= max_distance)
+    extra_mask_superset = np.logical_xor(morph.binary_dilation(mask, morph.disk(max_distance)), morph.binary_erosion(mask, morph.disk(max_distance)))
     g_fg_data = g[mask]
     fg_mean   = g_fg_data.mean()
     fg_amp    = g_fg_data.std() * stdamp
@@ -210,8 +231,6 @@ def _process_mask(candidate, g, max_distance, stdamp):
     extra_bg  = np.logical_not(extra_fg)
     extra_fg  = np.logical_and(extra_mask_superset, extra_fg)
     extra_bg  = np.logical_and(extra_mask_superset, extra_bg)
-    extra_fg  = _retain_intersections(extra_fg, boundary_mask)
-    extra_bg  = _retain_intersections(extra_bg, boundary_mask)
     mask[extra_fg] = True
     mask[extra_bg] = False
     fg_offset, fg_fragment = gocell.candidates.extract_foreground_fragment(mask)
