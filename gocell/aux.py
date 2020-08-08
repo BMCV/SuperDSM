@@ -1,6 +1,7 @@
 import cvxopt, cvxopt.solvers
 import sys
 import numpy as np
+import scipy.ndimage as ndi
 import scipy.sparse
 import warnings
 import pathlib
@@ -298,5 +299,16 @@ def find_candidate_by_position(candidates, x, y):
         c = x - candidate.fg_offset[1]
         if 0 <= r < candidate.fg_fragment.shape[0] and 0 <= c < candidate.fg_fragment.shape[1] and candidate.fg_fragment[r, c]:
             result.append(candidate)
+    return result
+
+
+def retain_intersections(superset_mask, subset_mask, copy=False):
+    """Retains all connected components in `superset_mask` which intersect `subset_mask`
+    """
+    result = superset_mask.copy() if copy else superset_mask
+    supersets = ndi.label(superset_mask)[0]
+    for l in frozenset(supersets.reshape(-1)) - {0}:
+        cc = (supersets == l)
+        if not subset_mask[cc].any(): result[cc] = False
     return result
 

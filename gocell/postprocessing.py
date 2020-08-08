@@ -136,13 +136,6 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
     return interior_mean / exterior_mean - 1
 
 
-#def _get_largest_cc(img):
-#    fg_top_labels    = ndi.label(img)[0]
-#    fg_top_cc_sizes  = {l: (fg_top_labels == l).sum() for l in frozenset(fg_top_labels.reshape(-1)) - {0}}
-#    largest_cc_label = max(fg_top_cc_sizes.keys(), key=fg_top_cc_sizes.get)
-#    return (fg_top_labels == largest_cc_label)
-
-
 def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
     g_sect = g[candidate.fg_offset[0] : candidate.fg_offset[0] + candidate.fg_fragment.shape[0],
                candidate.fg_offset[1] : candidate.fg_offset[1] + candidate.fg_fragment.shape[1]]
@@ -182,40 +175,6 @@ def _process_candidate(cidx, candidate, params):
         'obj_radius':        obj_radius,
         'is_glare':          is_glare
     }
-
-
-def _retain_intersections(superset_mask, subset_mask, copy=False):
-    """Retains all connected components in `superset_mask` which intersect `subset_mask`
-    """
-    result = superset_mask.copy() if copy else superset_mask
-    supersets = ndi.label(superset_mask)[0]
-    for l in frozenset(supersets.reshape(-1)) - {0}:
-        cc = (supersets == l)
-        if not subset_mask[cc].any(): result[cc] = False
-    return result
-
-
-#def _process_mask(candidate, g, max_distance, stdamp):
-#    if stdamp <= 0 or max_distance <= 0:
-#        return None, None
-#    mask = np.zeros(g.shape, bool)
-#    candidate.fill_foreground(mask)
-#    boundary_mask = np.logical_xor(morph.binary_dilation(mask, morph.disk(1)), morph.binary_erosion(mask, morph.disk(1)))
-#    boundary_distance   = 1 + ndi.distance_transform_edt(~boundary_mask)
-#    extra_mask_superset = (boundary_distance <= max_distance)
-#    g_fg_data = g[mask]
-#    fg_mean   = g_fg_data.mean()
-#    fg_amp    = g_fg_data.std() * stdamp
-#    extra_fg  = np.logical_and(fg_mean - fg_amp <= g, g <= fg_mean + fg_amp)
-#    extra_bg  = np.logical_not(extra_fg)
-#    extra_fg  = np.logical_and(extra_mask_superset, extra_fg)
-#    extra_bg  = np.logical_and(extra_mask_superset, extra_bg)
-#    extra_fg  = _retain_intersections(extra_fg, boundary_mask)
-#    extra_bg  = _retain_intersections(extra_bg, boundary_mask)
-#    mask[extra_fg] = True
-#    mask[extra_bg] = False
-#    fg_offset, fg_fragment = gocell.candidates.extract_foreground_fragment(mask)
-#    return fg_offset, fg_fragment
 
 
 def _process_mask(candidate, g, max_distance, stdamp):
