@@ -249,7 +249,7 @@ class Task:
                     data = dill.load(fin)
                 return stage_name, data
             else:
-                return None, {}
+                return stage_name, {}
 
     def write_evaluation_results(self, chunk_ids, study):
         measure_names = sorted(study.measures.keys())
