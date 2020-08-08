@@ -1,6 +1,26 @@
 import gocell.aux
 
 
+def _merge_minsetcover(candidates, accepted_candidates, alpha):
+    replacements_count = 0
+    w = lambda c: c.energy + alpha
+    for c_new in sorted([c for c in candidates if c not in accepted_candidates], key=lambda c: w(c)):
+        valid_replacement, blockers = True, set()
+        for c in accepted_candidates:
+            overlap = len(c.footprint & c_new.footprint)
+            if overlap == 0: continue
+            if overlap < len(c.footprint):
+                valid_replacement = False
+                break
+            assert overlap == len(c.footprint)
+            blockers |= {c}
+        if not valid_replacement: continue
+        if w(c_new) < sum(w(c) for c in blockers):
+            replacements_count += len(blockers)
+            accepted_candidates = [c for c in accepted_candidates if c not in blockers] + [c_new]
+    return accepted_candidates, replacements_count
+
+
 def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     accepted_candidates  = []  ## primal variable
     remaining_candidates = list(candidates)
@@ -24,37 +44,24 @@ def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     out.write(f'MINSETCOVER - GREEDY accepted candidates: {len(accepted_candidates)}')
 
     if merge:
-        replacements_count = 0
-        for c_new in sorted([c for c in candidates if c not in accepted_candidates], key=lambda c: w(c)):
-            valid_replacement, blockers = True, set()
-            for c in accepted_candidates:
-                overlap = len(c.footprint & c_new.footprint)
-                if overlap == 0: continue
-                if overlap < len(c.footprint):
-                    valid_replacement = False
-                    break
-                assert overlap == len(c.footprint)
-                blockers |= {c}
-            if not valid_replacement: continue
-            if w(c_new) < sum(w(c) for c in blockers):
-                replacements_count += len(blockers)
-                accepted_candidates = [c for c in accepted_candidates if c not in blockers] + [c_new]
-
+        accepted_candidates, replacements_count = _merge_minsetcover(candidates, accepted_candidates, alpha)
         out.write(f'MINSETCOVER - MERGED candidates: {replacements_count}')
 
     return accepted_candidates
 
 
 DEFAULT_TRY_LOWER_ALPHA = 1
+DEFAULT_LOWER_ALPHA_MUL = 0.8
 
 
-def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, out=None):
+def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL, merge_lower_alpha=False, out=None):
     out = gocell.aux.get_output(out)
     solution1 = gocell.minsetcover._solve_minsetcover(candidates, alpha, merge, out)
     if try_lower_alpha > 0 and alpha > 0:
-        new_alpha = alpha * 0.8
+        new_alpha = alpha * lower_alpha_mul
         out.write(f'MINSETCOVER retry with lower alpha: {new_alpha:g}')
-        solution2 = solve_minsetcover(candidates, new_alpha, merge, try_lower_alpha - 1, out)
+        solution2 = solve_minsetcover(candidates, new_alpha, merge, try_lower_alpha - 1, lower_alpha_mul, False, out)
+        if merge_lower_alpha: solution2 = _merge_minsetcover(candidates, solution2, alpha)[0]
         solution1_value = sum(c.energy for c in solution1) + alpha * len(solution1)
         solution2_value = sum(c.energy for c in solution2) + alpha * len(solution2)
         if solution2_value < solution1_value:
@@ -70,11 +77,12 @@ def _get_atom_label(atom):
 
 class MinSetCover:
 
-    def __init__(self, atoms, alpha, adjacencies, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA):
+    def __init__(self, atoms, alpha, adjacencies, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL):
         self.atoms = {_get_atom_label(atom): atom for atom in atoms}
         self.alpha = alpha
         self.adjacencies     = adjacencies
         self.try_lower_alpha = try_lower_alpha
+        self.lower_alpha_mul = lower_alpha_mul
         self.candidates_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
         self.  solution_by_cluster = {cluster: self.candidates_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
@@ -83,7 +91,7 @@ class MinSetCover:
 
     def _update_partial_solution(self, cluster_label, out):
         candidates = self.candidates_by_cluster[cluster_label]
-        partial_solution = solve_minsetcover(candidates, self.alpha, try_lower_alpha=self.try_lower_alpha, out=out)
+        partial_solution = solve_minsetcover(candidates, self.alpha, try_lower_alpha=self.try_lower_alpha, lower_alpha_mul=self.lower_alpha_mul, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
 
     def update(self, new_candidates, out=None):

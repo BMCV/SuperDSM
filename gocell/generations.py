@@ -48,9 +48,12 @@ class GenerationStage(gocell.pipeline.Stage):
         conservative    = gocell.config.get_value(cfg,    'conservative', True)
         alpha           = gocell.config.get_value(cfg,           'alpha', 0)
         try_lower_alpha = gocell.config.get_value(cfg, 'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
+        lower_alpha_mul = gocell.config.get_value(cfg, 'lower_alpha_mul', gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL)
+
+        assert 0 < lower_alpha_mul < 1
 
         mode = 'conservative' if conservative else 'fast'
-        generations, costs, cover, candidates = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, out)
+        generations, costs, cover, candidates = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, out)
 
         return {
             'y_surface':   y_surface,
@@ -61,7 +64,7 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, out=None):
     out = gocell.aux.get_output(out)
 
     modelfit_kwargs = {
@@ -80,7 +83,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         cover = None
         costs = None
     else:
-        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha)
+        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha, lower_alpha_mul)
         costs = [cover.costs]
         out.write(f'Solution costs: {costs[-1]:,g}')
 

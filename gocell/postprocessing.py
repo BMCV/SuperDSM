@@ -4,6 +4,7 @@ import gocell.candidates
 
 import scipy.ndimage      as ndi
 import skimage.morphology as morph
+import skimage.measure
 
 import ray
 import math, os
@@ -27,13 +28,15 @@ class Postprocessing(gocell.pipeline.Stage):
         min_obj_radius          = gocell.config.get_value(cfg,          'min_obj_radius',       0)
         max_obj_radius          = gocell.config.get_value(cfg,          'max_obj_radius',  np.inf)
         min_contrast_response   = gocell.config.get_value(cfg,   'min_contrast_response', -np.inf)
+        max_eccentricity        = gocell.config.get_value(cfg,        'max_eccentricity',       1)
 
         # mask-based post-processing
-        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp', 2)
-        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance', 0)
-        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness', 3)
-        exterior_scale    = gocell.config.get_value(cfg,    'exterior_scale', 5)
-        exterior_offset   = gocell.config.get_value(cfg,   'exterior_offset', 5)
+        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',     2)
+        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance',     0)
+        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness',     3)
+        exterior_scale    = gocell.config.get_value(cfg,    'exterior_scale',     5)
+        exterior_offset   = gocell.config.get_value(cfg,   'exterior_offset',     5)
+        fill_holes        = gocell.config.get_value(cfg,        'fill_holes', False)
 
         # autofluorescence glare removal
         glare_detection_smoothness = gocell.config.get_value(cfg, 'glare_detection_smoothness',      3)
@@ -52,6 +55,7 @@ class Postprocessing(gocell.pipeline.Stage):
             'exterior_offset':            exterior_offset,
             'mask_stdamp':                mask_stdamp,
             'mask_max_distance':          mask_max_distance,
+            'fill_holes':                 fill_holes,
             'min_glare_radius':           min_glare_radius,
             'min_boundary_glare_radius':  min_boundary_glare_radius,
             'glare_detection_min_layer':  glare_detection_min_layer,
@@ -83,6 +87,9 @@ class Postprocessing(gocell.pipeline.Stage):
                 continue
             if candidate_results['contrast_response'] < min_contrast_response:
                 log_entries.append((candidate, f'contrast response too low ({candidate_results["contrast_response"]})'))
+                continue
+            if candidate_results['eccentricity'] > max_eccentricity:
+                log_entries.append((candidate, f'eccentricity too high ({candidate_results["eccentricity"]})'))
                 continue
             if candidate.original.on_boundary:
                 if discard_image_boundary:
@@ -165,7 +172,8 @@ def _process_candidate(cidx, candidate, params):
     region       = candidate.get_modelfit_region(params['y'], params['g_atoms'])
     energy_rate  = candidate.energy / region.mask.sum()
     contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'])
-    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'])
+    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
+    eccentricity = _compute_eccentricity(candidate)
 
     return cidx, {
         'energy_rate':       energy_rate,
@@ -173,13 +181,17 @@ def _process_candidate(cidx, candidate, params):
         'fg_offset':         fg_offset,
         'fg_fragment':       fg_fragment,
         'obj_radius':        obj_radius,
-        'is_glare':          is_glare
+        'is_glare':          is_glare,
+        'eccentricity':      eccentricity
     }
 
 
-def _process_mask(candidate, g, max_distance, stdamp):
+def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
     if stdamp <= 0 or max_distance <= 0:
-        return None, None
+        if fill_holes:
+            return candidate.fg_offset, ndi.morphology.binary_fill_holes(candidate.fg_fragment)
+        else:
+            return None, None
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
     extra_mask_superset = np.logical_xor(morph.binary_dilation(mask, morph.disk(max_distance)), morph.binary_erosion(mask, morph.disk(max_distance)))
@@ -193,5 +205,13 @@ def _process_mask(candidate, g, max_distance, stdamp):
     mask[extra_fg] = True
     mask[extra_bg] = False
     fg_offset, fg_fragment = gocell.candidates.extract_foreground_fragment(mask)
+    if fill_holes: fg_fragment = ndi.morphology.binary_fill_holes(fg_fragment)
     return fg_offset, fg_fragment
+
+
+def _compute_eccentricity(candidate):
+    if candidate.fg_fragment.any():
+        return skimage.measure.regionprops(candidate.fg_fragment.astype('uint8'), coordinates='rc')[0].eccentricity
+    else:
+        return 0
 
