@@ -22,13 +22,14 @@ class Postprocessing(gocell.pipeline.Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
-        max_energy_rate         = gocell.config.get_value(cfg,         'max_energy_rate',  np.inf)
-        discard_image_boundary  = gocell.config.get_value(cfg,  'discard_image_boundary',   False)
-        min_boundary_obj_radius = gocell.config.get_value(cfg, 'min_boundary_obj_radius',       0)
-        min_obj_radius          = gocell.config.get_value(cfg,          'min_obj_radius',       0)
-        max_obj_radius          = gocell.config.get_value(cfg,          'max_obj_radius',  np.inf)
-        min_contrast_response   = gocell.config.get_value(cfg,   'min_contrast_response', -np.inf)
-        max_eccentricity        = gocell.config.get_value(cfg,        'max_eccentricity',       1)
+        max_energy_rate           = gocell.config.get_value(cfg,           'max_energy_rate',  np.inf)
+        discard_image_boundary    = gocell.config.get_value(cfg,    'discard_image_boundary',   False)
+        min_boundary_obj_radius   = gocell.config.get_value(cfg,   'min_boundary_obj_radius',       0)
+        min_obj_radius            = gocell.config.get_value(cfg,            'min_obj_radius',       0)
+        max_obj_radius            = gocell.config.get_value(cfg,            'max_obj_radius',  np.inf)
+        min_contrast_response     = gocell.config.get_value(cfg,     'min_contrast_response', -np.inf)
+        contrast_response_epsilon = gocell.config.get_value(cfg, 'contrast_response_epsilon',       0)
+        max_eccentricity          = gocell.config.get_value(cfg,          'max_eccentricity',       1)
 
         # mask-based post-processing
         mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',     2)
@@ -53,6 +54,7 @@ class Postprocessing(gocell.pipeline.Stage):
             'g_glare_detection':          ndi.gaussian_filter(input_data['g_raw'], glare_detection_smoothness),
             'exterior_scale':             exterior_scale,
             'exterior_offset':            exterior_offset,
+            'contrast_response_epsilon':  contrast_response_epsilon,
             'mask_stdamp':                mask_stdamp,
             'mask_max_distance':          mask_max_distance,
             'fill_holes':                 fill_holes,
@@ -128,7 +130,7 @@ class PostprocessedCandidate(gocell.candidates.BaseCandidate):
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
+def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon):
     g = g / g.std()
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
@@ -140,7 +142,7 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset):
     exterior_weights[exterior_mask] = np.exp(-exterior_distance_map[exterior_mask])
     exterior_weights /= exterior_weights.sum()
     exterior_mean = (g * exterior_weights).sum()
-    return interior_mean / exterior_mean - 1
+    return interior_mean / (exterior_mean + epsilon) - 1
 
 
 def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
@@ -171,7 +173,7 @@ def _process_candidate(cidx, candidate, params):
         is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
     region       = candidate.get_modelfit_region(params['y'], params['g_atoms'])
     energy_rate  = candidate.energy / region.mask.sum()
-    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'])
+    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'])
     fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(candidate)
 
