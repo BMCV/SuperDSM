@@ -134,9 +134,9 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
     print('.', end='\n')
     with aux.SystemSemaphore.get_lock(lock):
-        z = z[:, :, col_mask]
-        z = z[row_mask]
-    return z
+        col_mask_where = np.nonzero(col_mask)
+        row_mask_where = np.nonzero(row_mask)
+        return z[row_mask_where[0][:,None], row_mask_where[1][:,None], col_mask_where[0], col_mask_where[1]]
 
 
 def _create_subsample_grid(mask, subsample):
