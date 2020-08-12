@@ -53,7 +53,7 @@ class AtomicStage(gocell.pipeline.Stage):
         assert g_atoms.min() > 0
 
         # Compute adjacencies graph
-        adjacencies = AtomAdjacencyGraph(g_atoms, g_clusters, ~bg_mask, out)
+        adjacencies = AtomAdjacencyGraph(g_atoms, g_clusters, ~bg_mask, input_data['seeds'], out)
 
         # Optionally, split clusters
         if split_clusters > 0:
@@ -89,10 +89,11 @@ class AtomicStage(gocell.pipeline.Stage):
 
 class AtomAdjacencyGraph:
 
-    def __init__(self, g_atoms, g_clusters, fg_mask, out=None):
+    def __init__(self, g_atoms, g_clusters, fg_mask, seeds, out=None):
         out = gocell.aux.get_output(out)
         self._adjacencies, se = {atom_label: set() for atom_label in range(1, g_atoms.max() + 1)}, morph.disk(1)
         self._atoms_by_cluster, self._cluster_by_atom = {}, {}
+        self._seeds = seeds
         for l0 in range(1, g_atoms.max() + 1):
             cc = (g_atoms == l0)
             cluster_label = g_clusters[cc][0]
@@ -142,14 +143,17 @@ class AtomAdjacencyGraph:
     def atom_labels(self): return frozenset(self._cluster_by_atom.keys())
     
     ACCEPT_ALL_ATOMS = lambda atom_label: True
+
+    def get_seed(self, atom_label):
+        return self._seeds[atom_label - 1]
     
-    def get_edge_lines(self, data, accept=ACCEPT_ALL_ATOMS):
+    def get_edge_lines(self, accept=ACCEPT_ALL_ATOMS):
         lines = []
-        for l in frozenset(data['g_atoms'].reshape(-1)):
-            seed_l = data['seeds'][l - 1]
+        for l in self.atom_labels:
+            seed_l = self.get_seed(l)
             if not accept(l): continue
             for k in self[l]:
-                seed_k = data['seeds'][k - 1]
+                seed_k = self.get_seed(k)
                 if not accept(k): continue
                 lines.append([seed_l, seed_k])
         return lines

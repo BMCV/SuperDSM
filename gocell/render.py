@@ -46,7 +46,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     else:
         img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3)
         img = img / img.max()
-    lines = data['adjacencies'].get_edge_lines(data)
+    lines = data['adjacencies'].get_edge_lines()
     shape = img.shape[:2]
     for endpoint in data['seeds']:
         perim_mask  = skimage.draw.circle(*endpoint, endpoint_radius + endpoint_edge_thickness, shape)

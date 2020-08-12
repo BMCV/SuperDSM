@@ -42,18 +42,19 @@ class GenerationStage(gocell.pipeline.Stage):
                                               outputs = ['y_surface', 'generations', 'cover', 'costs', 'candidates'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface       = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
-        g_atoms         = input_data['g_atoms']
-        adjacencies     = input_data['adjacencies']
-        conservative    = gocell.config.get_value(cfg,    'conservative', True)
-        alpha           = gocell.config.get_value(cfg,           'alpha', 0)
-        try_lower_alpha = gocell.config.get_value(cfg, 'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
-        lower_alpha_mul = gocell.config.get_value(cfg, 'lower_alpha_mul', gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL)
+        y_surface         = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
+        g_atoms           = input_data['g_atoms']
+        adjacencies       = input_data['adjacencies']
+        conservative      = gocell.config.get_value(cfg,      'conservative', True)
+        alpha             = gocell.config.get_value(cfg,             'alpha', 0)
+        try_lower_alpha   = gocell.config.get_value(cfg,   'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
+        lower_alpha_mul   = gocell.config.get_value(cfg,   'lower_alpha_mul', gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL)
+        max_seed_distance = gocell.config.get_value(cfg, 'max_seed_distance', np.inf)
 
         assert 0 < lower_alpha_mul < 1
 
         mode = 'conservative' if conservative else 'fast'
-        generations, costs, cover, candidates = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, out)
+        generations, costs, cover, candidates = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)
 
         return {
             'y_surface':   y_surface,
@@ -64,7 +65,7 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, out=None):
     out = gocell.aux.get_output(out)
 
     modelfit_kwargs = {
@@ -93,7 +94,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         generation_number = 1 + len(generations)
         out.write(f'\nGeneration {generation_number}:')
         
-        new_generation, new_candidates = _iterate_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
+        new_generation, new_candidates = _iterate_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
         if len(new_generation) == 0: break
         generations.append(new_generation)
         candidates += new_candidates
@@ -106,7 +107,25 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
     return generations, costs, cover, candidates
 
 
-def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, log_root_dir, mode, out):
+def _get_max_distance(footprint, new_atom_label, adjacencies):
+    """Computes the maximum distance between the seed of `new_atom_label` and a seed point in `footprint`
+    """
+    assert new_atom_label not in footprint
+    maximum_distance = 0
+    new_atom_seed = adjacencies.get_seed(new_atom_label)
+    for label in footprint:
+        distance = np.linalg.norm(adjacencies.get_seed(label) - new_atom_seed)
+        maximum_distance = max((maximum_distance, distance))
+    return maximum_distance
+
+
+def _is_within_max_seed_distance(footprint, new_atom_label, adjacencies, max_seed_distance):
+    if np.isinf(max_seed_distance): return True
+    maximum_distance = _get_max_distance(footprint, new_atom_label, adjacencies)
+    return maximum_distance <= max_seed_distance
+
+
+def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, log_root_dir, mode, out):
     new_candidates = []
     new_candidate_thresholds = []
     discarded = 0
@@ -121,6 +140,7 @@ def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adja
         current_cluster_costs = cover.get_cluster_costs(cluster_label) if mode != 'bruteforce' else np.inf
         
         for new_atom_label in adjacent_atoms:
+            if not _is_within_max_seed_distance(candidate.footprint, new_atom_label, adjacencies, max_seed_distance): continue
             new_candidate = gocell.candidates.Candidate()
             new_candidate.footprint = candidate.footprint | {new_atom_label}
             new_candidate_footprint = frozenset(new_candidate.footprint)
