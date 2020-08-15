@@ -30,10 +30,12 @@ class Postprocessing(gocell.pipeline.Stage):
         max_eccentricity        = gocell.config.get_value(cfg,        'max_eccentricity',       1)
 
         # contrast-based post-processing
+        get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
+        contrast_response_version = gocell.config.get_value(cfg, 'contrast_response_version',  1)
+        exterior_scale            = gocell.config.get_value(cfg,            'exterior_scale',  5)
+        exterior_offset           = gocell.config.get_value(cfg,           'exterior_offset',  5)
         min_contrast_response     = gocell.config.get_value(cfg,     'min_contrast_response', -np.inf)
-        contrast_response_epsilon = gocell.config.get_value(cfg, 'contrast_response_epsilon',       0)
-        exterior_scale            = gocell.config.get_value(cfg,            'exterior_scale',       5)
-        exterior_offset           = gocell.config.get_value(cfg,           'exterior_offset',       5)
+        contrast_response_epsilon = gocell.config.get_value(cfg, 'contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
 
         # mask-based post-processing
         mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',     2)
@@ -48,12 +50,20 @@ class Postprocessing(gocell.pipeline.Stage):
         min_glare_radius           = gocell.config.get_value(cfg,           'min_glare_radius', np.inf)
         min_boundary_glare_radius  = gocell.config.get_value(cfg,  'min_boundary_glare_radius', min_glare_radius)
 
+        # mask image pixels allowed for estimation of mean background intesity during contrast computation
+        background_mask = np.zeros(input_data['g_raw'].shape, bool)
+        for c in input_data['cover'].solution:
+            c.fill_foreground(background_mask)
+        background_mask = morph.binary_erosion(~background_mask, morph.disk(exterior_offset))
+
         params = {
             'y':                          input_data['y_surface'],
             'g':                          input_data['g_raw'],
             'g_atoms':                    input_data['g_atoms'],
             'g_mask_processing':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
             'g_glare_detection':          ndi.gaussian_filter(input_data['g_raw'], glare_detection_smoothness),
+            'contrast_response_version':  contrast_response_version,
+            'background_mask':            background_mask,
             'exterior_scale':             exterior_scale,
             'exterior_offset':            exterior_offset,
             'contrast_response_epsilon':  contrast_response_epsilon,
@@ -132,19 +142,26 @@ class PostprocessedCandidate(gocell.candidates.BaseCandidate):
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon):
+def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon, background_mask, version):
+    assert version in [1,2]
     g = g / g.std()
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
     interior_mean = g[mask].mean()
     exterior_distance_map = (ndi.distance_transform_edt(~mask) - exterior_offset).clip(0, np.inf) / exterior_scale
     exterior_mask = np.logical_xor(mask, exterior_distance_map <= 5)
-    exterior_mask = np.logical_and(exterior_mask, g < interior_mean)
+    if version == 1:
+        exterior_mask = np.logical_and(exterior_mask, g < interior_mean)
+    elif version == 2:
+        exterior_mask = np.logical_and(exterior_mask, background_mask)
     exterior_weights = np.zeros(g.shape)
     exterior_weights[exterior_mask] = np.exp(-exterior_distance_map[exterior_mask])
     exterior_weights /= exterior_weights.sum()
     exterior_mean = (g * exterior_weights).sum()
-    return interior_mean / (exterior_mean + epsilon) - 1
+    if version == 1:
+        return interior_mean / (exterior_mean + epsilon) - 1
+    elif version == 2:
+        return (interior_mean + epsilon) / (exterior_mean + epsilon) - 1
 
 
 def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
@@ -175,7 +192,7 @@ def _process_candidate(cidx, candidate, params):
         is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
     region       = candidate.get_modelfit_region(params['y'], params['g_atoms'])
     energy_rate  = candidate.energy / region.mask.sum()
-    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'])
+    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'], params['contrast_response_version'])
     fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(candidate)
 
