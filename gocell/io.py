@@ -1,5 +1,5 @@
 import skimage.io, skimage.transform
-import os
+import os, warnings
 import gocell._warps as _warps
 
 
@@ -32,7 +32,9 @@ def imread(filepath, **kwargs):
     if fp_lowercase.endswith('.png'):
         img = skimage.io.imread(filepath, as_gray=True, **kwargs)
     elif fp_lowercase.endswith('.tif') or fp_lowercase.endswith('.tiff'):
-        img = skimage.io.imread(filepath, as_gray=True, plugin='tifffile', **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=RuntimeWarning)
+            img = skimage.io.imread(filepath, as_gray=True, plugin='tifffile', **kwargs)
     else:
         raise ValueError('unknown file extension: %s' % filepath)
     return img
