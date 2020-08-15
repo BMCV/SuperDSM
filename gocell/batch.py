@@ -124,26 +124,27 @@ class Task:
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         if self.runnable:
-            self.  im_pathpattern = os.path.expanduser(self.data['im_pathpattern'])
-            self.  gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern'])
-            self.    gt_is_unique = self.data['gt_is_unique']
-            self.       gt_loader = self.data['gt_loader']
-            self.gt_loader_kwargs = self.data['gt_loader_kwargs'] if 'gt_loader_kwargs' in self.data else {}
-            self. seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
-            self. adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
-            self. log_pathpattern = path / self.data['log_pathpattern']
-            self.        file_ids = sorted(frozenset(self.data['file_ids']))
-            self.     result_path = path / 'data.dill.gz'
-            self.      study_path = path / 'study.csv'
-            self.    timings_path = path / 'timings.csv'
-            self.     digest_path = path / '.digest'
-            self. digest_cfg_path = path / '.digest.cfg.json'
-            self.          config = self.data['config']
-            self.      seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
-            self.          dilate = self.data['dilate']
-            self. merge_threshold = self.data['merge_overlap_threshold']
-            self.      last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
-            self.         environ = self.data['environ'] if 'environ' in self.data else {}
+            self.   im_pathpattern = os.path.expanduser(self.data['im_pathpattern'])
+            self.   gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern'])
+            self.     gt_is_unique = self.data['gt_is_unique']
+            self.        gt_loader = self.data['gt_loader']
+            self. gt_loader_kwargs = self.data['gt_loader_kwargs'] if 'gt_loader_kwargs' in self.data else {}
+            self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
+            self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
+            self.  log_pathpattern = path / self.data['log_pathpattern']
+            self.         file_ids = sorted(frozenset(self.data['file_ids']))
+            self.      result_path = path / 'data.dill.gz'
+            self.       study_path = path / 'study.csv'
+            self.     timings_path = path / 'timings.csv'
+            self.timings_json_path = path / '.timings.json'
+            self.      digest_path = path / '.digest'
+            self.  digest_cfg_path = path / '.digest.cfg.json'
+            self.           config = self.data['config']
+            self.       seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
+            self.           dilate = self.data['dilate']
+            self.  merge_threshold = self.data['merge_overlap_threshold']
+            self.       last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
+            self.          environ = self.data['environ'] if 'environ' in self.data else {}
 
     def _initialize(self):
         for key, val in self.environ.items():
@@ -154,6 +155,13 @@ class Task:
 
     def _shutdown(self):
         ray.shutdown()
+
+    def _load_timings(self):
+        if self.timings_json_path.exists():
+            with self.timings_json_path.open('r') as fin:
+                return json.load(fin)
+        else:
+            return {}
 
     def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, out=None):
         out = ConsoleOutput.get(out)
@@ -168,7 +176,7 @@ class Task:
         try:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
-            timings = {}
+            timings = self._load_timings()
             for file_id in self.file_ids:
                 im_filepath = str(self. im_pathpattern) % file_id
                 out3.write(f'\nProcessing file: {im_filepath}')
@@ -284,6 +292,8 @@ class Task:
             csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for row in rows:
                 csv_writer.writerow(row)
+        with self.timings_json_path.open('w') as fout:
+            json.dump(timings, fout)
 
 
 class BatchLoader:
