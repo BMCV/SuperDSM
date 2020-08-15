@@ -162,7 +162,7 @@ class Task:
     def _shutdown(self):
         ray.shutdown()
 
-    def _load_timings(self, ):
+    def _load_timings(self):
         if self.timings_json_path.exists():
             with self.timings_json_path.open('r') as fin:
                 timings = json.load(fin)
