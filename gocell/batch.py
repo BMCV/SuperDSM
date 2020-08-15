@@ -184,9 +184,10 @@ class Task:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             timings = self._load_timings()
-            for file_id in self.file_ids:
+            for file_idx, file_id in enumerate(self.file_ids):
                 im_filepath = str(self. im_pathpattern) % file_id
-                out3.write(aux.Text.style(f'\nProcessing file: {im_filepath}', aux.Text.BOLD))
+                progress    = file_idx / len(self.file_ids)
+                out3.write(aux.Text.style(f'\nProcessing file: {im_filepath}', aux.Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
