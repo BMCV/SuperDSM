@@ -76,7 +76,7 @@ def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = ConsoleOutput.get(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
-        return None, None
+        return None, {}
     else:
         return __process_file(*args, out=out, **kwargs)
 
@@ -115,6 +115,12 @@ def find_first_differing_stage(pipeline, config1, config2):
                 (stage_name in config1 and stage_name in config2 and config1[stage_name] != config2[stage_name]):
             return stage_name
     return ''
+
+
+def _resolve_timings_key(key, candidates):
+    for c in candidates:
+        if str(c) == key: return c
+    raise ValueError(f'cannot resolve key "{key}"')
 
 
 class Task:
@@ -156,10 +162,11 @@ class Task:
     def _shutdown(self):
         ray.shutdown()
 
-    def _load_timings(self):
+    def _load_timings(self, ):
         if self.timings_json_path.exists():
             with self.timings_json_path.open('r') as fin:
-                return json.load(fin)
+                timings = json.load(fin)
+            return {_resolve_timings_key(key, self.file_ids): timings[key] for key in timings}
         else:
             return {}
 
@@ -189,7 +196,9 @@ class Task:
                                     config = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
-                data[file_id], timings[file_id] = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                if file_id not in timings: timings[file_id] = {}
+                timings[file_id].update(_timings)
             out2.write('')
             if one_shot or ((first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
                 out2.write('Skipping writing results')
