@@ -170,7 +170,7 @@ class Task:
         else:
             return {}
 
-    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, out=None):
+    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, out=None):
         out = ConsoleOutput.get(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
@@ -221,6 +221,9 @@ class Task:
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
                 out2.write(f'Evaluation study written to: {self.study_path}')
+                if not dry and print_study:
+                    out2.write('')
+                    study.print_results(write=out2.write, line_suffix='', pad=2)
         finally:
             self._shutdown()
 
@@ -379,6 +382,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     parser.add_argument('--fast-evaluation', help='only use fast measures for evaluation', action='store_true')
+    parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     args = parser.parse_args()
@@ -403,7 +407,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, args.print_study, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
