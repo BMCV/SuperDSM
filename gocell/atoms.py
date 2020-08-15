@@ -69,17 +69,6 @@ class AtomicStage(gocell.pipeline.Stage):
                        removed_edges += 1
             out.write(f'Removed {removed_edges} edge(s)')
 
-        # Estimate computational load
-        rough_comp_load_with_n_atoms = lambda n: sum(scipy.special.comb(n, k, exact=True) for k in range(1, n + 1))
-        rough_comp_load = sum(rough_comp_load_with_n_atoms(len(adjacencies.get_atoms_in_cluster(cluster_label))) for cluster_label in adjacencies.cluster_labels)
-        if rough_comp_load < 1e6:
-            comp_load = _count_connected_subgraphs(adjacencies.atom_labels, adjacencies.__getitem__)
-            rough_comp_load = False
-        else:
-            comp_load = rough_comp_load
-            rough_comp_load = True
-        out.write(f'Computational load ≤ {comp_load:,} {"(very rough)" if rough_comp_load else ""}')
-
         return {
             'g_clusters':  g_clusters,
             'g_atoms':     g_atoms,
@@ -184,24 +173,4 @@ class AtomAdjacencyGraph:
             if not all(atom1 in self[atom2] for atom2 in self[atom1]):
                 return False
         return True
-
-
-def _find_connected_subgraphs(nodes, get_neighbors):
-    singletons = [frozenset([i]) for i in nodes]
-    previous_generation = set(singletons)
-    for footprint in singletons: yield footprint
-    while len(previous_generation) > 0:
-        next_generation = set()
-        for footprint in previous_generation:
-            for node in footprint:
-                for neighbor in set(get_neighbors(node)) - footprint:
-                    new_footprint = footprint | {neighbor}
-                    if new_footprint in next_generation: continue
-                    yield new_footprint
-                    next_generation |= {new_footprint}
-        previous_generation = next_generation
-
-
-def _count_connected_subgraphs(nodes, get_neighbors):
-    return sum(1 for subgraph in _find_connected_subgraphs(nodes, get_neighbors))
 

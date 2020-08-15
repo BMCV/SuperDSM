@@ -92,9 +92,15 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
     candidates  = sum(generations, [])
     while True:
         generation_number = 1 + len(generations)
-        out.write(f'\nGeneration {generation_number}:')
+        generation_label  = f'Generation {generation_number}'
+        out.write('')
+        out.intermediate(f'{generation_label}...')
+
+        progress = _estimate_progress(generations, adjacencies, max_seed_distance)
+        progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
+        out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
         
-        new_generation, new_candidates = _iterate_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
+        new_generation, new_candidates = _process_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, out)
         if len(new_generation) == 0: break
         generations.append(new_generation)
         candidates += new_candidates
@@ -125,47 +131,71 @@ def _is_within_max_seed_distance(footprint, new_atom_label, adjacencies, max_see
     return maximum_distance <= max_seed_distance
 
 
-def _iterate_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, log_root_dir, mode, out):
+def _iterate_generation(previous_generation, adjacencies, max_seed_distance, get_footprint=lambda item: item):
+    existing_footprints = set()
+    for item in previous_generation:
+        footprint = get_footprint(item)
+        adjacent_atoms = set()
+        for atom in footprint:
+            adjacent_atoms |= adjacencies[atom] - footprint
+        for new_atom_label in adjacent_atoms:
+            if not _is_within_max_seed_distance(footprint, new_atom_label, adjacencies, max_seed_distance): continue
+            new_footprint = frozenset(footprint | {new_atom_label})
+            if new_footprint not in existing_footprints:
+                existing_footprints |= {new_footprint}
+                yield item, new_footprint, new_atom_label
+
+
+def _get_next_generation(previous_generation, adjacencies, max_seed_distance):
+    return [new_footprint for _, new_footprint, _ in _iterate_generation(previous_generation, adjacencies, max_seed_distance)]
+
+
+def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=10**6):
+    previous_generation = [c.footprint for c in generations[-1]]
+    remaining_amount    =  0
+    while len(previous_generation) > 0:
+        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance)
+        remaining_amount   += len(next_generation)
+        previous_generation = next_generation
+        if remaining_amount > max_amount: return None
+    finished_amount = len(sum(generations, []))
+    return finished_amount / (remaining_amount + finished_amount)
+
+
+def _process_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, log_root_dir, mode, out):
     new_candidates = []
     new_candidate_thresholds = []
     discarded = 0
-    existing_candidate_footprints = set()
     candidates_by_cluster = {cluster_label: [c for c in candidates if adjacencies.get_cluster_label(list(c.footprint)[0]) == cluster_label] for cluster_label in adjacencies.cluster_labels}
-    for cidx, candidate in enumerate(previous_generation):
-        adjacent_atoms = set()
-        for atom in candidate.footprint:
-            adjacent_atoms |= adjacencies[atom] - candidate.footprint
-            
+    current_cluster_label = None
+    for candidate, new_candidate_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint):
         cluster_label = adjacencies.get_cluster_label(list(candidate.footprint)[0])
-        current_cluster_costs = cover.get_cluster_costs(cluster_label) if mode != 'bruteforce' else np.inf
-        
-        for new_atom_label in adjacent_atoms:
-            if not _is_within_max_seed_distance(candidate.footprint, new_atom_label, adjacencies, max_seed_distance): continue
-            new_candidate = gocell.candidates.Candidate()
-            new_candidate.footprint = candidate.footprint | {new_atom_label}
-            new_candidate_footprint = frozenset(new_candidate.footprint)
-            if new_candidate_footprint not in existing_candidate_footprints:
-                existing_candidate_footprints |= {new_candidate_footprint}
+        if current_cluster_label != cluster_label:
+            current_cluster_label = cluster_label
+            current_cluster_costs = cover.get_cluster_costs(cluster_label) if mode != 'bruteforce' else np.inf
 
-                if mode == 'bruteforce':
-                    new_candidates.append(new_candidate)
-                else:
-                    remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
-                    min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
-                    min_remaining_costs = min((min_remaining_atom_costs + cover.alpha, sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates_by_cluster[cluster_label] if len(c.footprint & new_candidate.footprint) == 0], out=out.derive(muted=True)))))
-                    if mode == 'conservative':
-                        max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
-                    elif mode == 'fast':
-                        max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
-                    else:
-                        raise ValueError(f'unknown mode "{mode}"')
-                    new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
-                    min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
-                    if max_new_candidate_energy < min_new_candidate_energy:
-                        discarded += 1
-                    else:
-                        new_candidate_thresholds.append(max_new_candidate_energy)
-                        new_candidates.append(new_candidate)
+        new_candidate = gocell.candidates.Candidate()
+        new_candidate.footprint = new_candidate_footprint
+
+        if mode == 'bruteforce':
+            new_candidates.append(new_candidate)
+        else:
+            remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
+            min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
+            min_remaining_costs = min((min_remaining_atom_costs + cover.alpha, sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates_by_cluster[cluster_label] if len(c.footprint & new_candidate.footprint) == 0], out=out.derive(muted=True)))))
+            if mode == 'conservative':
+                max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
+            elif mode == 'fast':
+                max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
+            else:
+                raise ValueError(f'unknown mode "{mode}"')
+            new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
+            min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
+            if max_new_candidate_energy < min_new_candidate_energy:
+                discarded += 1
+            else:
+                new_candidate_thresholds.append(max_new_candidate_energy)
+                new_candidates.append(new_candidate)
 
     gocell.candidates.process_candidates(new_candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=out)
 

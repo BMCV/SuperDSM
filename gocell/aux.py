@@ -56,6 +56,24 @@ def get_output(out=None):
         return ConsoleOutput()
 
 
+class Text:
+
+    PURPLE    = '\033[95m'
+    CYAN      = '\033[96m'
+    DARKCYAN  = '\033[36m'
+    BLUE      = '\033[94m'
+    GREEN     = '\033[92m'
+    YELLOW    = '\033[93m'
+    RED       = '\033[91m'
+    BOLD      = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END       = '\033[0m'
+
+    @staticmethod
+    def style(text, style):
+        return f'{style}{text}{Text.END}'
+
+
 class JupyterOutput:
 
     def __init__(self, parent=None, maxlen=np.inf, muted=False):

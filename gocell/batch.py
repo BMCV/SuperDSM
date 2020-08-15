@@ -170,7 +170,7 @@ class Task:
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
             out.write(f'\nSkipping task: {self.path} ({run_count})')
             return
-        out.write(f'\nEntering task: {self.path} ({run_count})')
+        out.write(aux.Text.style(f'\nEntering task: {self.path} ({run_count})', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         try:
@@ -179,7 +179,7 @@ class Task:
             timings = self._load_timings()
             for file_id in self.file_ids:
                 im_filepath = str(self. im_pathpattern) % file_id
-                out3.write(f'\nProcessing file: {im_filepath}')
+                out3.write(aux.Text.style(f'\nProcessing file: {im_filepath}', aux.Text.BOLD))
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
