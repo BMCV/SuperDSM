@@ -124,9 +124,10 @@ def _resolve_timings_key(key, candidates):
 
 
 class Task:
-    def __init__(self, path, data, parent_task=None):
+    def __init__(self, path, data, parent_task=None, rel_path=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
+        self.rel_path    = rel_path
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         if self.runnable:
@@ -152,6 +153,10 @@ class Task:
             self.       last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
             self.          environ = self.data['environ'] if 'environ' in self.data else {}
 
+    def _fmt_path(self, path):
+        if self.rel_path is None: return str(path)
+        else: return str(path.relative_to(self.rel_path))
+
     def _initialize(self):
         for key, val in self.environ.items():
             os.environ[key] = str(val)
@@ -175,9 +180,9 @@ class Task:
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
-            out.write(f'\nSkipping task: {self.path} ({run_count})')
+            out.write(f'\nSkipping task: {self._fmt_path(self.path)} ({run_count})')
             return
-        out.write(aux.Text.style(f'\nEntering task: {self.path} ({run_count})', aux.Text.YELLOW))
+        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} ({run_count})', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         try:
@@ -206,12 +211,12 @@ class Task:
             else:
                 if not dry:
                     self.write_timings(timings)
-                    out2.intermediate(f'Writing results... {self.result_path}')
+                    out2.intermediate(f'Writing results... {self._fmt_path(self.result_path)}')
                     with gzip.open(self.result_path, 'wb') as fout:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
-                out2.write(f'Results written to: {self.result_path}')
+                out2.write(f'Results written to: {self._fmt_path(self.result_path)}')
             if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'):
                 out2.write('Skipping evaluation')
             else:
@@ -221,7 +226,7 @@ class Task:
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=fast_evaluation, out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
-                out2.write(f'Evaluation study written to: {self.study_path}')
+                out2.write(f'Evaluation study written to: {self._fmt_path(self.study_path)}')
                 if not dry and print_study:
                     out2.write('')
                     study.print_results(write=out2.write, line_suffix='', pad=2)
@@ -264,7 +269,7 @@ class Task:
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms') + 1:
             return None, {}
         else:
-            out.write(f'Picking up from: {pickup_task.result_path} ({stage_name if stage_name != "" else "evaluate"})')
+            out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "evaluate"})')
             if not dry:
                 with gzip.open(pickup_task.result_path, 'rb') as fin:
                     data = dill.load(fin)
@@ -315,15 +320,16 @@ class BatchLoader:
         self.tasks = []
 
     def load(self, path):
-        self.process_directory(pathlib.Path(path))
+        root_path = pathlib.Path(path)
+        self.process_directory(root_path, rel_path=root_path.parents[0])
 
-    def process_directory(self, current_dir, parent_task=None):
+    def process_directory(self, current_dir, parent_task=None, rel_path=None):
         task_file = current_dir / 'task.json'
         if task_file.exists():
             try:
                 with task_file.open('r') as task_fin:
                     task_data = json.load(task_fin)
-                task = Task(current_dir, task_data, parent_task)
+                task = Task(current_dir, task_data, parent_task, rel_path=rel_path)
             except json.JSONDecodeError as err:
                 raise ValueError(f'Error processing: "{task_file}"')
             self.tasks.append(task)
@@ -331,7 +337,7 @@ class BatchLoader:
         for d in os.listdir(current_dir):
             f = current_dir / d
             if f.is_dir():
-                self.process_directory(f, parent_task)
+                self.process_directory(f, parent_task, rel_path=rel_path)
 
 
 class ConsoleOutput:
