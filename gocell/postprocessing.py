@@ -184,14 +184,18 @@ def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
     return is_glare
 
 
+def _compute_energy_rate(candidate, y, g_atoms):
+    region = candidate.get_modelfit_region(y, g_atoms)
+    return candidate.energy / region.mask.sum()
+
+
 @ray.remote
 def _process_candidate(cidx, candidate, params):
     obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
     is_glare   = False
     if params['min_boundary_glare_radius' if candidate.on_boundary else 'min_glare_radius'] < obj_radius:
         is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
-    region       = candidate.get_modelfit_region(params['y'], params['g_atoms'])
-    energy_rate  = candidate.energy / region.mask.sum()
+    energy_rate  = _compute_energy_rate(candidate, params['y'], params['g_atoms'])
     contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'], params['contrast_response_version'])
     fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(candidate)
