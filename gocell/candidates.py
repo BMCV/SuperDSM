@@ -9,6 +9,9 @@ import numpy as np
 import skimage.morphology as morph
 
 
+_DEBUG = False
+
+
 class BaseCandidate:
     def __init__(self):
         self.fg_offset   = None
@@ -128,6 +131,10 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
 
 
 @ray.remote
+def _ray_process_candidate_logged(*args, **kwargs):
+    return _process_candidate_logged(*args, **kwargs)
+
+
 def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
     if log_root_dir is not None:
         log_filename = gocell.aux.join_path(log_root_dir, f'{cidx}.txt')
@@ -149,19 +156,28 @@ def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, ou
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     smooth_mat_max_allocations = modelfit_kwargs.pop('smooth_mat_max_allocations', np.inf)
     with gocell.aux.SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
-        candidates   = list(candidates)
-        y_id         = ray.put(y)
-        g_atoms_id   = ray.put(g_atoms)
-        x_map_id     = ray.put(y.get_map(normalized=False, pad=1))
-        mf_kwargs_id = ray.put(modelfit_kwargs)
-        lock_id      = ray.put(smooth_mat_allocation_lock)
-        futures      = [_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
-        fallbacks    = 0
-        for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+        candidates = list(candidates)
+        fallbacks  = 0
+        x_map      = y.get_map(normalized=False, pad=1)
+        for ret_idx, ret in enumerate(_process_candidates(candidates, y, g_atoms, x_map, smooth_mat_allocation_lock, modelfit_kwargs, log_root_dir)):
             candidates[ret[0]].set(ret[1])
-            out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(futures)} ({fallbacks}x fallback)')
+            out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(candidates)} ({fallbacks}x fallback)')
             if ret[2]: fallbacks += 1
     out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
+
+
+def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):
+    if _DEBUG: ## run serially
+        for cidx, c in enumerate(candidates):
+            yield _process_candidate_logged(log_root_dir, cidx, y, g_atoms, x_map, c, modelfit_kwargs, lock)
+    else: ## run in parallel
+        y_id         = ray.put(y)
+        g_atoms_id   = ray.put(g_atoms)
+        x_map_id     = ray.put(x_map)
+        mf_kwargs_id = ray.put(modelfit_kwargs)
+        lock_id      = ray.put(lock)
+        futures      = [_ray_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
+        for ret in gocell.aux.get_ray_1by1(futures): yield ret
 
 
 def _estimate_initialization(region):
@@ -169,9 +185,10 @@ def _estimate_initialization(region):
     fg[~region.mask] = 0
     fg = (fg > 0)
     roi_xmap = region.get_map()
-    fg_center = np.round(ndi.center_of_mass(fg)).astype(int)##
+    fg_center = np.round(ndi.center_of_mass(fg)).astype(int)
     fg_center = roi_xmap[:, fg_center[0], fg_center[1]]
     halfaxes_lengths = (roi_xmap[:, fg] - fg_center[:, None]).std(axis=1)
+    halfaxes_lengths = np.max([halfaxes_lengths, np.full(halfaxes_lengths.shape, 1e-8)], axis=0)
     return gocell.modelfit.PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
 
 
