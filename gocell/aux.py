@@ -129,6 +129,7 @@ class ConsoleOutput:
         self.parent = parent
         self._muted = muted
         self.margin = margin
+        self._intermediate_line_length = 0
     
     @staticmethod
     def get(out):
@@ -136,8 +137,13 @@ class ConsoleOutput:
 
     def intermediate(self, line):
         if not self.muted:
-            print(' ' * self.margin + line, end='\r')
+            _line = ' ' * self.margin + line
+            print(self._finish_line(_line), end='\r')
+            self._intermediate_line_length = len(_line)
             sys.stdout.flush()
+
+    def _finish_line(self, line):
+        return line + ' ' * max((0, self._intermediate_line_length - len(line)))
     
     def write(self, line):
         if not self.muted:

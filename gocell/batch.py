@@ -40,7 +40,7 @@ def load_gt(loader, filepath, **loader_kwargs):
 
 
 def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, fast=False, out=None):
-    out = ConsoleOutput.get(out)
+    out = aux.ConsoleOutput.get(out)
     import segmetrics
 
     segmetrics.detection.FalseMerge.ACCUMULATIVE    = False
@@ -74,7 +74,7 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
 
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
-        out = ConsoleOutput.get(out)
+        out = aux.ConsoleOutput.get(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
         return None, {}
     else:
@@ -87,7 +87,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     aux.mkdir(pathlib.Path(log_filepath).parents[0])
 
     g_raw = io.imread(im_filepath)
-    out   = ConsoleOutput.get(out)
+    out   = aux.ConsoleOutput.get(out)
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
@@ -176,7 +176,7 @@ class Task:
             return {}
 
     def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, out=None):
-        out = ConsoleOutput.get(out)
+        out = aux.ConsoleOutput.get(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
@@ -264,7 +264,7 @@ class Task:
         return pickup_candidates[np.argmax(pickup_candidate_scores)]
 
     def find_first_stage_name(self, pipeline, dry=False, out=None):
-        out = ConsoleOutput.get(out)
+        out = aux.ConsoleOutput.get(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms') + 1:
             return None, {}
@@ -316,8 +316,9 @@ class Task:
 
 class BatchLoader:
 
-    def __init__(self):
-        self.tasks = []
+    def __init__(self, override_cfg={}):
+        self.tasks        = []
+        self.override_cfg = override_cfg
 
     def load(self, path):
         root_path = pathlib.Path(path)
@@ -330,6 +331,8 @@ class BatchLoader:
                 with task_file.open('r') as task_fin:
                     task_data = json.load(task_fin)
                 task = Task(current_dir, task_data, parent_task, rel_path=rel_path)
+                for key in self.override_cfg:
+                    setattr(task, key, self.override_cfg[key])
             except json.JSONDecodeError as err:
                 raise ValueError(f'Error processing: "{task_file}"')
             self.tasks.append(task)
@@ -338,39 +341,6 @@ class BatchLoader:
             f = current_dir / d
             if f.is_dir():
                 self.process_directory(f, parent_task, rel_path=rel_path)
-
-
-class ConsoleOutput:
-    def __init__(self, muted=False, parent=None, margin=0):
-        self.parent = parent
-        self._muted = muted
-        self.margin = margin
-    
-    @staticmethod
-    def get(out):
-        return ConsoleOutput() if out is None else out
-
-    def intermediate(self, line):
-        if not self.muted:
-            print(' ' * self.margin + line, end='\r')
-            sys.stdout.flush()
-    
-    def write(self, line):
-        if not self.muted:
-            lines = line.split('\n')
-            if len(lines) == 1:
-                sys.stdout.write("\033[K");
-                print(' ' * self.margin + line)
-            else:
-                for line in lines: self.write(line)
-
-    @property
-    def muted(self):
-        return self._muted or (self.parent is not None and self.parent.muted)
-    
-    def derive(self, muted=False, margin=0):
-        assert margin >= 0
-        return ConsoleOutput(muted, self, self.margin + margin)
 
 
 def get_path(root_path, path):
@@ -389,6 +359,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     parser.add_argument('--fast-evaluation', help='only use fast measures for evaluation', action='store_true')
+    parser.add_argument('--last-stage', help='override the "last_stage" setting', type=str, default=None)
     parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
@@ -397,14 +368,17 @@ if __name__ == '__main__':
     if args.fast_evaluation and not args.oneshot:
         parser.error('Using "--fast-evaluation" only allowed if "--oneshot" is used')
 
-    loader = BatchLoader()
+    if args.last_stage is not None and not args.oneshot:
+        parser.error('Using "--last-stage" only allowed if "--oneshot" is used')
+
+    loader = BatchLoader(override_cfg=dict(last_stage=args.last_stage))
     loader.load(args.path)
 
     args.task     = [get_path(args.path,     task_path) for     task_path in args.task    ]
     args.task_dir = [get_path(args.path, task_dir_path) for task_dir_path in args.task_dir]
 
     dry = not args.run
-    out = ConsoleOutput()
+    out = aux.ConsoleOutput()
     runnable_tasks = [task for task in loader.tasks if task.runnable]
     run_task_count = 0
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')

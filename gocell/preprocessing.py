@@ -52,11 +52,11 @@ class PreprocessingStage2(gocell.pipeline.Stage):
 
     def __init__(self):
         super(PreprocessingStage2, self).__init__('preprocess2',
-                                                  inputs  = ['y', 'seeds', 'foreground_abs_threshold'],
+                                                  inputs  = ['y', 'seeds', 'foreground_threshold'],
                                                   outputs = ['y', 'y_mask', 'foreground_labels'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        abs_threshold = input_data['foreground_abs_threshold']
+        fg_threshold = input_data['foreground_threshold']
 
         tmp1 = (input_data['y'] >= 0)
         tmp2 = morph.binary_dilation(tmp1)
@@ -71,7 +71,7 @@ class PreprocessingStage2(gocell.pipeline.Stage):
 
         foreground_labels = tmp4
 
-        tmp10 = np.logical_and(input_data['y'] > 0, input_data['y'] < abs_threshold * input_data['y'].max())
+        tmp10 = np.logical_and(input_data['y'] > 0, input_data['y'] < fg_threshold)
         tmp10 = np.logical_and(tmp10, foreground_labels == 0)
         input_data['y'][tmp10] = 0
 
