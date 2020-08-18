@@ -22,12 +22,14 @@ class Postprocessing(gocell.pipeline.Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
-        max_energy_rate         = gocell.config.get_value(cfg,         'max_energy_rate',  np.inf)
-        discard_image_boundary  = gocell.config.get_value(cfg,  'discard_image_boundary',   False)
-        min_boundary_obj_radius = gocell.config.get_value(cfg, 'min_boundary_obj_radius',       0)
-        min_obj_radius          = gocell.config.get_value(cfg,          'min_obj_radius',       0)
-        max_obj_radius          = gocell.config.get_value(cfg,          'max_obj_radius',  np.inf)
-        max_eccentricity        = gocell.config.get_value(cfg,        'max_eccentricity',       1)
+        max_energy_rate           = gocell.config.get_value(cfg,           'max_energy_rate',  np.inf)
+        discard_image_boundary    = gocell.config.get_value(cfg,    'discard_image_boundary',   False)
+        min_boundary_obj_radius   = gocell.config.get_value(cfg,   'min_boundary_obj_radius',       0)
+        min_obj_radius            = gocell.config.get_value(cfg,            'min_obj_radius',       0)
+        max_obj_radius            = gocell.config.get_value(cfg,            'max_obj_radius',  np.inf)
+        max_eccentricity          = gocell.config.get_value(cfg,          'max_eccentricity',       1)
+        max_boundary_eccentricity = gocell.config.get_value(cfg, 'max_boundary_eccentricity',    None)
+        if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
         get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
@@ -102,10 +104,10 @@ class Postprocessing(gocell.pipeline.Stage):
             if candidate_results['contrast_response'] < min_contrast_response:
                 log_entries.append((candidate, f'contrast response too low ({candidate_results["contrast_response"]})'))
                 continue
-            if candidate_results['eccentricity'] > max_eccentricity:
-                log_entries.append((candidate, f'eccentricity too high ({candidate_results["eccentricity"]})'))
-                continue
             if candidate.original.on_boundary:
+                if candidate_results['eccentricity'] > max_boundary_eccentricity:
+                    log_entries.append((candidate, f'boundary object eccentricity too high ({candidate_results["eccentricity"]})'))
+                    continue
                 if discard_image_boundary:
                     log_entries.append((candidate, f'boundary object discarded'))
                     continue
@@ -113,6 +115,9 @@ class Postprocessing(gocell.pipeline.Stage):
                     log_entries.append((candidate, f'boundary object and/or too small/large (radius: {candidate_results["obj_radius"]})'))
                     continue
             else:
+                if candidate_results['eccentricity'] > max_eccentricity:
+                    log_entries.append((candidate, f'eccentricity too high ({candidate_results["eccentricity"]})'))
+                    continue
                 if not min_obj_radius <= candidate_results['obj_radius'] <= max_obj_radius:
                     log_entries.append((candidate, f'object too small/large (radius: {candidate_results["obj_radius"]})'))
                     continue
