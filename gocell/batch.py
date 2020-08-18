@@ -393,6 +393,6 @@ if __name__ == '__main__':
         else:
             if os.waitpid(newpid, 0)[1] != 0:
                 out.write('An error occurred: interrupting')
-                break
+                sys.exit(1)
     out.write(f'\nRan {run_task_count} task(s)')
 
