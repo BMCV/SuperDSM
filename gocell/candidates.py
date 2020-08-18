@@ -112,22 +112,34 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
     region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
-    t0 = time.time()
-    J, result, fallback = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
-    dt = time.time() - t0
-    padded_mask = np.pad(region.mask, 1)
-    smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
-    padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
-    foreground = padded_foreground[1:-1, 1:-1]
-    if foreground.any():
-        candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
-    else:
+
+    # Skip regions whose foreground is only a single pixel (this is just noise)
+    if (region.model[region.mask] > 0).sum() == 1:
         candidate.fg_offset   = np.zeros(2, int)
         candidate.fg_fragment = np.zeros((1, 1), bool)
-    candidate.energy      = J(result)
-    candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
-    candidate.processing_time = dt
-    return candidate, fallback
+        candidate.energy      = 0.
+        candidate.on_boundary = False
+        candidate.processing_time = 0
+        return candidate, False
+
+    # Otherwise, perform model fitting
+    else:
+        t0 = time.time()
+        J, result, fallback = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
+        dt = time.time() - t0
+        padded_mask = np.pad(region.mask, 1)
+        smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
+        padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
+        foreground = padded_foreground[1:-1, 1:-1]
+        if foreground.any():
+            candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
+        else:
+            candidate.fg_offset   = np.zeros(2, int)
+            candidate.fg_fragment = np.zeros((1, 1), bool)
+        candidate.energy      = J(result)
+        candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
+        candidate.processing_time = dt
+        return candidate, fallback
 
 
 @ray.remote
@@ -215,7 +227,6 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         if init == 'gocell':
             _print_heading('convex programming starting: GOCELL')
             J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
-            params = _estimate_initialization(region).array
             for retry in [False, True]:
                 if not retry:
                     params = np.zeros(6)
@@ -228,7 +239,11 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
                     if params_value > J_gocell(solution):
                         print('initialization worse than previous solution - skipping retry')
                         break
-                solution_info = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
+                try:
+                    solution_info = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
+                except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+                    if not retry: continue
+                    else: raise
                 solution, status = np.array(solution_info['x']), solution_info['status']
                 _print_cvxopt_solution(solution_info)
                 if status == 'optimal': break
