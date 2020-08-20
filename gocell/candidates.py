@@ -163,7 +163,10 @@ def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
     return (cidx, *result)
 
 
-def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=None):
+DEFAULT_PROCESSING_STATUS_LINE = ('Processing candidates', 'Processed candidates')
+
+
+def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, status_line=DEFAULT_PROCESSING_STATUS_LINE, out=None):
     out = gocell.aux.get_output(out)
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     smooth_mat_max_allocations = modelfit_kwargs.pop('smooth_mat_max_allocations', np.inf)
@@ -173,9 +176,9 @@ def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, ou
         x_map      = y.get_map(normalized=False, pad=1)
         for ret_idx, ret in enumerate(_process_candidates(candidates, y, g_atoms, x_map, smooth_mat_allocation_lock, modelfit_kwargs, log_root_dir)):
             candidates[ret[0]].set(ret[1])
-            out.intermediate(f'Processing candidates... {ret_idx + 1} / {len(candidates)} ({fallbacks}x fallback)')
+            out.intermediate(f'{status_line[0]}... {ret_idx + 1} / {len(candidates)} ({fallbacks}x fallback)')
             if ret[2]: fallbacks += 1
-    out.write(f'Processed candidates: {len(candidates)} ({fallbacks}x fallback)')
+    out.write(f'{status_line[1]}: {len(candidates)} ({fallbacks}x fallback)')
 
 
 def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):

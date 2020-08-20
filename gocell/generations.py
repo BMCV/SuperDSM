@@ -66,6 +66,7 @@ class GenerationStage(gocell.pipeline.Stage):
 
 
 def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, out=None):
+    assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = gocell.aux.get_output(out)
 
     modelfit_kwargs = {
@@ -78,15 +79,19 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         c.footprint = {atom_label}
         atoms.append(c)
     out.write(f'\nGeneration 1:')
-    gocell.candidates.process_candidates(atoms, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 1), out)
+    gocell.candidates.process_candidates(atoms, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 1), out=out)
 
-    if mode == 'bruteforce':
-        cover = None
-        costs = None
-    else:
-        cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha, lower_alpha_mul)
-        costs = [cover.costs]
-        out.write(f'Solution costs: {costs[-1]:,g}')
+    universes = []
+    for cluster_label in adjacencies.cluster_labels:
+        universe = gocell.candidates.Candidate()
+        universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
+        universes.append(universe)
+    gocell.candidates.process_candidates(universes, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 0), ('Computing lower bounds', 'Lower bounds computed'), out=out)
+
+    cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha, lower_alpha_mul)
+    cover.update(universes, out.derive(muted=True))
+    costs = [cover.costs]
+    out.write(f'Solution costs: {costs[-1]:,g}')
 
     generations = [atoms]
     candidates  = sum(generations, [])
@@ -105,10 +110,9 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         generations.append(new_generation)
         candidates += new_candidates
 
-        if mode != 'bruteforce':
-            cover.update(new_generation, out.derive(muted=True))
-            costs.append(cover.costs)
-            out.write(f'Solution costs: {costs[-1]:,g}')
+        cover.update(new_generation, out.derive(muted=True))
+        costs.append(cover.costs)
+        out.write(f'Solution costs: {costs[-1]:,g}')
 
     return generations, costs, cover, candidates
 
@@ -131,10 +135,13 @@ def _is_within_max_seed_distance(footprint, new_atom_label, adjacencies, max_see
     return maximum_distance <= max_seed_distance
 
 
-def _iterate_generation(previous_generation, adjacencies, max_seed_distance, get_footprint=lambda item: item):
+def _iterate_generation(previous_generation, adjacencies, max_seed_distance, get_footprint=lambda item: item, skip_last=False):
     existing_footprints = set()
     for item in previous_generation:
         footprint = get_footprint(item)
+        if skip_last:
+            cluster_label = adjacencies.get_cluster_label(list(footprint)[0])
+            if len(footprint) + 1 == len(adjacencies.get_atoms_in_cluster(cluster_label)): continue
         adjacent_atoms = set()
         for atom in footprint:
             adjacent_atoms |= adjacencies[atom] - footprint
@@ -146,15 +153,15 @@ def _iterate_generation(previous_generation, adjacencies, max_seed_distance, get
                 yield item, new_footprint, new_atom_label
 
 
-def _get_next_generation(previous_generation, adjacencies, max_seed_distance):
-    return [new_footprint for _, new_footprint, _ in _iterate_generation(previous_generation, adjacencies, max_seed_distance)]
+def _get_next_generation(previous_generation, adjacencies, max_seed_distance, **kwargs):
+    return [new_footprint for _, new_footprint, _ in _iterate_generation(previous_generation, adjacencies, max_seed_distance, **kwargs)]
 
 
 def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=10**6):
     previous_generation = [c.footprint for c in generations[-1]]
     remaining_amount    =  0
     while len(previous_generation) > 0:
-        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance)
+        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, skip_last=True)
         remaining_amount   += len(next_generation)
         previous_generation = next_generation
         if remaining_amount > max_amount: return None
@@ -168,7 +175,7 @@ def _process_generation(cover, candidates, previous_generation, y, g_atoms, adja
     discarded = 0
     candidates_by_cluster = {cluster_label: [c for c in candidates if adjacencies.get_cluster_label(list(c.footprint)[0]) == cluster_label] for cluster_label in adjacencies.cluster_labels}
     current_cluster_label = None
-    for candidate, new_candidate_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint):
+    for candidate, new_candidate_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, skip_last=True):
         cluster_label = adjacencies.get_cluster_label(list(candidate.footprint)[0])
         if current_cluster_label != cluster_label:
             current_cluster_label = cluster_label
