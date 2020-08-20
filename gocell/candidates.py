@@ -28,6 +28,7 @@ class Candidate(BaseCandidate):
         self.footprint       = set()
         self.energy          = np.nan
         self.on_boundary     = np.nan
+        self.is_optimal      = np.nan
         self.processing_time = np.nan
         self._default_kwargs = {}
 
@@ -57,6 +58,7 @@ class Candidate(BaseCandidate):
         self.footprint       = set(state.footprint)
         self.energy          = state.energy
         self.on_boundary     = state.on_boundary
+        self.is_optimal      = state.is_optimal
         self.processing_time = state.processing_time
         self._default_kwargs = gocell.aux.copy_dict(state._default_kwargs)
         return self
@@ -125,7 +127,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
     # Otherwise, perform model fitting
     else:
         t0 = time.time()
-        J, result, fallback = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
+        J, result, status = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
         dt = time.time() - t0
         padded_mask = np.pad(region.mask, 1)
         smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
@@ -138,8 +140,9 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
             candidate.fg_fragment = np.zeros((1, 1), bool)
         candidate.energy      = J(result)
         candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
+        candidate.is_optimal  = (status == 'optimal')
         candidate.processing_time = dt
-        return candidate, fallback
+        return candidate, (status == 'fallback')
 
 
 @ray.remote
@@ -223,7 +226,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
     J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
     print(f'scale: {CP_params["scale"]:g}')
-    fallback = False
+    status = None
     if callable(init):
         params = init(J.smooth_mat.shape[1])
     else:
@@ -247,9 +250,9 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
                 except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
                     if not retry: continue
                     else: raise
-                solution, status = np.array(solution_info['x']), solution_info['status']
+                solution = np.array(solution_info['x'])
                 _print_cvxopt_solution(solution_info)
-                if status == 'optimal': break
+                if solution_info['status'] == 'optimal': break
             params = gocell.modelfit.PolynomialModel(np.array(solution)).array
             print(f'solution: {J_gocell(params)}')
         else:
@@ -258,18 +261,20 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
     try:
         _print_heading('convex programming starting: GOCELLOS')
         solution_info = gocell.modelfit.CP(J, params, **CP_params).solve()
-        solution, status = np.array(solution_info['x']), solution_info['status']
+        solution = np.array(solution_info['x'])
         _print_cvxopt_solution(solution_info)
-        if status == 'unknown' and J(solution) > J(params):
-            fallback = True ## numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
+        if solution_info['status'] == 'unknown' and J(solution) > J(params):
+            status = 'fallback' ## numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
         else:
             print(f'solution: {J(solution)}')
+            status = 'optimal'
     except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
         traceback.print_exc(file=sys.stdout)
-        fallback = True  ## at least something we can continue the work with
-    if fallback:
+        status = 'fallback'  ## at least something we can continue the work with
+    assert status is not None
+    if status == 'fallback':
         _print_heading('GOCELLOS failed: falling back to GOCELL result')
         solution = params
     _print_heading('finished')
-    return J, gocell.modelfit.PolynomialModel(solution), fallback
+    return J, gocell.modelfit.PolynomialModel(solution), status
 

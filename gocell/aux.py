@@ -336,3 +336,17 @@ def retain_intersections(superset_mask, subset_mask, copy=False):
         if not subset_mask[cc].any(): result[cc] = False
     return result
 
+
+def get_discarded_workload(*args):
+    if len(args) == 1:
+        data = args[0]
+        computed_candidates_num = len(data['candidates'])
+        total_workload = data['workload']
+    elif len(args) == 2:
+        computed_candidates_num = args[0]
+        total_workload = args[1]
+    else:
+        raise ValueError('unknown arguments')
+    assert computed_candidates_num <= total_workload
+    return 1 - (computed_candidates_num / total_workload if total_workload > 0 else 1)
+

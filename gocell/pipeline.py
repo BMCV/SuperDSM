@@ -133,7 +133,6 @@ def create_default_pipeline():
     import gocell.seeds
     import gocell.atoms
     import gocell.generations
-    import gocell.precompute
     import gocell.postprocessing
 
     stages = [
@@ -142,8 +141,6 @@ def create_default_pipeline():
         gocell.seeds.SeedStage(),
         gocell.atoms.AtomicStage(),
         gocell.generations.GenerationStage(),
-        gocell.precompute.PrecomputeStage(),
-        gocell.precompute.MinSetCoverStage(),
         gocell.postprocessing.Postprocessing(),
     ]
 

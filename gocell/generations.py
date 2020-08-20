@@ -39,7 +39,7 @@ class GenerationStage(gocell.pipeline.Stage):
     def __init__(self):
         super(GenerationStage, self).__init__('generations',
                                               inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies'],
-                                              outputs = ['y_surface', 'generations', 'cover', 'costs', 'candidates'])
+                                              outputs = ['y_surface', 'generations', 'cover', 'costs', 'candidates', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         y_surface         = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
@@ -54,14 +54,15 @@ class GenerationStage(gocell.pipeline.Stage):
         assert 0 < lower_alpha_mul < 1
 
         mode = 'conservative' if conservative else 'fast'
-        generations, costs, cover, candidates = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)
+        generations, costs, cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)
 
         return {
             'y_surface':   y_surface,
             'generations': generations,
             'costs':       costs,
             'cover':       cover,
-            'candidates':  candidates
+            'candidates':  candidates,
+            'workload':    workload
         }
 
 
@@ -81,27 +82,30 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
     out.write(f'\nGeneration 1:')
     gocell.candidates.process_candidates(atoms, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 1), out=out)
 
-    universes = []
-    for cluster_label in adjacencies.cluster_labels:
-        universe = gocell.candidates.Candidate()
-        universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
-        universes.append(universe)
-    gocell.candidates.process_candidates(universes, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 0), ('Computing lower bounds', 'Lower bounds computed'), out=out)
+#    universes = []
+#    for cluster_label in adjacencies.cluster_labels:
+#        universe = gocell.candidates.Candidate()
+#        universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
+#        universes.append(universe)
+#    gocell.candidates.process_candidates(universes, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 0), ('Computing lower bounds', 'Lower bounds computed'), out=out)
 
     cover = gocell.minsetcover.MinSetCover(atoms, alpha, adjacencies, try_lower_alpha, lower_alpha_mul)
-    cover.update(universes, out.derive(muted=True))
+#    cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
 
-    generations = [atoms]
-    candidates  = sum(generations, [])
+    generations    = [atoms]
+    candidates     = list(atoms)
+    total_workload = None
     while True:
         generation_number = 1 + len(generations)
         generation_label  = f'Generation {generation_number}'
         out.write('')
         out.intermediate(f'{generation_label}...')
 
-        progress = _estimate_progress(generations, adjacencies, max_seed_distance)
+        finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance)
+        if total_workload is None: total_workload = remaining_amount + len(atoms)
+        progress = finished_amount / (remaining_amount + finished_amount)
         progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
         out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
         
@@ -114,7 +118,10 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         costs.append(cover.costs)
         out.write(f'Solution costs: {costs[-1]:,g}')
 
-    return generations, costs, cover, candidates
+    discarded_workload = gocell.aux.get_discarded_workload(len(candidates), total_workload)
+    out.write('')
+    out.write(f'Discarded workload: {100 * discarded_workload:.1f}%')
+    return generations, costs, cover, candidates, total_workload
 
 
 def _get_max_distance(footprint, new_atom_label, adjacencies):
@@ -161,12 +168,12 @@ def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=1
     previous_generation = [c.footprint for c in generations[-1]]
     remaining_amount    =  0
     while len(previous_generation) > 0:
-        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, skip_last=True)
+        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, skip_last=False)
         remaining_amount   += len(next_generation)
         previous_generation = next_generation
         if remaining_amount > max_amount: return None
     finished_amount = len(sum(generations, []))
-    return finished_amount / (remaining_amount + finished_amount)
+    return finished_amount, remaining_amount
 
 
 def _process_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, log_root_dir, mode, out):
@@ -175,7 +182,7 @@ def _process_generation(cover, candidates, previous_generation, y, g_atoms, adja
     discarded = 0
     candidates_by_cluster = {cluster_label: [c for c in candidates if adjacencies.get_cluster_label(list(c.footprint)[0]) == cluster_label] for cluster_label in adjacencies.cluster_labels}
     current_cluster_label = None
-    for candidate, new_candidate_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, skip_last=True):
+    for candidate, new_candidate_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, skip_last=False):
         cluster_label = adjacencies.get_cluster_label(list(candidate.footprint)[0])
         if current_cluster_label != cluster_label:
             current_cluster_label = cluster_label
@@ -184,31 +191,27 @@ def _process_generation(cover, candidates, previous_generation, y, g_atoms, adja
         new_candidate = gocell.candidates.Candidate()
         new_candidate.footprint = new_candidate_footprint
 
-        if mode == 'bruteforce':
-            new_candidates.append(new_candidate)
+        remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
+        min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
+        if mode == 'conservative':
+            max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
+        elif mode == 'fast':
+            max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
         else:
-            remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
-            min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
-            min_remaining_costs = min((min_remaining_atom_costs + cover.alpha, sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates_by_cluster[cluster_label] if len(c.footprint & new_candidate.footprint) == 0], out=out.derive(muted=True)))))
-            if mode == 'conservative':
-                max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
-            elif mode == 'fast':
-                max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
-            else:
-                raise ValueError(f'unknown mode "{mode}"')
-            new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
-            min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
-            if max_new_candidate_energy < min_new_candidate_energy:
-                discarded += 1
-            else:
-                new_candidate_thresholds.append(max_new_candidate_energy)
-                new_candidates.append(new_candidate)
+            raise ValueError(f'unknown mode "{mode}"')
+        new_candidate_maxsetpack = sum(c.energy for c in gocell.maxsetpack.solve_maxsetpack([c for c in candidates if c.is_optimal and c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))
+        min_new_candidate_energy = max((candidate.energy + cover.get_atom(new_atom_label).energy, new_candidate_maxsetpack))
+        if max_new_candidate_energy < min_new_candidate_energy:
+            discarded += 1
+        else:
+            new_candidate_thresholds.append(max_new_candidate_energy)
+            new_candidates.append(new_candidate)
 
     gocell.candidates.process_candidates(new_candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=out)
 
     next_generation = []
     for new_candidate_idx, new_candidate in enumerate(new_candidates):
-        if mode == 'bruteforce' or new_candidate.energy < new_candidate_thresholds[new_candidate_idx]:
+        if new_candidate.energy < new_candidate_thresholds[new_candidate_idx]:
             next_generation.append(new_candidate)
         else:
             discarded += 1

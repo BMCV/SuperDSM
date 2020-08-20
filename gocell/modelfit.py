@@ -139,9 +139,10 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
         return z[row_mask_where[0][:,None], row_mask_where[1][:,None], col_mask_where[0], col_mask_where[1]]
 
 
-def _create_subsample_grid(mask, subsample):
+def _create_subsample_grid(mask, subsample, mask_offset=(0,0)):
+    grid_offset = np.asarray(mask_offset) % subsample
     subsample_grid = np.zeros_like(mask)
-    subsample_grid[::subsample, ::subsample] = True
+    subsample_grid[grid_offset[0]::subsample, grid_offset[1]::subsample] = True
     subsample_grid = np.logical_and(mask, subsample_grid)
     distances = mask * ndimage.distance_transform_bf(~subsample_grid, metric='chessboard')
     tmp1 = np.ones_like(subsample_grid, bool)
@@ -159,9 +160,11 @@ def _create_subsample_grid(mask, subsample):
 
 
 def _create_masked_smooth_matrix(kernel, mask, subsample=1, lock=None):
+#    mask_offset = (np.where(mask.any(axis=1))[0][0], np.where(mask.any(axis=0))[0][0])
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
     if (mask.shape <= np.asarray(kernel.shape) // 2).any(): return None
+#    subsample_grid = _create_subsample_grid(mask, subsample, mask_offset)
     subsample_grid = _create_subsample_grid(mask, subsample)
     col_mask = np.logical_and(mask, subsample_grid)
     print(f'{mask.sum()} rows, {col_mask.sum()} columns')

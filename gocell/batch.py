@@ -189,6 +189,7 @@ class Task:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             timings = self._load_timings()
+            discarded_workloads = []
             for file_idx, file_id in enumerate(self.file_ids):
                 im_filepath = str(self. im_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
@@ -205,8 +206,11 @@ class Task:
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
+                discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
             out2.write('')
-            if one_shot or ((first_stage is not None and pipeline.find(first_stage) > pipeline.find('precompute') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
+            if not dry and len(discarded_workloads) > 0:
+                out2.write(f'Discarded workload: {100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
+            if one_shot or ((first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
