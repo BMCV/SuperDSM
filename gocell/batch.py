@@ -40,7 +40,7 @@ def load_gt(loader, filepath, **loader_kwargs):
 
 
 def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, fast=False, out=None):
-    out = aux.ConsoleOutput.get(out)
+    out = aux.get_output(out)
     import segmetrics
 
     segmetrics.detection.FalseMerge.ACCUMULATIVE    = False
@@ -74,7 +74,7 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
 
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
-        out = aux.ConsoleOutput.get(out)
+        out = aux.get_output(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
         return None, {}
     else:
@@ -87,7 +87,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     aux.mkdir(pathlib.Path(log_filepath).parents[0])
 
     g_raw = io.imread(im_filepath)
-    out   = aux.ConsoleOutput.get(out)
+    out   = aux.get_output(out)
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
@@ -123,13 +123,20 @@ def _resolve_timings_key(key, candidates):
     raise ValueError(f'cannot resolve key "{key}"')
 
 
+def _find_task_rel_path(task):
+    if task.parent_task is not None:
+        return _find_task_rel_path(task.parent_task)
+    else:
+        return task.path.parents[0]
+
+
 class Task:
     def __init__(self, path, data, parent_task=None, rel_path=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
-        self.rel_path    = rel_path
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
+        self.rel_path = _find_task_rel_path(self)
         if self.runnable:
             self.   im_pathpattern = os.path.expanduser(self.data['im_pathpattern'])
             self.   gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern'])
@@ -176,7 +183,7 @@ class Task:
             return {}
 
     def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, out=None):
-        out = aux.ConsoleOutput.get(out)
+        out = aux.get_output(out)
         if not self.runnable: return
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
@@ -268,7 +275,7 @@ class Task:
         return pickup_candidates[np.argmax(pickup_candidate_scores)]
 
     def find_first_stage_name(self, pipeline, dry=False, out=None):
-        out = aux.ConsoleOutput.get(out)
+        out = aux.get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('atoms') + 1:
             return None, {}
@@ -326,15 +333,15 @@ class BatchLoader:
 
     def load(self, path):
         root_path = pathlib.Path(path)
-        self.process_directory(root_path, rel_path=root_path.parents[0])
+        self.process_directory(root_path)
 
-    def process_directory(self, current_dir, parent_task=None, rel_path=None):
+    def process_directory(self, current_dir, parent_task=None):
         task_file = current_dir / 'task.json'
         if task_file.exists():
             try:
                 with task_file.open('r') as task_fin:
                     task_data = json.load(task_fin)
-                task = Task(current_dir, task_data, parent_task, rel_path=rel_path)
+                task = Task(current_dir, task_data, parent_task)
                 for key in self.override_cfg:
                     setattr(task, key, self.override_cfg[key])
             except json.JSONDecodeError as err:
@@ -344,7 +351,7 @@ class BatchLoader:
         for d in os.listdir(current_dir):
             f = current_dir / d
             if f.is_dir():
-                self.process_directory(f, parent_task, rel_path=rel_path)
+                self.process_directory(f, parent_task)
 
 
 def get_path(root_path, path):
@@ -382,7 +389,7 @@ if __name__ == '__main__':
     args.task_dir = [get_path(args.path, task_dir_path) for task_dir_path in args.task_dir]
 
     dry = not args.run
-    out = aux.ConsoleOutput()
+    out = aux.get_output()
     runnable_tasks = [task for task in loader.tasks if task.runnable]
     run_task_count = 0
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
