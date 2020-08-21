@@ -102,7 +102,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
 
     generations    = [atoms]
     candidates     =  atoms + universes
-    total_workload = _estimate_progress(generations, adjacencies, max_seed_distance)[1]
+    total_workload = len(atoms) + _estimate_progress(generations, adjacencies, max_seed_distance)[1]
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
