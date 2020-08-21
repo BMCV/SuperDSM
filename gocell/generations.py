@@ -88,7 +88,9 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
     gocell.candidates.process_candidates(universes, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
     trivial_cluster_labels = set()
     for cluster_label, universe in zip(adjacencies.cluster_labels, universes):
-        atom_energies_sum = sum(atoms[atom_label - 1].energy for atom_label in adjacencies.get_atoms_in_cluster(cluster_label))
+        atoms_in_cluster = [atoms[atom_label - 1] for atom_label in adjacencies.get_atoms_in_cluster(cluster_label)]
+        if not all(atom.is_optimal for atom in atoms_in_cluster): continue
+        atom_energies_sum = sum(atom.energy for atom in atoms_in_cluster)
         if universe.energy <= alpha + atom_energies_sum:
             trivial_cluster_labels |= {cluster_label}
 
