@@ -206,7 +206,7 @@ class Task:
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
-                discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
+                if not dry: discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
             out2.write('')
             if not dry and len(discarded_workloads) > 0:
                 out2.write(f'Discarded workload: {100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
