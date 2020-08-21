@@ -209,7 +209,7 @@ class Task:
                 if not dry: discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
             out2.write('')
             if not dry and len(discarded_workloads) > 0:
-                out2.write(f'Discarded workload: {100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
+                out2.write(aux.Text.style('Discarded workload: ', aux.Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
             if one_shot or ((first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('atoms'))) and not self.result_path.exists()):
                 out2.write('Skipping writing results')
             else:
@@ -220,7 +220,7 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
-                out2.write(f'Results written to: {self._fmt_path(self.result_path)}')
+                out2.write(aux.Text.style('Results written to: ', aux.Text.BOLD) + self._fmt_path(self.result_path))
             if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'):
                 out2.write('Skipping evaluation')
             else:
@@ -230,7 +230,7 @@ class Task:
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=fast_evaluation, out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
-                out2.write(f'Evaluation study written to: {self._fmt_path(self.study_path)}')
+                out2.write(aux.Text.style('Evaluation study written to: ', aux.Text.BOLD) + self._fmt_path(self.study_path))
                 if not dry and print_study:
                     out2.write('')
                     study.print_results(write=out2.write, line_suffix='', pad=2)

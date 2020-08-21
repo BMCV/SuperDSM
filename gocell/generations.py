@@ -39,7 +39,7 @@ class GenerationStage(gocell.pipeline.Stage):
     def __init__(self):
         super(GenerationStage, self).__init__('generations',
                                               inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies'],
-                                              outputs = ['y_surface', 'generations', 'cover', 'costs', 'candidates', 'workload'])
+                                              outputs = ['y_surface', 'cover', 'candidates', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         y_surface         = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
@@ -54,15 +54,13 @@ class GenerationStage(gocell.pipeline.Stage):
         assert 0 < lower_alpha_mul < 1
 
         mode = 'conservative' if conservative else 'fast'
-        generations, costs, cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)
+        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)[2:]
 
         return {
-            'y_surface':   y_surface,
-            'generations': generations,
-            'costs':       costs,
-            'cover':       cover,
-            'candidates':  candidates,
-            'workload':    workload
+            'y_surface':  y_surface,
+            'cover':      cover,
+            'candidates': candidates,
+            'workload':   workload
         }
 
 
@@ -102,7 +100,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
 
     generations    = [atoms]
     candidates     =  atoms + universes
-    total_workload = len(atoms) + _estimate_progress(generations, adjacencies, max_seed_distance)[1]
+    total_workload = len(candidates) + _estimate_progress(generations, adjacencies, max_seed_distance, skip_last=False)[1]
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -111,7 +109,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
             out.write('')
             out.intermediate(f'{generation_label}...')
 
-            finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance, ignored_cluster_labels=trivial_cluster_labels)
+            finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
             progress = finished_amount / (remaining_amount + finished_amount)
             progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
@@ -171,11 +169,11 @@ def _get_next_generation(previous_generation, adjacencies, max_seed_distance, **
     return [new_footprint for _, new_footprint, _ in _iterate_generation(previous_generation, adjacencies, max_seed_distance, **kwargs)]
 
 
-def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=10**6, ignored_cluster_labels=set()):
+def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=10**6, ignored_cluster_labels=set(), skip_last=False):
     previous_generation = [c.footprint for c in generations[-1]]
     remaining_amount    =  0
     while len(previous_generation) > 0:
-        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, ignored_cluster_labels=ignored_cluster_labels, skip_last=False)
+        next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, ignored_cluster_labels=ignored_cluster_labels, skip_last=skip_last)
         remaining_amount   += len(next_generation)
         previous_generation = next_generation
         if remaining_amount > max_amount: return None
