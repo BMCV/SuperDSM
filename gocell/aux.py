@@ -1,5 +1,5 @@
 import cvxopt, cvxopt.solvers
-import sys
+import sys, os
 import numpy as np
 import scipy.ndimage as ndi
 import scipy.sparse
@@ -349,4 +349,27 @@ def get_discarded_workload(*args):
         raise ValueError('unknown arguments')
     assert computed_candidates_num <= total_workload, f'{computed_candidates_num} <= {total_workload}'
     return 1 - (computed_candidates_num / total_workload if total_workload > 0 else 1)
+
+
+def get_file_size(file_path):
+    return os.path.getsize(str(file_path))
+
+
+def get_directory_size(start_path):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += get_file_size(fp)
+    return total_size
+
+
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return '%3.1f %s%s' % (num, unit, suffix)
+        num /= 1024.0
+    return '%.1f %s%s' % (num, 'Yi', suffix)
 

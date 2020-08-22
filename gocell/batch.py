@@ -4,7 +4,7 @@ import gocell.candidates as candidates
 import gocell.aux        as aux
 import gocell.io         as io
 import gocell.render     as render
-import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib
+import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil
 import ray
 import numpy as np
 import scipy.ndimage as ndi
@@ -131,6 +131,15 @@ def _find_task_rel_path(task):
         return task.path.parents[0]
 
 
+def _compress_logs(log_dir):
+    if log_dir is None: return
+    assert pathlib.Path(log_dir).is_dir()
+    compressed_logs_filepath = f'{log_dir}.tgz'
+    with tarfile.open(compressed_logs_filepath, "w:gz") as tar:
+        tar.add(log_dir, arcname=os.path.sep)
+    shutil.rmtree(str(log_dir))
+
+
 class Task:
     def __init__(self, path, data, parent_task=None, rel_path=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
@@ -162,6 +171,7 @@ class Task:
             self.          environ = self.data['environ'] if 'environ' in self.data else {}
 
     def _fmt_path(self, path):
+        if isinstance(path, str): path = pathlib.Path(path)
         if self.rel_path is None: return str(path)
         else: return str(path.relative_to(self.rel_path))
 
@@ -206,13 +216,14 @@ class Task:
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
-                              log_filepath = str(self.log_pathpattern) % file_id,
+                              log_filepath = str(self.log_pathpattern) % file_id if self.log_pathpattern is not None else None,
                                 seg_border = self.seg_border,
                                 last_stage = self.last_stage,
                                     config = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
                 if not dry: discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
