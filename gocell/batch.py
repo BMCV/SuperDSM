@@ -1,8 +1,9 @@
-import gocell.config   as config
-import gocell.pipeline as pipeline
-import gocell.aux      as aux
-import gocell.io       as io
-import gocell.render   as render
+import gocell.config     as config
+import gocell.pipeline   as pipeline
+import gocell.candidates as candidates
+import gocell.aux        as aux
+import gocell.io         as io
+import gocell.render     as render
 import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib
 import ray
 import numpy as np
@@ -182,9 +183,10 @@ class Task:
         else:
             return {}
 
-    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, out=None):
+    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, debug=False, out=None):
         out = aux.get_output(out)
         if not self.runnable: return
+        candidates._DEBUG = debug
         config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
             out.write(f'\nSkipping task: {self._fmt_path(self.path)} ({run_count})')
@@ -241,6 +243,9 @@ class Task:
                 if not dry and print_study:
                     out2.write('')
                     study.print_results(write=out2.write, line_suffix='', pad=2)
+        except:
+            out.write(aux.Text.style(f'\nError while processing task: {self._fmt_path(self.path)}', aux.Text.RED))
+            raise
         finally:
             self._shutdown()
 
@@ -374,6 +379,7 @@ if __name__ == '__main__':
     parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
+    parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
     args = parser.parse_args()
 
     if args.fast_evaluation and not args.oneshot:
@@ -399,7 +405,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, args.print_study, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, args.print_study, args.debug, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
