@@ -112,7 +112,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
     max_background_margin =      modelfit_kwargs.pop('max_background_margin')
     region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin)
-    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'modelfit_kwargs'):
+    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
     # Skip regions whose foreground is only a single pixel (this is just noise)
@@ -121,6 +121,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
         candidate.fg_fragment = np.zeros((1, 1), bool)
         candidate.energy      = 0.
         candidate.on_boundary = False
+        candidate.is_optimal  = False
         candidate.processing_time = 0
         return candidate, False
 
@@ -151,18 +152,22 @@ def _ray_process_candidate_logged(*args, **kwargs):
 
 
 def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
-    if log_root_dir is not None:
-        log_filename = gocell.aux.join_path(log_root_dir, f'{cidx}.txt')
-        with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
-            with contextlib.redirect_stdout(log_file):
-                try:
-                    result = _process_candidate(*args, **kwargs)
-                except:
-                    traceback.print_exc(file=log_file)
-                    raise
-    else:
-        with contextlib.redirect_stdout(None):
-            result = _process_candidate(*args, **kwargs)
+    try:
+        if log_root_dir is not None:
+            log_filename = gocell.aux.join_path(log_root_dir, f'{cidx}.txt')
+            with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
+                with contextlib.redirect_stdout(log_file):
+                    try:
+                        result = _process_candidate(*args, **kwargs)
+                    except:
+                        traceback.print_exc(file=log_file)
+                        raise
+        else:
+            with contextlib.redirect_stdout(None):
+                result = _process_candidate(*args, **kwargs)
+    except ModelfitError as error:
+        error.cidx = cidx
+        raise
     return (cidx, *result)
 
 
@@ -220,6 +225,58 @@ def _fmt_timestamp(): return time.strftime('%X')
 def _print_heading(line): print(f'-- {_fmt_timestamp()} -- {line} --')
 
 
+class ModelfitError(Exception):
+    def __init__(self, *args, cidx=None, cause=None):
+        super().__init__(*args)
+        self.cidx = cidx
+
+    def __str__(self):
+        messages = [str(arg) for arg in self.args]
+        if self.cidx is not None:
+            messages.append(f'cidx: {self.cidx}')
+        return ', '.join(messages)
+
+
+def _compute_gocell_solution(J_gocell, CP_params):
+    solution_info  = None
+    solution_array = None
+    sultiuon_value = np.inf
+
+    # Pass 1: Try zeros initialization
+    try:
+        solution_info  = gocell.modelfit.CP(J_gocell, np.zeros(6), **CP_params).solve()
+        solution_array = gocell.modelfit.PolynomialModel(np.array(solution_info['x'])).array
+        solution_value = J_gocell(solution_array)
+        print(f'solution: {solution_value}')
+    except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+        traceback.print_exc()
+        pass ## continue with Pass 2 (retry)
+
+    # Pass 2: Try data-specific initialization
+    if solution_info is None or solution_info['status'] != 'optimal':
+        print(f'-- retry --')
+        initialization = _estimate_initialization(J_gocell.roi)
+        initialization_value = J_gocell(initialization)
+        print(f'initialization: {initialization_value}')
+        if initialization_value > solution_value:
+            print('initialization worse than previous solution - skipping retry')
+        else:
+            try:
+                solution_info  = gocell.modelfit.CP(J_gocell, initialization, **CP_params).solve()
+                solution_array = gocell.modelfit.PolynomialModel(np.array(solution_info['x'])).array
+                solution_value = J_gocell(solution_array)
+                print(f'solution: {solution_value}')
+            except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
+                if solution_info is None:
+                    cause = sys.exc_info()[1]
+                    raise ModelfitError(cause)
+                else:
+                    pass ## continue with previous solution (Pass 1)
+
+    assert solution_array is not None
+    return solution_array
+
+
 def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
     _print_heading('initializing')
     smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
@@ -233,28 +290,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         if init == 'gocell':
             _print_heading('convex programming starting: GOCELL')
             J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
-            for retry in [False, True]:
-                if not retry:
-                    params = np.zeros(6)
-                else:
-                    print(f'-- retry --')
-                    params = _estimate_initialization(region)
-                    params_value = J_gocell(params)
-                    print(f'initialization: {params_value}')
-                    params = params.array
-                    if params_value > J_gocell(solution):
-                        print('initialization worse than previous solution - skipping retry')
-                        break
-                try:
-                    solution_info = gocell.modelfit.CP(J_gocell, params, **CP_params).solve()
-                except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
-                    if not retry: continue
-                    else: raise
-                solution = np.array(solution_info['x'])
-                _print_cvxopt_solution(solution_info)
-                if solution_info['status'] == 'optimal': break
-            params = gocell.modelfit.PolynomialModel(np.array(solution)).array
-            print(f'solution: {J_gocell(params)}')
+            params = _compute_gocell_solution(J_gocell, CP_params)
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
