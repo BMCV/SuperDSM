@@ -240,7 +240,7 @@ class ModelfitError(Exception):
 def _compute_gocell_solution(J_gocell, CP_params):
     solution_info  = None
     solution_array = None
-    sultiuon_value = np.inf
+    solution_value = np.inf
 
     # Pass 1: Try zeros initialization
     try:
@@ -262,7 +262,7 @@ def _compute_gocell_solution(J_gocell, CP_params):
             print('initialization worse than previous solution - skipping retry')
         else:
             try:
-                solution_info  = gocell.modelfit.CP(J_gocell, initialization, **CP_params).solve()
+                solution_info  = gocell.modelfit.CP(J_gocell, initialization.array, **CP_params).solve()
                 solution_array = gocell.modelfit.PolynomialModel(np.array(solution_info['x'])).array
                 solution_value = J_gocell(solution_array)
                 print(f'solution: {solution_value}')
