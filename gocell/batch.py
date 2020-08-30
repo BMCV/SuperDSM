@@ -133,7 +133,9 @@ def _find_task_rel_path(task):
 
 def _compress_logs(log_dir):
     if log_dir is None: return
-    assert pathlib.Path(log_dir).is_dir()
+    log_dir_path = pathlib.Path(log_dir)
+    if not log_dir_path.exists(): return
+    assert log_dir_path.is_dir()
     compressed_logs_filepath = f'{log_dir}.tgz'
     with tarfile.open(compressed_logs_filepath, "w:gz") as tar:
         tar.add(log_dir, arcname=os.path.sep)
@@ -223,7 +225,7 @@ class Task:
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
-                _compress_logs(kwargs['log_filepath'])
+                if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
                 if not dry: discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
