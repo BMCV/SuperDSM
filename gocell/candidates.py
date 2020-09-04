@@ -98,13 +98,16 @@ def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
 
 
 def extract_foreground_fragment(fg_mask):
-    rows = fg_mask.any(axis=1)
-    cols = fg_mask.any(axis=0)
-    rmin, rmax  = np.where(rows)[0][[0, -1]]
-    cmin, cmax  = np.where(cols)[0][[0, -1]]
-    fg_offset   = np.array([rmin, cmin])
-    fg_fragment = fg_mask[rmin : rmax + 1, cmin : cmax + 1]
-    return fg_offset, fg_fragment
+    if fg_mask.any():
+        rows = fg_mask.any(axis=1)
+        cols = fg_mask.any(axis=0)
+        rmin, rmax  = np.where(rows)[0][[0, -1]]
+        cmin, cmax  = np.where(cols)[0][[0, -1]]
+        fg_offset   = np.array([rmin, cmin])
+        fg_fragment = fg_mask[rmin : rmax + 1, cmin : cmax + 1]
+        return fg_offset, fg_fragment
+    else:
+        return np.zeros(2, int), np.zeros((1, 1), bool)
 
 
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
