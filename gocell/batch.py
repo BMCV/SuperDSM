@@ -152,16 +152,22 @@ class Task:
         self.path = path
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         self.rel_path = _find_task_rel_path(self)
+        self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
+        self.   im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
+        self.   gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern']) if 'gt_pathpattern' in self.data else None
+        self.     gt_is_unique = self.data.get('gt_is_unique'    , None)
+        self.        gt_loader = self.data.get('gt_loader'       , None)
+        self. gt_loader_kwargs = self.data.get('gt_loader_kwargs', {}  )
         if self.runnable:
-            self.   im_pathpattern = os.path.expanduser(self.data['im_pathpattern'])
-            self.   gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern'])
-            self.     gt_is_unique = self.data['gt_is_unique']
-            self.        gt_loader = self.data['gt_loader']
-            self. gt_loader_kwargs = self.data['gt_loader_kwargs'] if 'gt_loader_kwargs' in self.data else {}
+            assert self.file_ids         is not None
+            assert self.im_pathpattern   is not None
+            assert self.gt_pathpattern   is not None
+            assert self.gt_is_unique     is not None
+            assert self.gt_loader        is not None
+            assert self.gt_loader_kwargs is not None
             self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
             self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
             self.  log_pathpattern = path / self.data['log_pathpattern'] if 'log_pathpattern' in self.data else None
-            self.         file_ids = sorted(frozenset(self.data['file_ids']))
             self.      result_path = path / DATA_DILL_GZ_FILENAME
             self.       study_path = path / 'study.csv'
             self.     timings_path = path / 'timings.csv'

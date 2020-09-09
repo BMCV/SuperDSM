@@ -73,7 +73,7 @@ def render_ymap(data, clim=None):
     return plt.cm.bwr(y)
 
 
-def _normalize_image(img):
+def normalize_image(img):
     if not np.allclose(img.std(), 0):
         img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
     return img - img.min()
@@ -81,7 +81,7 @@ def _normalize_image(img):
 
 def _fetch_image_from_data(data, normalize_img=True):
     img = data['g_raw']
-    if normalize_img: img = _normalize_image(img)
+    if normalize_img: img = normalize_image(img)
     return img
 
 
@@ -286,4 +286,32 @@ def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_
 
     result[result == 0] = background_label
     return result
+
+
+def shuffle_labels(labels, bg_label=None, seed=None):
+    label_values0 = frozenset(labels.flatten())
+    if bg_label is not None: label_values0 -= {bg_label}
+    label_values0 = list(label_values0)
+    if seed is not None: np.random.seed(seed)
+    label_values1 = np.asarray(label_values0).copy()
+    np.random.shuffle(label_values1)
+    label_map = dict(zip(label_values0, label_values1))
+    result = np.zeros_like(labels)
+    for l in label_map.keys():
+        cc = (labels == l)
+        result[cc] = label_map[l]
+    return result
+
+
+def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), shuffle=None):
+    if shuffle is not None:
+        labels = shuffle_labels(labels, bg_label=bg_label, seed=shuffle)
+    if isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
+    img = cmap((labels - labels.min()) / float(labels.max() - labels.min()))
+    if img.shape[2] > 3: img = img[:,:,:3]
+    if bg_label is not None:
+        bg = (labels == bg_label)
+        img[bg] = np.asarray(bg_color)[None, None, :]
+    return img
 
