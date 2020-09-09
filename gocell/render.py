@@ -42,7 +42,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     if override_img is not None:
         assert override_img.ndim == 3 and override_img.shape[2] >= 3
         img = override_img[:, :, :3].copy()
-        if (img > 1).any(): img /= 255
+        if (img > 1).any(): img = img / 255
     else:
         img = np.dstack([_fetch_image_from_data(data, normalize_img)] * 3)
         img = img / img.max()

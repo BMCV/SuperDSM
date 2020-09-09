@@ -8,7 +8,8 @@ import gzip, dill, pathlib
 DEFAULT_OUTDIR = {
     'gt' : 'export-gt',
     'seg': 'export-seg',
-    'img': 'export-img'
+    'img': 'export-img',
+    'adj': 'export-adj'
 }
 
 
@@ -19,13 +20,13 @@ if __name__ == '__main__':
     parser.add_argument('taskdir', help=f'batch task directory path')
     parser.add_argument('--outdir', help='output directory', default=None)
     parser.add_argument('--imageid', help='only export image ID', default=[], action='append')
-    parser.add_argument('--segborder', help='border width of the segmentation masks', type=int, default=8)
+    parser.add_argument('--border', help='border width', type=int, default=8)
     parser.add_argument('--enhance', help='apply contrast enhancement', action='store_true')
-    parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), or the raw images (img)', default='seg')
+    parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), the raw images (img), or the adjacency graphs (adj)', default='seg')
     parser.add_argument('--gt-shuffle', help='shuffle colors of ground truth', default=[], action='append')
     args = parser.parse_args()
 
-    if args.mode not in ('gt', 'seg', 'img'):
+    if args.mode not in ('gt', 'seg', 'img', 'adj'):
         parser.error(f'Unknown mode: "{args.mode}"')
     
     rootpath = pathlib.Path(args.rootpath)
@@ -83,7 +84,8 @@ if __name__ == '__main__':
             if args.enhance: img = gocell.render.normalize_image(img)
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             gocell.io.imwrite(str(outputfile), img)
-    elif args.mode == 'seg':
+    elif args.mode in ('seg', 'adj'):
+        if args.mode == 'adj': task.last_stage = 'atoms'
         data = task.run(one_shot=True, force=True, evaluation='none', out=out)
         out.write('\nRunning export:')
         for image_id in task.file_ids:
@@ -91,7 +93,12 @@ if __name__ == '__main__':
             outputfile = outdir / f'{image_id}.png'
             out.intermediate(f'  Processing image... {outputfile}')
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
-            img = gocell.render.render_model_shapes_over_image(dataframe, border=args.segborder, normalize_img=args.enhance)
+            if args.mode == 'seg':
+                img = gocell.render.render_model_shapes_over_image(dataframe, border=args.border, normalize_img=args.enhance)
+            elif args.mode == 'adj':
+                ymap = gocell.render.render_ymap(dataframe)[:,:,:3]
+                ymap = gocell.render.render_atoms(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=args.border // 2)
+                img  = gocell.render.render_adjacencies(dataframe, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             gocell.io.imwrite(str(outputfile), img)
             out.write(f'  Exported {outputfile}')
         out.write('\n')

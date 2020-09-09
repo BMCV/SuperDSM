@@ -79,6 +79,7 @@ class Pipeline:
         if log_root_dir is not None: gocell.aux.mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].name
+        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
         out  = gocell.aux.get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
