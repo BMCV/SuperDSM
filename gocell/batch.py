@@ -85,7 +85,7 @@ def _process_file(dry, *args, out=None, **kwargs):
 def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, config, first_stage, last_stage, out=None):
     if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
     if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
-    aux.mkdir(pathlib.Path(log_filepath).parents[0])
+    if log_filepath is not None: aux.mkdir(pathlib.Path(log_filepath).parents[0])
 
     g_raw = io.imread(im_filepath)
     out   = aux.get_output(out)
@@ -142,6 +142,9 @@ def _compress_logs(log_dir):
     shutil.rmtree(str(log_dir))
 
 
+DATA_DILL_GZ_FILENAME = 'data.dill.gz'
+
+
 class Task:
     def __init__(self, path, data, parent_task=None, rel_path=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
@@ -157,9 +160,9 @@ class Task:
             self. gt_loader_kwargs = self.data['gt_loader_kwargs'] if 'gt_loader_kwargs' in self.data else {}
             self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
             self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
-            self.  log_pathpattern = path / self.data['log_pathpattern']
+            self.  log_pathpattern = path / self.data['log_pathpattern'] if 'log_pathpattern' in self.data else None
             self.         file_ids = sorted(frozenset(self.data['file_ids']))
-            self.      result_path = path / 'data.dill.gz'
+            self.      result_path = path / DATA_DILL_GZ_FILENAME
             self.       study_path = path / 'study.csv'
             self.     timings_path = path / 'timings.csv'
             self.timings_json_path = path / '.timings.json'
@@ -171,6 +174,21 @@ class Task:
             self.  merge_threshold = self.data['merge_overlap_threshold']
             self.       last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
             self.          environ = self.data['environ'] if 'environ' in self.data else {}
+
+    @staticmethod
+    def create_from_directory(task_dir, parent_task, override_cfg={}):
+        task_file = task_dir / 'task.json'
+        if task_file.exists():
+            try:
+                with task_file.open('r') as task_fin:
+                    task_data = json.load(task_fin)
+                task = Task(task_dir, task_data, parent_task)
+                for key in override_cfg:
+                    setattr(task, key, self.override_cfg[key])
+                return task
+            except json.JSONDecodeError as err:
+                raise ValueError(f'Error processing: "{task_file}"')
+        return None
 
     def _fmt_path(self, path):
         if isinstance(path, str): path = pathlib.Path(path)
@@ -195,7 +213,8 @@ class Task:
         else:
             return {}
 
-    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, fast_evaluation=False, print_study=False, debug=False, out=None):
+    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, out=None):
+        assert evaluation in ('none', 'fast', 'full')
         out = aux.get_output(out)
         if not self.runnable: return
         candidates._DEBUG = debug
@@ -243,19 +262,21 @@ class Task:
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
                 out2.write(aux.Text.style('Results written to: ', aux.Text.BOLD) + self._fmt_path(self.result_path))
-            if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'):
+            if evaluation == 'none' or (self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess')):
                 out2.write('Skipping evaluation')
             else:
                 if not dry:
                     shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
                     del data
-                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=fast_evaluation, out=out2)
+                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=(evaluation == 'fast'), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
                 out2.write(aux.Text.style('Evaluation study written to: ', aux.Text.BOLD) + self._fmt_path(self.study_path))
                 if not dry and print_study:
                     out2.write('')
                     study.print_results(write=out2.write, line_suffix='', pad=2)
+            for obj_name in ('data', 'shallow_data'):
+                if obj_name in locals(): return locals()[obj_name]
         except:
             out.write(aux.Text.style(f'\nError while processing task: {self._fmt_path(self.path)}', aux.Text.RED))
             raise
@@ -354,16 +375,8 @@ class BatchLoader:
         self.process_directory(root_path)
 
     def process_directory(self, current_dir, parent_task=None):
-        task_file = current_dir / 'task.json'
-        if task_file.exists():
-            try:
-                with task_file.open('r') as task_fin:
-                    task_data = json.load(task_fin)
-                task = Task(current_dir, task_data, parent_task)
-                for key in self.override_cfg:
-                    setattr(task, key, self.override_cfg[key])
-            except json.JSONDecodeError as err:
-                raise ValueError(f'Error processing: "{task_file}"')
+        task = Task.create_from_directory(current_dir, parent_task, self.override_cfg)
+        if task is not None:
             self.tasks.append(task)
             parent_task = task
         for d in os.listdir(current_dir):
@@ -418,7 +431,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, args.fast_evaluation, args.print_study, args.debug, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'fast' if args.fast_evaluation else 'full', args.print_study, args.debug, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:

@@ -182,17 +182,17 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     return (255 * img).clip(0, 255).astype('uint8')
 
 
-def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5):
+def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5, color_accepted='g', color_discarded='r'):
     if isinstance(postprocessed_candidates, str): postprocessed_candidates = data[postprocessed_candidates]
     candidates, colors = [], {}
     for candidate in data['cover'].solution:
         postprocessed_candidate = [c for c in postprocessed_candidates if c.original is candidate]
         if len(postprocessed_candidate) > 0:
             candidates.append(postprocessed_candidate[0])
-            colors[postprocessed_candidate[0]] = 'g'
+            colors[postprocessed_candidate[0]] = color_accepted
         else:
             candidates.append(candidate)
-            colors[candidate] = 'r'
+            colors[candidate] = color_discarded
     return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors)
 
 
