@@ -64,13 +64,17 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     return (255 * img).clip(0, 255).astype('uint8')
 
 
-def render_ymap(data, clim=None):
+def render_ymap(data, clim=None, cmap='bwr'):
     y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
+    z = np.full((1, y.shape[1]), clim[0])
+    z[0, -1] = clim[1]
+    y = np.concatenate((z, y), axis=0)
+    if isinstance(cmap, str): cmap = plt.cm.get_cmap(cmap)
     y  = y.clip(*clim)
     y -= y.min()
     y /= y.max()
-    return plt.cm.bwr(y)
+    return cmap(y)[1:]
 
 
 def normalize_image(img):
@@ -85,10 +89,14 @@ def _fetch_image_from_data(data, normalize_img=True):
     return img
 
 
-def render_atoms(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
+def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
-    regions = data['g_atoms'] > 0 if discarded_only else data['g_atoms']
-    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
+    return render_regions_over_image(img / img.max(), data['g_atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
+
+
+def render_foreground_clusters(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
+    img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
+    return render_regions_over_image(img / img.max(), data['g_clusters'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
@@ -117,20 +125,6 @@ def render_regions_over_image(img, regions, background_label=None, color=(0,1,0)
     #for i in   [0, 2]: result[:, :, i] *=  1 - borders
     for i in range(3): result[background, i] = bg[i] * bg[3] + result[background, i] * (1 - bg[3])
     return (255 * result).clip(0, 255).astype('uint8')
-
-
-def rasterize_activity_regions(data, candidates_key='postprocessed_candidates'):
-    regions = np.zeros(data['g_raw'].shape, 'uint16')
-    for label, candidate in enumerate(data[candidates_key], start=1):
-        mask = candidate.get_mask(data['g_superpixels'])
-        regions[mask] = label
-    return regions
-
-
-def render_activity_regions(data, normalize_img=True, none_color=(0.3, 1, 0.3, 0.1), border_radius=2, **kwargs):
-    img = _fetch_image_from_data(data, normalize_img)
-    regions = rasterize_activity_regions(data, **kwargs)
-    return render_regions_over_image(img / img.max(), regions, background_label=0, bg=none_color, radius=border_radius)
 
 
 COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
