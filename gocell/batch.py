@@ -190,7 +190,7 @@ class Task:
                     task_data = json.load(task_fin)
                 task = Task(task_dir, task_data, parent_task)
                 for key in override_cfg:
-                    setattr(task, key, self.override_cfg[key])
+                    setattr(task, key, override_cfg[key])
                 return task
             except json.JSONDecodeError as err:
                 raise ValueError(f'Error processing: "{task_file}"')
