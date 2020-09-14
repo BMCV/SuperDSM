@@ -12,13 +12,15 @@ DEFAULT_OUTDIR = {
     'seg': 'export-seg',
     'img': 'export-img',
     'fgc': 'export-fgc',
-    'adj': 'export-adj'
+    'adj': 'export-adj',
+    'atm': 'export-atm'
 }
 
 DEFAULT_BORDER = {
     'seg': 8,
     'fgc': 2,
-    'adj': 2
+    'adj': 2,
+    'atm': 6,
 }
 
 
@@ -31,12 +33,12 @@ if __name__ == '__main__':
     parser.add_argument('--imageid', help='only export image ID', default=[], action='append')
     parser.add_argument('--border', help='border width', type=int, default=None)
     parser.add_argument('--enhance', help='apply contrast enhancement', action='store_true')
-    parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), the raw images (img), the foreground clusters (fgc), or the adjacency graphs (adj)', default='seg')
+    parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), the raw images (img), the foreground clusters (fgc), the adjacency graphs (adj), or the atoms (atm)', default='seg')
     parser.add_argument('--gt-shuffle', help='shuffle colors of ground truth', default=[], action='append')
     parser.add_argument('--ymap', help='intensity mapping for y-map rendering', default='-0.8:+1:5:seismic')
     args = parser.parse_args()
 
-    if args.mode not in ('gt', 'seg', 'img', 'fgc', 'adj'):
+    if args.mode not in ('gt', 'seg', 'img', 'fgc', 'adj', 'atm'):
         parser.error(f'Unknown mode: "{args.mode}"')
 
     border_width = args.border
@@ -98,9 +100,10 @@ if __name__ == '__main__':
             if args.enhance: img = gocell.render.normalize_image(img)
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             gocell.io.imwrite(str(outputfile), img)
-    elif args.mode in ('seg', 'fgc', 'adj'):
-        if args.mode in ('fgc', 'adj'):
+    elif args.mode in ('seg', 'fgc', 'adj', 'atm'):
+        if args.mode in ('fgc', 'adj', 'atm'):
             task.last_stage = 'atoms'
+        if args.mode in ('fgc', 'adj'):
             ymap_spec = tuple(tf(val) for val, tf in zip(args.ymap.split(':'), (float, float, float, str)))
             ymapping  = lambda y: np.exp(ymap_spec[2] * y) / (1 + np.exp(ymap_spec[2] * y)) - 0.5
             render_ymap = lambda y: gocell.render.render_ymap(ymapping(y.clip(*ymap_spec[:2])), clim=(ymapping(np.array(ymap_spec[:2]))), cmap=ymap_spec[3])[:,:,:3]
@@ -125,6 +128,8 @@ if __name__ == '__main__':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
                 ymap = gocell.render.render_atoms(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
                 img  = gocell.render.render_adjacencies(dataframe, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
+            elif args.mode == 'atm':
+                img = gocell.render.render_atoms(dataframe, border_color=(0,1,0), border_radius=border_width // 2, normalize_img=args.enhance)
             gocell.io.imwrite(str(outputfile), img)
             out.write(f'  Exported {outputfile}')
         out.write('\n')
