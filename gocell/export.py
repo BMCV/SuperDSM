@@ -40,7 +40,7 @@ if __name__ == '__main__':
         parser.error(f'Unknown mode: "{args.mode}"')
 
     border_width = args.border
-    if border_width is None:
+    if border_width is None and args.mode in DEFAULT_BORDER:
         border_width = DEFAULT_BORDER[args.mode]
     
     rootpath = pathlib.Path(args.rootpath)
