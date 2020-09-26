@@ -176,7 +176,7 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     return (255 * img).clip(0, 255).astype('uint8')
 
 
-def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5, color_accepted='g', color_discarded='r'):
+def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5, color_accepted='g', color_discarded='r', normalize_img=True):
     if isinstance(postprocessed_candidates, str): postprocessed_candidates = data[postprocessed_candidates]
     candidates, colors = [], {}
     for candidate in data['cover'].solution:
@@ -187,7 +187,7 @@ def render_postprocessed_result(data, postprocessed_candidates='postprocessed_ca
         else:
             candidates.append(candidate)
             colors[candidate] = color_discarded
-    return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors)
+    return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors, normalize_img=normalize_img)
 
 
 def render_result_over_image(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
