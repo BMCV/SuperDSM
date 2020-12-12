@@ -76,20 +76,22 @@ class Text:
 
 class JupyterOutput:
 
-    def __init__(self, parent=None, maxlen=np.inf, muted=False):
+    def __init__(self, parent=None, maxlen=np.inf, muted=False, margin=0):
+        assert margin >= 0
         self.lines     = []
         self.current   = None
         self.parent    = parent
         self.maxlen    = maxlen
         self.truncated = 0
         self._muted    = muted
+        self.margin    = margin
 
     @property
     def muted(self):
         return self._muted or (self.parent is not None and self.parent.muted)
     
-    def derive(self, muted=False, maxlen=np.inf):
-        child = JupyterOutput(parent=self, maxlen=maxlen, muted=muted)
+    def derive(self, muted=False, maxlen=np.inf, margin=0):
+        child = JupyterOutput(parent=self, maxlen=maxlen, muted=muted, margin=margin)
         if self.current is not None: child.lines.append(self.current)
         return child
     
@@ -110,6 +112,7 @@ class JupyterOutput:
     
     def intermediate(self, line, flush=True):
         if self.muted: return
+        line = ' ' * self.margin + line
         self.truncate(offset=+1)
         self.clear()
         self.current = line
@@ -119,6 +122,7 @@ class JupyterOutput:
     def write(self, line, keep_current=False):
         if self.muted: return
         if keep_current and self.current is not None: self.lines.append(self.current)
+        line = ' ' * self.margin + line
         self.lines.append(line)
         self.truncate()
         self.clear()
@@ -163,14 +167,6 @@ class ConsoleOutput:
         return ConsoleOutput(muted, self, self.margin + margin)
 
 
-#def medianf(img, selem):
-#    img_min = img.min()
-#    img -= img_min
-#    img_max = img.max()
-#    img /= img_max
-#    return median_filter((img * 256).round().astype('uint8'), selem) * img_max / 256. + img_min
-
-
 class CvxoptFrame:
 
     def __init__(self, **defaults):
@@ -191,18 +187,6 @@ class CvxoptFrame:
         self._interface.clear()
         self._interface.update(self._options)
         self._interface = None
-
-
-#def threshold_gauss(data, tolerance, mode):
-#    X = np.array(list(data)).flat
-#    f = None
-#    if mode in ('l', 'lower'): f = -1
-#    if mode in ('u', 'upper'): f = +1
-#    assert f is not None, 'unknown mode "%s"' % mode
-#    X_std = np.std(X) if len(X) > 1 else np.inf
-#    t_gauss = np.mean(X) + f * X_std * tolerance
-#    assert not np.isnan(t_gauss)
-#    return t_gauss
 
 
 def uplift_smooth_matrix(smoothmat, mask):
