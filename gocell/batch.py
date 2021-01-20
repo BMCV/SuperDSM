@@ -21,7 +21,7 @@ def _format_runtime(seconds):
 def load_xcf_layer(xcf_path, layername):
     with tempfile.NamedTemporaryFile() as png_file:
         subprocess.call(['xcf2png', xcf_path, layername, '-o', png_file.name])
-        img = skimage.io.imread(png_file.name, plugin='matplotlib', as_grey=True, format='png')
+        img = skimage.io.imread(png_file.name, plugin='matplotlib', as_gray=True, format='png')
         if img is None: warnings.warn('couldn\'t load XCF layer "%s" from file: %s' % (layername, xcf_path))
         return img
 
@@ -92,11 +92,12 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     g_raw = io.imread(im_filepath)
     out   = aux.get_output(out)
 
-    out.intermediate('Creating configuration...')
-    config, scale = automation.create_config(config, g_raw)
-    with open(cfg_filepath, 'w') as fout:
-        json.dump(config, fout)
-    out.write(f'Estimated scale: {scale:.2f}')
+    if last_stage is not None:
+        out.intermediate('Creating configuration...')
+        config, scale = automation.create_config(config, g_raw)
+        with open(cfg_filepath, 'w') as fout:
+            json.dump(config, fout)
+        out.write(f'Estimated scale: {scale:.2f}')
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
