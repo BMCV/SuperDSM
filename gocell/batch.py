@@ -21,7 +21,7 @@ def _format_runtime(seconds):
 def load_xcf_layer(xcf_path, layername):
     with tempfile.NamedTemporaryFile() as png_file:
         subprocess.call(['xcf2png', xcf_path, layername, '-o', png_file.name])
-        img = skimage.io.imread(png_file.name, plugin='matplotlib', as_gray=True, format='png')
+        img = skimage.io.imread(png_file.name, plugin='matplotlib', format='png')[:,:,3]
         if img is None: warnings.warn('couldn\'t load XCF layer "%s" from file: %s' % (layername, xcf_path))
         return img
 
