@@ -34,10 +34,10 @@ class SeedStage(gocell.pipeline.Stage):
                                         outputs = ['seeds', 'foreground_threshold'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        foreground_abs_threshold = gocell.config.get_value(cfg, 'foreground_abs_threshold', 0.05)
-        foreground_rel_threshold = gocell.config.get_value(cfg, 'foreground_rel_threshold',    0)
-        min_seed_distance        = gocell.config.get_value(cfg, 'min_seed_distance'       ,   20)
-        max_seed_number          = gocell.config.get_value(cfg, 'max_seed_number'         ,  200)
+        foreground_abs_threshold = gocell.config.get_value(cfg, 'foreground_abs_threshold',   0.01)
+        foreground_rel_threshold = gocell.config.get_value(cfg, 'foreground_rel_threshold',      0)
+        min_seed_distance        = gocell.config.get_value(cfg, 'min_seed_distance'       ,     30)
+        max_seed_number          = gocell.config.get_value(cfg, 'max_seed_number'         , np.inf)
 
         seeds_map, threshold_map = _get_local_maxima(input_data['y'].copy(),
                                                      min_seed_distance,

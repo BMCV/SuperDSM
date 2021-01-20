@@ -4,7 +4,7 @@ import gocell.aux
 import numpy as np
 import warnings, math
 
-from skimage import morphology
+from skimage import morphology, segmentation
 from scipy   import ndimage
 
 import skimage.draw
@@ -49,7 +49,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     lines = data['adjacencies'].get_edge_lines()
     shape = img.shape[:2]
     for endpoint in data['seeds']:
-        perim_mask  = skimage.draw.circle(*endpoint, endpoint_radius + endpoint_edge_thickness, shape)
+        perim_mask  = skimage.draw.disk(endpoint, endpoint_radius + endpoint_edge_thickness, shape=shape)
         for i in range(3):
             img[:,:,i][ perim_mask] = endpoint_edge_color[i]
     for line in lines:
@@ -58,7 +58,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
         line_vals = line_buf[line_mask]
         for i in range(3): img[:, :, i][line_mask] = (line_vals) * edge_color[i]
     for endpoint in data['seeds']:
-        circle_mask = skimage.draw.circle(*endpoint, endpoint_radius, shape)
+        circle_mask = skimage.draw.disk(endpoint, endpoint_radius, shape=shape)
         for i in range(3):
             img[:,:,i][circle_mask] = endpoint_color[i]
     return (255 * img).clip(0, 255).astype('uint8')
@@ -270,7 +270,7 @@ def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_
         dist = ndimage.morphology.distance_transform_edt(result == 0)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            result = morphology.watershed(dist, result, mask=np.logical_not(background))
+            result = segmentation.watershed(dist, result, mask=np.logical_not(background))
 
     # In rare cases it can happen that two or more objects overlap exactly, in which csae the above code
     # will eliminate both objects. We will fix this by checking for such occasions explicitly:

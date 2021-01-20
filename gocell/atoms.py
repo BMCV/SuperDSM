@@ -4,6 +4,7 @@ import gocell.pipeline
 
 import numpy as np
 import skimage.morphology as morph
+import skimage.segmentation
 import scipy.ndimage as ndi
 import scipy.special
 import warnings
@@ -27,7 +28,7 @@ class AtomicStage(gocell.pipeline.Stage):
         cc_distances = ndi.distance_transform_edt(bg_mask)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            g_clusters = morph.watershed(cc_distances)
+            g_clusters = skimage.segmentation.watershed(cc_distances)
         out.write('Clusters: %d' % g_clusters.max())
 
         # Rasterize atom seeds
@@ -44,7 +45,7 @@ class AtomicStage(gocell.pipeline.Stage):
             distances = input_data['y'].max() - input_data['y'].clip(0, np.inf)
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', FutureWarning)
-                g_cluster_atoms = morph.watershed(distances, g_atom_seeds * cluster_mask, mask=cluster_mask)
+                g_cluster_atoms = skimage.segmentation.watershed(distances, g_atom_seeds * cluster_mask, mask=cluster_mask)
                 for l in frozenset(g_cluster_atoms.reshape(-1)) - {0}:
                     cc = (g_cluster_atoms == l)
                     g_atoms[cc] = g_atom_seeds[cc].max()

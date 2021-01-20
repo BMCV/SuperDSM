@@ -14,24 +14,6 @@ from skimage.filters.rank import median as median_filter
 from IPython.display      import clear_output
 
 
-#def set2str(S, delim=','):
-#    """Formats the set `S` as a string with the given delimiter.
-#    """
-#    return '{%s}' % (delim.join(str(s) for s in S))
-#
-#
-#def int_hist(g):
-#    """Computes the histogram of array `g`.
-#    """
-#    h, i = [], []
-#    for k in range(g.min(), g.max() + 1):
-#        hi = (g == k).sum()
-#        if hi > 0:
-#            i.append(k)
-#            h.append(hi)
-#    return i, h
-#
-#
 def copy_dict(d):
     """Returns a copy of dict `d`.
     """

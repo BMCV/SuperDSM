@@ -4,6 +4,7 @@ import gocell.candidates as candidates
 import gocell.aux        as aux
 import gocell.io         as io
 import gocell.render     as render
+import gocell.automation as automation
 import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil
 import ray
 import numpy as np
@@ -82,13 +83,20 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, config, first_stage, last_stage, out=None):
+def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, config, first_stage, last_stage, out=None):
     if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
     if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
     if log_filepath is not None: aux.mkdir(pathlib.Path(log_filepath).parents[0])
+    if cfg_filepath is not None: aux.mkdir(pathlib.Path(cfg_filepath).parents[0])
 
     g_raw = io.imread(im_filepath)
     out   = aux.get_output(out)
+
+    out.intermediate('Creating configuration...')
+    config, scale = automation.create_config(config, g_raw)
+    with open(cfg_filepath, 'w') as fout:
+        json.dump(config, fout)
+    out.write(f'Estimated scale: {scale:.2f}')
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
@@ -168,6 +176,7 @@ class Task:
             self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
             self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
             self.  log_pathpattern = path / self.data['log_pathpattern'] if 'log_pathpattern' in self.data else None
+            self.  cfg_pathpattern = path / self.data['cfg_pathpattern'] if 'cfg_pathpattern' in self.data else None
             self.      result_path = path / DATA_DILL_GZ_FILENAME
             self.       study_path = path / 'study.csv'
             self.     timings_path = path / 'timings.csv'
@@ -244,6 +253,7 @@ class Task:
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
                               log_filepath = str(self.log_pathpattern) % file_id if self.log_pathpattern is not None else None,
+                              cfg_filepath = str(self.cfg_pathpattern) % file_id if self.cfg_pathpattern is not None else None,
                                 seg_border = self.seg_border,
                                 last_stage = self.last_stage,
                                     config = config.derive(self.config, {}))

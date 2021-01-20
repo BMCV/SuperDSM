@@ -6,12 +6,25 @@ def pop_value(kwargs, kw, default):
 
 
 def set_default_value(kwargs, kw, default):
-    if kw not in kwargs: kwargs[kw] = default
+    if '/' in kw:
+        keys = kw.split('/')
+        for key in keys[:-1]:
+            kwargs = set_default_value(kwargs, key, {})
+        return set_default_value(kwargs, keys[-1], default)
+    else:
+        if kw not in kwargs: kwargs[kw] = default
+        return kwargs[kw]
 
 
 def get_value(config, key, default):
-    if key not in config: config[key] = default
-    return config[key]
+    if '/' in key:
+        keys = key.split('/')
+        for key in keys[:-1]:
+            config = get_value(config, key, {})
+        return get_value(config, keys[-1], default)
+    else:
+        if key not in config: config[key] = default
+        return config[key]
 
 
 def update(base_cfg, cfg_override):
@@ -28,4 +41,8 @@ def update(base_cfg, cfg_override):
 def derive(base_cfg, cfg_override):
     cfg = json.loads(json.dumps(base_cfg))
     return update(cfg, cfg_override)
+
+
+def copy(base_cfg):
+    return derive(base_cfg, dict())
 
