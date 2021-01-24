@@ -21,7 +21,8 @@ MODELFIT_KWARGS_DEFAULTS = {
     'gaussian_shape_multiplier': 2,
     'smooth_mat_dtype': 'float32',
     'min_background_margin': 20,
-    'max_background_margin': 100
+    'max_background_margin': 100,
+    'cp_timeout': 120
 }
 
 

@@ -1,9 +1,11 @@
 import gocell.surface as surface
 import gocell.aux     as aux
 import gocell._mkl    as mkl
+
 import numpy as np
 import cvxopt
 import skimage.util
+import signal
 
 from math         import sqrt
 from scipy.linalg import orth
@@ -348,14 +350,23 @@ class Cache:
         return output
 
 
+class TimeoutError(Exception):
+    pass
+
+
+def _cp_timeout_handler(*args):
+    raise TimeoutError()
+
+
 class CP:
 
     CHECK_NUMBERS = True
 
-    def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None):
+    def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None, timeout=None):
         self.params0  = params0
         self.gradient = Cache(cachesize, lambda p: (scale * energy(p), cvxopt.matrix(scale * energy.grad(p)).T), equality=cachetest)
         self.hessian  = Cache(cachesize, lambda p:  scale * energy.hessian(p), equality=cachetest)
+        self.timeout  = timeout
     
     def __call__(self, params=None, w=None):
         if params is None:
@@ -384,6 +395,9 @@ class CP:
                 return l, Dl, H
     
     def solve(self, **options):
+        if self.timeout is not None and self.timeout > 0:
+            signal.signal(signal.SIGALRM, _cp_timeout_handler)
+            signal.alarm(self.timeout)
         return cvxopt.solvers.cp(self)
 #        dims = dict(l=0, q=[], s=[2])
 #        h = cvxopt.matrix(np.zeros(4))

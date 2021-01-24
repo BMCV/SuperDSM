@@ -280,11 +280,11 @@ def _compute_gocell_solution(J_gocell, CP_params):
     return solution_array
 
 
-def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None):
+def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     _print_heading('initializing')
     smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
     J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
-    CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0]}
+    CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
     status = None
     if callable(init):
@@ -298,7 +298,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
-        _print_heading('convex programming starting: GOCELLOS')
+        _print_heading('convex programming starting: GODMOD')
         solution_info = gocell.modelfit.CP(J, params, **CP_params).solve()
         solution = np.array(solution_info['x'])
         _print_cvxopt_solution(solution_info)
@@ -312,7 +312,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         status = 'fallback'  ## at least something we can continue the work with
     assert status is not None
     if status == 'fallback':
-        _print_heading('GOCELLOS failed: falling back to GOCELL result')
+        _print_heading('GODMOD failed: falling back to GOCELL result')
         solution = params
     _print_heading('finished')
     return J, gocell.modelfit.PolynomialModel(solution), status
