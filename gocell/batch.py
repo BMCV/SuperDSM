@@ -9,6 +9,7 @@ import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnin
 import ray
 import numpy as np
 import scipy.ndimage as ndi
+import time
 
 
 def _format_runtime(seconds):
@@ -92,9 +93,12 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     g_raw = io.imread(im_filepath)
     out   = aux.get_output(out)
 
-    if last_stage is not None:
+    timings = {}
+    if first_stage != '':
         out.intermediate('Creating configuration...')
+        t0 = time.time()
         config, scale = automation.create_config(config, g_raw)
+        timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
             json.dump(config, fout)
         out.write(f'Estimated scale: {scale:.2f}')
@@ -106,8 +110,9 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     atomic_stage = pipeline.stages[pipeline.find('atoms')]
     atomic_stage.add_callback('end', write_adjacencies_image)
-    result_data, _, timings = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
+    result_data, _, _timings = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
     atomic_stage.remove_callback('end', write_adjacencies_image)
+    timings.update(_timings)
 
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
