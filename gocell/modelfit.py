@@ -395,10 +395,14 @@ class CP:
                 return l, Dl, H
     
     def solve(self, **options):
+        alarm_set = False
         if self.timeout is not None and self.timeout > 0:
             signal.signal(signal.SIGALRM, _cp_timeout_handler)
             signal.alarm(self.timeout)
-        return cvxopt.solvers.cp(self)
+            alarm_set = True
+        ret = cvxopt.solvers.cp(self)
+        if alarm_set: signal.alarm(0)
+        return ret
 #        dims = dict(l=0, q=[], s=[2])
 #        h = cvxopt.matrix(np.zeros(4))
 #        G = cvxopt.spmatrix(np.ones(4), [0,1,2,3], [0,2,2,1], size=(4, len(self.params0)))
