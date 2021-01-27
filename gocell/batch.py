@@ -10,6 +10,7 @@ import ray
 import numpy as np
 import scipy.ndimage as ndi
 import time
+import itertools
 
 
 def _format_runtime(seconds):
@@ -40,6 +41,9 @@ def load_gt(loader, filepath, **loader_kwargs):
         return io.imread(filepath)
     elif loader == 'xcf':
         return load_unlabeled_xcf_gt(filepath, **loader_kwargs)
+
+
+FP_INVARIANT_MEASURES = frozenset(['SEG', 'd/Split', 'd/Merge', 'd/FN'])
 
 
 def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, fast=False, out=None):
@@ -167,20 +171,22 @@ class Task:
         self.data = data if parent_task is None else config.derive(parent_task.data, data)
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
-        self.   im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
-        self.   gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern']) if 'gt_pathpattern' in self.data else None
-        self.     gt_is_unique = self.data.get('gt_is_unique'    , None)
-        self.        gt_loader = self.data.get('gt_loader'       , None)
-        self. gt_loader_kwargs = self.data.get('gt_loader_kwargs', {}  )
+        self.fully_annotated_ids = frozenset(self.data['fully_annotated_ids']) if 'fully_annotated_ids' in self.data else self.file_ids
+        self.     im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
+        self.     gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern']) if 'gt_pathpattern' in self.data else None
+        self.       gt_is_unique = self.data.get('gt_is_unique'    , None)
+        self.          gt_loader = self.data.get('gt_loader'       , None)
+        self.   gt_loader_kwargs = self.data.get('gt_loader_kwargs', {}  )
 
         if self.runnable:
 
-            assert self.file_ids         is not None
-            assert self.im_pathpattern   is not None
-            assert self.gt_pathpattern   is not None
-            assert self.gt_is_unique     is not None
-            assert self.gt_loader        is not None
-            assert self.gt_loader_kwargs is not None
+            assert self.file_ids            is not None
+            assert self.fully_annotated_ids is not None
+            assert self.im_pathpattern      is not None
+            assert self.gt_pathpattern      is not None
+            assert self.gt_is_unique        is not None
+            assert self.gt_loader           is not None
+            assert self.gt_loader_kwargs    is not None
 
             if 'base_config_path' in self.data:
                 base_config_path = self.data['base_config_path']
@@ -372,8 +378,10 @@ class Task:
         rows.append([''])
         for measure_name in measure_names:
             measure = study.measures[measure_name]
+            chunks  = study. results[measure_name]
+            values  = list(itertools.chain(*[chunks[chunk_id] for chunk_id in chunks if chunk_id in self.fully_annotated_ids or measure_name in FP_INVARIANT_MEASURES]))
             fnc = np.sum if measure.ACCUMULATIVE else np.mean
-            val = fnc(study[measure_name])
+            val = fnc(values)
             rows[-1].append(val)
         with self.study_path.open('w', newline='') as fout:
             csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
