@@ -327,7 +327,7 @@ class Task:
         finally:
             self._shutdown()
 
-    def analyze_fn(self, dry=False, out=None):
+    def analyze_fn(self, dry=False, pp_logfilename='postprocessing.txt', out=None):
         out = aux.get_output(out)
         if not self.runnable: return
         if self.log_pathpattern is None: return
@@ -344,7 +344,8 @@ class Task:
             expected = load_gt(self.gt_loader, filepath=self.gt_pathpattern % file_id, **self.gt_loader_kwargs)
             if not dry:
                 with tarfile.open(compressed_logs_filepath, 'r:gz') as tar:
-                    pp_logfile_info = tar.getmember('postprocessing.txt')
+                    if not pp_logfilename in tar.getnames(): continue
+                    pp_logfile_info = tar.getmember(pp_logfilename)
                     pp_logfile = tar.extractfile(pp_logfile_info)
                     pp_logfile_text = pp_logfile.read().decode('utf-8')
                     for pp_logfile_line in pp_logfile_text.split('\n'):
