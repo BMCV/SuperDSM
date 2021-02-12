@@ -11,6 +11,7 @@ import numpy as np
 import scipy.ndimage as ndi
 import time
 import itertools
+import re
 
 
 def _format_runtime(seconds):
@@ -155,7 +156,7 @@ def _compress_logs(log_dir):
     if not log_dir_path.exists(): return
     assert log_dir_path.is_dir()
     compressed_logs_filepath = f'{log_dir}.tgz'
-    with tarfile.open(compressed_logs_filepath, "w:gz") as tar:
+    with tarfile.open(compressed_logs_filepath, 'w:gz') as tar:
         tar.add(log_dir, arcname=os.path.sep)
     shutil.rmtree(str(log_dir))
 
@@ -209,6 +210,7 @@ class Task:
             self.timings_json_path = path / '.timings.json'
             self.      digest_path = path / '.digest'
             self.  digest_cfg_path = path / '.digest.cfg.json'
+            self. fn_analysis_path = path / 'fn.csv'
             self.           config = self.data['config']
             self.       seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
             self.           dilate = self.data['dilate']
@@ -324,6 +326,43 @@ class Task:
             raise
         finally:
             self._shutdown()
+
+    def analyze_fn(self, dry=False, out=None):
+        out = aux.get_output(out)
+        if not self.runnable: return
+        if self.log_pathpattern is None: return
+        log_path_parent = self.log_pathpattern.parent
+        while not log_path_parent.is_dir():
+            log_path_parent = log_path_parent.parent
+        if self.fn_analysis_path.is_file() and self.fn_analysis_path.stat().st_mtime >= log_path_parent.stat().st_mtime: return
+        pp_logfile_line_pattern = re.compile(r'^object at x=([0-9]+), y=([0-9]+): ([^(]+).*?$')
+        reasons_histogram = {}
+        for file_id in self.file_ids:
+            log_filepath = str(self.log_pathpattern) % file_id
+            compressed_logs_filepath = f'{log_filepath}.tgz'
+            out.intermediate(f'Analyzing false-negative detections for file: {file_id}')
+            expected = load_gt(self.gt_loader, filepath=self.gt_pathpattern % file_id, **self.gt_loader_kwargs)
+            if not dry:
+                with tarfile.open(compressed_logs_filepath, 'r:gz') as tar:
+                    pp_logfile_info = tar.getmember('postprocessing.txt')
+                    pp_logfile = tar.extractfile(pp_logfile_info)
+                    pp_logfile_text = pp_logfile.read().decode('utf-8')
+                    for pp_logfile_line in pp_logfile_text.split('\n'):
+                        if len(pp_logfile_line) == 0: continue
+                        match = pp_logfile_line_pattern.match(pp_logfile_line)
+                        if match is None: raise ValueError(f'Log file {compressed_logs_filepath} contains malformed line: {pp_logfile_line}')
+                        x = int(match.group(1))
+                        y = int(match.group(2))
+                        reason = match.group(3)
+                        y = np.clip(y, 0, expected.shape[0] - 1)
+                        x = np.clip(x, 0, expected.shape[1] - 1)
+                        is_fn = (expected[y,x] > 0)
+                        if is_fn:
+                            reasons_histogram[reason] = reasons_histogram.get(reason, 0) + 1
+        with self.fn_analysis_path.open('w', newline='') as fout:
+            csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            for reason, count in reasons_histogram.items():
+                csv_writer.writerow([reason, count])
 
     def find_runnable_parent_task(self):
         if self.parent_task is None: return None
@@ -450,6 +489,7 @@ if __name__ == '__main__':
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
+    parser.add_argument('--analyze-fn', help='summarize reasons of false negative detections', action='store_true')
     args = parser.parse_args()
 
     if args.fast_evaluation and not args.oneshot:
@@ -476,6 +516,8 @@ if __name__ == '__main__':
         newpid = os.fork()
         if newpid == 0:
             task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'fast' if args.fast_evaluation else 'full', args.print_study, args.debug, out)
+            if args.analyze_fn:
+                task.analyze_fn(dry, out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
