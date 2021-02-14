@@ -329,7 +329,8 @@ class Task:
 
     def analyze_fn(self, dry=False, pp_logfilename='postprocessing.txt', out=None):
         out = aux.get_output(out)
-        if not self.runnable: return
+        out = out.derive(margin=2)
+        if not self.runnable or dry: return
         if self.log_pathpattern is None: return
         log_path_parent = self.log_pathpattern.parent
         while not log_path_parent.is_dir():
