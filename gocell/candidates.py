@@ -45,11 +45,16 @@ class Candidate(BaseCandidate):
     def get_mask(self, g_atoms):
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
-    def get_modelfit_region(self, y, g_atoms, min_background_margin=None, max_background_margin=None):
+    def get_modelfit_region(self, y, g_atoms, min_background_margin=None, max_background_margin=None, ng=None):
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
-        max_background_margin = self._update_default_kwarg('max_background_margin', max_background_margin)
+        ng = self._update_default_kwarg('ng', ng)
         region = y.get_region(self.get_mask(g_atoms))
-        region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
+        if ng:
+            region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
+        else:
+            min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
+            max_background_margin = self._update_default_kwarg('max_background_margin', max_background_margin)
+            region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
         return region
 
     def set(self, state):
@@ -114,7 +119,8 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
     max_background_margin =      modelfit_kwargs.pop('max_background_margin')
-    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin)
+    process_candidate_ng  =      modelfit_kwargs.pop('ng', False)
+    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin, process_candidate_ng)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
@@ -138,6 +144,8 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
         padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
         foreground = padded_foreground[1:-1, 1:-1]
         if foreground.any():
+            if process_candidate_ng:
+                foreground = np.logical_and(region.mask, foreground)
             candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
         else:
             candidate.fg_offset   = np.zeros(2, int)

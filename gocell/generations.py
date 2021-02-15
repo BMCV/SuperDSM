@@ -22,6 +22,7 @@ MODELFIT_KWARGS_DEFAULTS = {
     'smooth_mat_dtype': 'float32',
     'min_background_margin': 20,
     'max_background_margin': 100,
+    'ng': False,
     'cp_timeout': 300
 }
 
