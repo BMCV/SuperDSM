@@ -519,7 +519,7 @@ if __name__ == '__main__':
         if newpid == 0:
             task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'fast' if args.fast_evaluation else 'full', args.print_study, args.debug, out)
             if args.analyze_fn:
-                task.analyze_fn(dry, out)
+                task.analyze_fn(dry, out=out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:
