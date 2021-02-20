@@ -27,6 +27,21 @@ def get_value(config, key, default):
         return config[key]
 
 
+def update_value(config, key, func):
+    if '/' in key:
+        keys = key.split('/')
+        for key in keys[:-1]:
+            config = get_value(config, key, {})
+        return update_value(config, keys[-1], func)
+    else:
+        config[key] = func(config[key])
+        return config[key]
+
+
+def set_value(config, key, value):
+    update_value(config, key, lambda *args: value)
+
+
 def update(base_cfg, cfg_override):
     for key, val in cfg_override.items():
         if key not in base_cfg.keys() or not isinstance(val, dict):

@@ -124,7 +124,7 @@ def _create_gaussian_kernel(sigma, shape=None, shape_multiplier=1):
 
 def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
     assert filter_mask.ndim == 2 and filter_mask.shape[0] == filter_mask.shape[1]
-    assert filter_mask.shape[0] % 2 == 1
+    assert filter_mask.shape[0] % 2 == 1, filter_mask.shape[0]
     if row_mask is None: row_mask = np.ones(img_shape, bool)
     if col_mask is None: col_mask = np.ones(img_shape, bool)
     print('.', end='')
