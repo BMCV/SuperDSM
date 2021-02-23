@@ -75,19 +75,24 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, _min=
 
 
 def create_config(base_cfg, im):
-    scale    = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
-    radius   = scale * math.sqrt(2)
-    diameter = 2 * radius
     config   = gocell.config.copy(base_cfg)
     version  = gocell.config.get_value(config, 'af_version', 1)
 
-    _create_config_entry(config, 'preprocess1/sigma2'           , scale      , 1   )
-    _create_config_entry(config, 'find_seeds/min_seed_distance' , radius     , 0.33)
-    _create_config_entry(config, 'generations/alpha'            , radius ** 2, 0.2 )
-    _create_config_entry(config, 'generations/max_seed_distance', diameter   , 1   )
-    _create_config_entry(config, 'postprocess/min_obj_radius'   , radius     , 0.2 )
-    _create_config_entry(config, 'postprocess/max_obj_radius'   , radius     , 1.0 )
-    _create_config_entry(config, 'postprocess/min_glare_radius' , radius     , 0.5 )
+    if version == 0:
+        scale = None
+
+    if version >= 1:
+        scale    = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
+        radius   = scale * math.sqrt(2)
+        diameter = 2 * radius
+
+        _create_config_entry(config, 'preprocess1/sigma2'           , scale      , 1   )
+        _create_config_entry(config, 'find_seeds/min_seed_distance' , radius     , 0.33)
+        _create_config_entry(config, 'generations/alpha'            , radius ** 2, 0.2 )
+        _create_config_entry(config, 'generations/max_seed_distance', diameter   , 1   )
+        _create_config_entry(config, 'postprocess/min_obj_radius'   , radius     , 0.2 )
+        _create_config_entry(config, 'postprocess/max_obj_radius'   , radius     , 1.0 )
+        _create_config_entry(config, 'postprocess/min_glare_radius' , radius     , 0.5 )
     
     if version >= 2:
         _create_config_entry(config, 'generations/rho'             , scale ** 2, 0.015 ** 2)

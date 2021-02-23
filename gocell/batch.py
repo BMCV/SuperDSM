@@ -106,7 +106,8 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
             json.dump(config, fout)
-        out.write(f'Estimated scale: {scale:.2f}')
+        if scale is not None:
+            out.write(f'Estimated scale: {scale:.2f}')
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
