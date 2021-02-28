@@ -44,6 +44,9 @@ if __name__ == '__main__':
     border_width = args.border
     if border_width is None and args.mode in DEFAULT_BORDER:
         border_width = DEFAULT_BORDER[args.mode]
+
+    if args.ymap.startswith('/'):
+        args.ymap = args.ymap[1:]
     
     rootpath = pathlib.Path(args.rootpath)
     if not rootpath.exists():
@@ -69,21 +72,24 @@ if __name__ == '__main__':
         task = gocell.batch.Task.create_from_directory(_taskdir, tasks[-1] if len(tasks) > 0 else None)
         if task is not None:
             tasks.append(task)
-
-    out  = gocell.aux.get_output(None)
     task = tasks[-1]
+    if not task.runnable:
+        task = gocell.batch.Task.create_from_directory(task.path, tasks[-2], force_runnable=True)
+
+    out = gocell.aux.get_output(None)
     if len(args.imageid) > 0:
         task.file_ids = [gocell.batch._resolve_timings_key(file_id, task.file_ids) for file_id in args.imageid]
     task.seg_pathpattern = None
     task.log_pathpattern = None
     task.adj_pathpattern = None
+    task._load_timings = lambda *args: {}
 
     if args.mode == 'gt':
         shuffles = {}
         for shuffle_spec in args.gt_shuffle:
             image_id, shuffle_seed = shuffle_spec.split(':')
             image_id = gocell.batch._resolve_timings_key(image_id, task.file_ids)
-            shuffles[image_id] = shuffle_seed
+            shuffles[image_id] = int(shuffle_seed)
         for image_id in task.file_ids:
             outputfile = outdir / f'{image_id}.png'
             out.intermediate(f'Processing image... {outputfile}')
@@ -120,7 +126,7 @@ if __name__ == '__main__':
             out.intermediate(f'  Processing image... {outputfile}')
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             if args.mode == 'seg':
-                img = gocell.render.render_model_shapes_over_image(dataframe, border=border_width, normalize_img=args.enhance)
+                img = gocell.render.render_result_over_image(dataframe, border=border_width, normalize_img=args.enhance)
             elif args.mode == 'fgc':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
                 img  = gocell.render.render_foreground_clusters(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)

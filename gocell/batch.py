@@ -220,12 +220,13 @@ class Task:
             self.          environ = self.data['environ'] if 'environ' in self.data else {}
 
     @staticmethod
-    def create_from_directory(task_dir, parent_task, override_cfg={}):
+    def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
         task_file = task_dir / 'task.json'
         if task_file.exists():
             try:
                 with task_file.open('r') as task_fin:
                     task_data = json.load(task_fin)
+                if force_runnable: task_data['runnable'] = True
                 task = Task(task_dir, task_data, parent_task)
                 for key in override_cfg:
                     setattr(task, key, override_cfg[key])
