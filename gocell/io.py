@@ -29,12 +29,13 @@ def imread(filepath, **kwargs):
     if not os.path.exists(filepath) or not os.path.isfile(filepath):
         raise ValueError('not a file: %s' % filepath)
     fp_lowercase = filepath.lower()
+    if 'as_gray' not in kwargs: kwargs['as_gray'] = True
     if fp_lowercase.endswith('.png'):
-        img = skimage.io.imread(filepath, as_gray=True, **kwargs)
+        img = skimage.io.imread(filepath, **kwargs)
     elif fp_lowercase.endswith('.tif') or fp_lowercase.endswith('.tiff'):
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=RuntimeWarning)
-            img = skimage.io.imread(filepath, as_gray=True, plugin='tifffile', **kwargs)
+            img = skimage.io.imread(filepath, plugin='tifffile', **kwargs)
     else:
         raise ValueError('unknown file extension: %s' % filepath)
     return img

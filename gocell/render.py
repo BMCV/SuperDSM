@@ -80,13 +80,26 @@ def render_ymap(data, clim=None, cmap='bwr'):
 def normalize_image(img):
     if not np.allclose(img.std(), 0):
         img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
-    return img - img.min()
+    img = img - img.min()
+    return img / img.max()
 
 
 def _fetch_image_from_data(data, normalize_img=True):
     img = data['g_raw']
     if normalize_img: img = normalize_image(img)
     return img
+
+
+def _fetch_rgb_image_from_data(data, normalize_img=True):
+    if 'g_rgb' in data:
+        img = data['g_rgb']
+        if img.max() > 1: img = img / 255
+    else:
+        img = data['g_raw']
+        if normalize_img: img = normalize_image(img)
+        print(img.min(), img.max())
+        img = np.dstack([img] * 3)
+    return img.copy()
 
 
 def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
@@ -136,26 +149,28 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
 
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
 
-    if normalize_img:
-        g = gocell.surface.Surface.create_from_image(_fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
-    else:
-        g = gocell.surface.Surface(data['g_raw'].shape)
-        g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
+    #if normalize_img:
+    #    g = gocell.surface.Surface.create_from_image(_fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
+    #else:
+    #    g = gocell.surface.Surface(data['g_raw'].shape)
+    #    g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
 
     if isinstance(candidates, str): candidates = data[candidates]
     if is_legal == True: is_legal = lambda m: True
 
-    img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
-    for i in range(3): img[:, :, i] = g.model * g.mask
+    #img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
+    #for i in range(3): img[:, :, i] = g.model * g.mask
+    img = _fetch_rgb_image_from_data(data, normalize_img)
+    img_shape = img.shape[:2]
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()
-    for candidate, foreground in zip(candidates, gocell.aux.render_candidate_foregrounds(g.model.shape, candidates)):
+    for candidate, foreground in zip(candidates, gocell.aux.render_candidate_foregrounds(img.shape[:2], candidates)):
         if candidate in merged_candidates: continue
         merged_candidates |= {candidate}
         model_shape = foreground
         if labels is not None:
             label = np.bincount(labels[model_shape]).argmax()
-            for candidate1, foreground1 in zip(candidates, gocell.aux.render_candidate_foregrounds(g.model.shape, candidates)):
+            for candidate1, foreground1 in zip(candidates, gocell.aux.render_candidate_foregrounds(img.shape[:2], candidates)):
                 if candidate1 in merged_candidates: continue
                 model1_shape = foreground1
                 label1 = np.bincount(labels[model1_shape]).argmax()

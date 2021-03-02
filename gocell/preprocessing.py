@@ -21,7 +21,7 @@ class PreprocessingStage1(gocell.pipeline.Stage):
 
         sigma1 = gocell.config.get_value(cfg, 'sigma1', math.sqrt(2))
         sigma2 = gocell.config.get_value(cfg, 'sigma2', 40)
-        threshold_clip = gocell.config.get_value(cfg, 'threshold_clip', 3)
+        threshold_clip  = gocell.config.get_value(cfg, 'threshold_clip', 3)
 
         threshold_original = ndi.gaussian_filter(g_raw, sigma2)
         if np.isinf(threshold_clip):

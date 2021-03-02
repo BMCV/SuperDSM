@@ -89,23 +89,28 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, config, first_stage, last_stage, out=None):
+def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None):
     if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
     if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
     if log_filepath is not None: aux.mkdir(pathlib.Path(log_filepath).parents[0])
     if cfg_filepath is not None: aux.mkdir(pathlib.Path(cfg_filepath).parents[0])
 
-    g_raw = io.imread(im_filepath)
+    histological  = config.get_value(cfg, 'histological', False)
+    imread_kwargs = {}
+    if histological:
+        imread_kwargs['as_gray'] = False
+
+    g_raw = io.imread(im_filepath, **imread_kwargs)
     out   = aux.get_output(out)
 
     timings = {}
     if first_stage != '':
         out.intermediate('Creating configuration...')
         t0 = time.time()
-        config, scale = automation.create_config(config, g_raw)
+        cfg, scale = automation.create_config(cfg, g_raw)
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
-            json.dump(config, fout)
+            json.dump(cfg, fout)
         if scale is not None:
             out.write(f'Estimated scale: {scale:.2f}')
 
@@ -116,7 +121,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     atomic_stage = pipeline.stages[pipeline.find('atoms')]
     atomic_stage.add_callback('end', write_adjacencies_image)
-    result_data, _, _timings = pipeline.process_image(g_raw, data=data, cfg=config, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
+    result_data, _, _timings = pipeline.process_image(g_raw, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
     atomic_stage.remove_callback('end', write_adjacencies_image)
     timings.update(_timings)
 
@@ -286,7 +291,7 @@ class Task:
                               cfg_filepath = str(self.cfg_pathpattern) % file_id if self.cfg_pathpattern is not None else None,
                                 seg_border = self.seg_border,
                                 last_stage = self.last_stage,
-                                    config = config.derive(self.config, {}))
+                                       cfg = config.derive(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)

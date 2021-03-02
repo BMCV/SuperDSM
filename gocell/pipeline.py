@@ -92,9 +92,16 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
-        return {
-            'g_raw': gocell.surface.Surface.create_from_image(g_raw).model  ## does some normalization
-        }
+        if gocell.config.get_value(cfg, 'histological', False):
+            g_rgb = g_raw
+            g_raw = g_raw.mean(axis=2)
+            g_raw = g_raw.max() - g_raw
+        else:
+            g_rgb = None
+        data = dict(g_raw = gocell.surface.Surface.create_from_image(g_raw).model) ## does some normalization
+        if g_rgb is not None:
+            data['g_rgb'] = g_rgb
+        return data
 
     def find(self, stage_name, not_found_dummy=np.inf):
         try:
