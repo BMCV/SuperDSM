@@ -287,7 +287,7 @@ def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_
             warnings.simplefilter('ignore', FutureWarning)
             result = segmentation.watershed(dist, result, mask=np.logical_not(background))
 
-    # In rare cases it can happen that two or more objects overlap exactly, in which csae the above code
+    # In rare cases it can happen that two or more objects overlap exactly, in which case the above code
     # will eliminate both objects. We will fix this by checking for such occasions explicitly:
     for obj in objects:
         obj_mask = ((result > 0) * 1 - (obj > 0) * 1 < 0)

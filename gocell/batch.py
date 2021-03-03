@@ -47,7 +47,7 @@ def load_gt(loader, filepath, **loader_kwargs):
 FP_INVARIANT_MEASURES = frozenset(['SEG', 'd/Split', 'd/Merge', 'd/FN'])
 
 
-def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, fast=False, out=None):
+def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, ignore_dist_fn=False, out=None):
     out = aux.get_output(out)
     import segmetrics
 
@@ -59,16 +59,15 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
     study = segmetrics.study.Study()
     study.add_measure(segmetrics. regional.Dice()         , 'Dice')
     study.add_measure(segmetrics. regional.JaccardIndex() , 'Jaccard')
-    if not fast:
-        study.add_measure(segmetrics. regional.RandIndex()    , 'Rand')
-        study.add_measure(segmetrics. regional.ISBIScore()    , 'SEG')
-        study.add_measure(segmetrics.detection.FalseSplit()   , 'd/Split')
-        study.add_measure(segmetrics.detection.FalseMerge()   , 'd/Merge')
-        study.add_measure(segmetrics.detection.FalsePositive(), 'd/FP')
-        study.add_measure(segmetrics.detection.FalseNegative(), 'd/FN')
-        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           ), 'NSD')
-        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e')), 'HSD (a2e)')
-        study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a')), 'HSD (e2a)')
+    study.add_measure(segmetrics. regional.RandIndex()    , 'Rand')
+    study.add_measure(segmetrics. regional.ISBIScore()    , 'SEG')
+    study.add_measure(segmetrics.detection.FalseSplit()   , 'd/Split')
+    study.add_measure(segmetrics.detection.FalseMerge()   , 'd/Merge')
+    study.add_measure(segmetrics.detection.FalsePositive(), 'd/FP')
+    study.add_measure(segmetrics.detection.FalseNegative(), 'd/FN')
+    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           , skip_fn=ignore_dist_fn), 'NSD')
+    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e'), skip_fn=ignore_dist_fn), 'HSD (a2e)')
+    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a'), skip_fn=ignore_dist_fn), 'HSD (e2a)')
 
     chunk_ids = sorted(data.keys())
     for chunk_idx, chunk_id in enumerate(chunk_ids):
@@ -264,7 +263,7 @@ class Task:
             return {}
 
     def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, out=None):
-        assert evaluation in ('none', 'fast', 'full')
+        assert evaluation in ('none', 'legacy', 'full')
         out = aux.get_output(out)
         if not self.runnable: return
         candidates._DEBUG = debug
@@ -319,7 +318,7 @@ class Task:
                 if not dry:
                     shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
                     del data
-                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), fast=(evaluation == 'fast'), out=out2)
+                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), ignore_dist_fn=(evaluation == 'legacy'), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
                 out2.write(aux.Text.style('Evaluation study written to: ', aux.Text.BOLD) + self._fmt_path(self.study_path))
@@ -492,7 +491,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbosity', help='postive (negative) is more (less) verbose', type=int, default=0)
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
-    parser.add_argument('--fast-evaluation', help='only use fast measures for evaluation', action='store_true')
+    parser.add_argument('--legacy-evaluation', help='use segmetrics boundary distance measures behaving like prior to version 0.11 for evaluation', action='store_true')
     parser.add_argument('--last-stage', help='override the "last_stage" setting', type=str, default=None)
     parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
@@ -501,8 +500,8 @@ if __name__ == '__main__':
     parser.add_argument('--analyze-fn', help='summarize reasons of false negative detections', action='store_true')
     args = parser.parse_args()
 
-    if args.fast_evaluation and not args.oneshot:
-        parser.error('Using "--fast-evaluation" only allowed if "--oneshot" is used')
+    if args.legacy_evaluation and not args.oneshot:
+        parser.error('Using "--legacy-evaluation" only allowed if "--oneshot" is used')
 
     if args.last_stage is not None and not args.oneshot:
         parser.error('Using "--last-stage" only allowed if "--oneshot" is used')
@@ -524,7 +523,7 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'fast' if args.fast_evaluation else 'full', args.print_study, args.debug, out)
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'legacy' if args.legacy_evaluation else 'full', args.print_study, args.debug, out)
             if args.analyze_fn:
                 task.analyze_fn(dry, out=out)
             os._exit(0)
