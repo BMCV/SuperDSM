@@ -97,7 +97,6 @@ def _fetch_rgb_image_from_data(data, normalize_img=True):
     else:
         img = data['g_raw']
         if normalize_img: img = normalize_image(img)
-        print(img.min(), img.max())
         img = np.dstack([img] * 3)
     return img.copy()
 
