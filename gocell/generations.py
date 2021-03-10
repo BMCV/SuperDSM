@@ -9,24 +9,6 @@ import scipy.ndimage as ndi
 import numpy as np
 
 
-MODELFIT_KWARGS_DEFAULTS = {
-    'cachesize': 1,
-    'sparsity_tol': 0,
-    'init': 'gocell',
-    'smooth_amount': 10,
-    'epsilon': 0.1,
-    'rho': 0.8,
-    'scale': 1000,
-    'smooth_subsample': 20,
-    'gaussian_shape_multiplier': 2,
-    'smooth_mat_dtype': 'float32',
-    'min_background_margin': 20,
-    'max_background_margin': 100,
-    'ng': False,
-    'cp_timeout': 300
-}
-
-
 def _get_generation_log_dir(log_root_dir, generation_number):
     if log_root_dir is None: return None
     result = gocell.aux.join_path(log_root_dir, f'gen{generation_number}')
@@ -40,7 +22,7 @@ class GenerationStage(gocell.pipeline.Stage):
 
     def __init__(self):
         super(GenerationStage, self).__init__('generations',
-                                              inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies'],
+                                              inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies', 'mfcfg'],
                                               outputs = ['y_surface', 'cover', 'candidates', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
@@ -55,8 +37,9 @@ class GenerationStage(gocell.pipeline.Stage):
 
         assert 0 < lower_alpha_mul < 1
 
-        mode = 'conservative' if conservative else 'fast'
-        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)[2:]
+        mode  = 'conservative' if conservative else 'fast'
+        mfcfg = gocell.config.copy(input_data['mfcfg'])
+        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)[2:]
 
         return {
             'y_surface':  y_surface,
@@ -66,13 +49,9 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = gocell.aux.get_output(out)
-
-    modelfit_kwargs = {
-        key: gocell.config.get_value(cfg, key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
-    }
 
     atoms = []
     for atom_label in adjacencies.atom_labels:
@@ -80,14 +59,14 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
         c.footprint = {atom_label}
         atoms.append(c)
     out.write(f'\nGeneration 1:')
-    gocell.candidates.process_candidates(atoms, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 1), out=out)
+    gocell.candidates.process_candidates(atoms, y_surface, g_atoms, mfcfg, _get_generation_log_dir(log_root_dir, 1), out=out)
 
     universes = []
     for cluster_label in adjacencies.cluster_labels:
         universe = gocell.candidates.Candidate()
         universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
         universes.append(universe)
-    gocell.candidates.process_candidates(universes, y_surface, g_atoms, modelfit_kwargs, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
+    gocell.candidates.process_candidates(universes, y_surface, g_atoms, mfcfg, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
     trivial_cluster_labels = set()
     for cluster_label, universe in zip(adjacencies.cluster_labels, universes):
         atoms_in_cluster = [atoms[atom_label - 1] for atom_label in adjacencies.get_atoms_in_cluster(cluster_label)]
@@ -118,7 +97,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, cfg
             progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
             
-            new_generation, new_candidates = _process_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
+            new_generation, new_candidates = _process_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, mfcfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
             candidates += new_candidates
@@ -185,7 +164,7 @@ def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=1
     return finished_amount, remaining_amount
 
 
-def _process_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, modelfit_kwargs, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
+def _process_generation(cover, candidates, previous_generation, y, g_atoms, adjacencies, mfcfg, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
     new_candidates = []
     new_candidate_thresholds = []
     discarded = 0
@@ -216,7 +195,7 @@ def _process_generation(cover, candidates, previous_generation, y, g_atoms, adja
             new_candidate_thresholds.append(max_new_candidate_energy)
             new_candidates.append(new_candidate)
 
-    gocell.candidates.process_candidates(new_candidates, y, g_atoms, modelfit_kwargs, log_root_dir, out=out)
+    gocell.candidates.process_candidates(new_candidates, y, g_atoms, mfcfg, log_root_dir, out=out)
 
     next_generation = []
     for new_candidate_idx, new_candidate in enumerate(new_candidates):

@@ -1,80 +1,8 @@
 import gocell.aux
-import gocell.config
-import gocell.pipeline
 
 import numpy as np
 import skimage.morphology as morph
 import skimage.segmentation
-import scipy.ndimage as ndi
-import scipy.special
-import warnings
-
-
-class AtomicStage(gocell.pipeline.Stage):
-
-    ENABLED_BY_DEFAULT = True
-
-    def __init__(self):
-        super(AtomicStage, self).__init__('atoms',
-                                          inputs  = ['y', 'foreground_labels', 'seeds'],
-                                          outputs = ['g_clusters', 'g_atoms', 'adjacencies'])
-
-    def process(self, input_data, cfg, out, log_root_dir):
-        shape = input_data['y'].shape
-        bg_mask = (input_data['foreground_labels'] == 0)
-        split_clusters = gocell.config.get_value(cfg, 'split_clusters', 0)
-
-        # Apply watershed transform using image intensities
-        cc_distances = ndi.distance_transform_edt(bg_mask)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', FutureWarning)
-            g_clusters = skimage.segmentation.watershed(cc_distances)
-        out.write('Clusters: %d' % g_clusters.max())
-
-        # Rasterize atom seeds
-        g_atom_seeds = np.zeros(shape, 'uint16')
-        for seed_idx, seed in enumerate(input_data['seeds']):
-            g_atom_seeds[tuple(seed)] = seed_idx + 1
-        assert g_atom_seeds.max() == len(input_data['seeds'])
-
-        g_atoms = np.zeros_like(g_clusters)
-        for cluster_l in frozenset(g_clusters.reshape(-1)):
-            cluster_mask = (g_clusters == cluster_l)
-
-            # Apply watershed transform using image intensities
-            distances = input_data['y'].max() - input_data['y'].clip(0, np.inf)
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', FutureWarning)
-                g_cluster_atoms = skimage.segmentation.watershed(distances, g_atom_seeds * cluster_mask, mask=cluster_mask)
-                for l in frozenset(g_cluster_atoms.reshape(-1)) - {0}:
-                    cc = (g_cluster_atoms == l)
-                    g_atoms[cc] = g_atom_seeds[cc].max()
-            out.intermediate(f'Extracting atoms from cluster {cluster_l} / {g_clusters.max()}')
-        out.write(f'Extracted atoms: {g_atoms.max()}')
-        assert g_atoms.min() > 0
-
-        # Compute adjacencies graph
-        adjacencies = AtomAdjacencyGraph(g_atoms, g_clusters, ~bg_mask, input_data['seeds'], out)
-
-        # Optionally, split clusters
-        if split_clusters > 0:
-            fg_mask   = morph.binary_erosion(input_data['foreground_labels'] > 0, morph.disk(split_clusters))
-            fg_labels = ndi.label(fg_mask)[0]
-            removed_edges = 0
-            for atom1 in list(adjacencies.atom_labels):
-                seed1 = tuple(input_data['seeds'][atom1 - 1])
-                for atom2 in list(adjacencies[atom1]):
-                    seed2 = tuple(input_data['seeds'][atom2 - 1])
-                    if fg_labels[seed1] != fg_labels[seed2]:
-                       adjacencies.remove_adjacency(atom1, atom2)
-                       removed_edges += 1
-            out.write(f'Removed {removed_edges} edge(s)')
-
-        return {
-            'g_clusters':  g_clusters,
-            'g_atoms':     g_atoms,
-            'adjacencies': adjacencies
-        }
 
 
 class AtomAdjacencyGraph:

@@ -74,7 +74,9 @@ def render_ymap(data, clim=None, cmap='bwr'):
     y  = y.clip(*clim)
     y -= y.min()
     y /= y.max()
-    return cmap(y)[1:]
+    ymap = cmap(y)[1:]
+    if ymap.ndim == 3 and ymap.shape[2] == 4: ymap = ymap[:,:,:3]
+    return ymap
 
 
 def normalize_image(img):

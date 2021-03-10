@@ -28,22 +28,22 @@ class Postprocessing(gocell.pipeline.Stage):
         min_obj_radius            = gocell.config.get_value(cfg,            'min_obj_radius',       0)
         max_obj_radius            = gocell.config.get_value(cfg,            'max_obj_radius',  np.inf)
         max_eccentricity          = gocell.config.get_value(cfg,          'max_eccentricity',       1)
-        max_boundary_eccentricity = gocell.config.get_value(cfg, 'max_boundary_eccentricity',    None)
+        max_boundary_eccentricity = gocell.config.get_value(cfg, 'max_boundary_eccentricity',  np.inf)
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
         get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
-        contrast_response_version = gocell.config.get_value(cfg, 'contrast_response_version',  1)
+        contrast_response_version = gocell.config.get_value(cfg, 'contrast_response_version',  2)
         exterior_scale            = gocell.config.get_value(cfg,            'exterior_scale',  5)
         exterior_offset           = gocell.config.get_value(cfg,           'exterior_offset',  5)
         min_contrast_response     = gocell.config.get_value(cfg,     'min_contrast_response', -np.inf)
         contrast_response_epsilon = gocell.config.get_value(cfg, 'contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
 
         # mask-based post-processing
-        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',     2)
-        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance',     0)
-        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness',     3)
-        fill_holes        = gocell.config.get_value(cfg,        'fill_holes', False)
+        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',    2)
+        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance',    0)
+        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness',    3)
+        fill_holes        = gocell.config.get_value(cfg,        'fill_holes', True)
 
         # autofluorescence glare removal
         glare_detection_smoothness = gocell.config.get_value(cfg, 'glare_detection_smoothness',      3)

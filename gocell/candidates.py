@@ -45,16 +45,10 @@ class Candidate(BaseCandidate):
     def get_mask(self, g_atoms):
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
-    def get_modelfit_region(self, y, g_atoms, min_background_margin=None, max_background_margin=None, ng=None):
+    def get_modelfit_region(self, y, g_atoms, min_background_margin=None):
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
-        ng = self._update_default_kwarg('ng', ng)
         region = y.get_region(self.get_mask(g_atoms))
-        if ng:
-            region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
-        else:
-            min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
-            max_background_margin = self._update_default_kwarg('max_background_margin', max_background_margin)
-            region.mask = _get_economic_mask(y, region.mask, min_background_margin, max_background_margin)
+        region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
         return region
 
     def set(self, state):
@@ -70,36 +64,6 @@ class Candidate(BaseCandidate):
 
     def copy(self):
         return Candidate().set(self)
-
-
-def _get_economic_mask(y, mask, min_background_margin, max_background_margin):
-    img_boundary_mask = np.zeros(mask.shape, bool)
-    img_boundary_mask[ 0,  :] = True
-    img_boundary_mask[-1,  :] = True
-    img_boundary_mask[ :,  0] = True
-    img_boundary_mask[ :, -1] = True
-    mask_foreground  = np.logical_and(y.model > 0, mask)
-    image_foreground = np.logical_and(y.model > 0, y.mask)
-    tmp01 = (ndi.distance_transform_edt(~image_foreground) <= min_background_margin)
-    image_background_within_margin = np.logical_and(tmp01, y.model < 0)
-    foreground_clusters = ndi.label(image_foreground)[0]
-    current_cluster_foreground = np.zeros(mask.shape, bool)
-    for l in frozenset(foreground_clusters.reshape(-1)) - {0}:
-        cc = (foreground_clusters == l)
-        if mask[cc].any():
-            current_cluster_foreground[cc] = True
-    image_background_within_margin = np.logical_and(image_background_within_margin, ndi.distance_transform_edt(~current_cluster_foreground) <= max_background_margin)
-    current_cluster_foreground = morph.binary_dilation(current_cluster_foreground, morph.disk(1))
-    tmp02   = ndi.label(image_background_within_margin)[0]
-    bg_mask = np.zeros_like(mask)
-    for l in frozenset(tmp02.reshape(-1)) - {0}:
-        cc = (tmp02 == l)
-        if current_cluster_foreground[cc].any():
-            bg_mask[cc] = True
-    economical_mask = np.logical_or(bg_mask, mask_foreground)
-    if img_boundary_mask[current_cluster_foreground].any():
-        economical_mask = np.logical_or(np.logical_and(img_boundary_mask, y.model < 0), economical_mask)
-    return economical_mask
 
 
 def extract_foreground_fragment(fg_mask):
@@ -118,9 +82,7 @@ def extract_foreground_fragment(fg_mask):
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
     modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
-    max_background_margin =      modelfit_kwargs.pop('max_background_margin')
-    process_candidate_ng  =      modelfit_kwargs.pop('ng', False)
-    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin, max_background_margin, process_candidate_ng)
+    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
@@ -144,8 +106,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
         padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
         foreground = padded_foreground[1:-1, 1:-1]
         if foreground.any():
-            if process_candidate_ng:
-                foreground = np.logical_and(region.mask, foreground)
+            foreground = np.logical_and(region.mask, foreground)
             candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
         else:
             candidate.fg_offset   = np.zeros(2, int)

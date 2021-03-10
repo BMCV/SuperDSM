@@ -50,7 +50,7 @@ def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     return accepted_candidates
 
 
-DEFAULT_TRY_LOWER_ALPHA = 1
+DEFAULT_TRY_LOWER_ALPHA = 4
 DEFAULT_LOWER_ALPHA_MUL = 0.8
 
 

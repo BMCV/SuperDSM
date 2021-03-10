@@ -75,6 +75,7 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
+        assert 'preprocess1' not in cfg.keys(), 'config version is deprecated'
         cfg = gocell.aux.copy_dict(cfg)
         if log_root_dir is not None: gocell.aux.mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
@@ -138,16 +139,15 @@ def create_pipeline(stages):
 
 def create_default_pipeline():
     import gocell.preprocessing
-    import gocell.seeds
-    import gocell.atoms
+    import gocell.modelfit_config
+    import gocell.topdownsegm
     import gocell.generations
     import gocell.postprocessing
 
     stages = [
-        gocell.preprocessing.PreprocessingStage1(),
-        gocell.preprocessing.PreprocessingStage2(),
-        gocell.seeds.SeedStage(),
-        gocell.atoms.AtomicStage(),
+        gocell.preprocessing.PreprocessingStage(),
+        gocell.modelfit_config.ModelfitConfigStage(),
+        gocell.topdownsegm.TopDownSegmentation(),
         gocell.generations.GenerationStage(),
         gocell.postprocessing.Postprocessing(),
     ]
