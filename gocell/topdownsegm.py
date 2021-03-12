@@ -9,7 +9,7 @@ import scipy.ndimage as ndi
 import numpy as np
 import skimage.segmentation as segm
 import skimage.morphology as morph
-import queue, contextlib, math
+import queue, contextlib, math, hashlib
 
 
 def get_next_seed(region, where, score_func, footprint_radius=1):
@@ -47,18 +47,30 @@ def normalize_labels_map(labels, first_label=0, skip_labels=[]):
     return result, label_translation
 
 
-def compute_energy_rate(candidate, region, atoms_map, mfcfg):
-    _mf_kwargs = gocell.config.copy(mfcfg)
-    bg_margin  = _mf_kwargs.pop('min_background_margin')
-    
-    mf_region = candidate.get_modelfit_region(region, atoms_map, min_background_margin=bg_margin)
-    if (mf_region.model[mf_region.mask] > 0).all() or (mf_region.model[mf_region.mask] < 0).all():
-        energy = 0
-    else:
-        with contextlib.redirect_stdout(None):
-            J, model, status = gocell.candidates._modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
-        energy = J(model)
-    return energy / mf_region.mask.sum()
+def _hash_mask(mask):
+    mask = mask.astype(np.uint8)
+    return hashlib.sha1(mask).digest()
+
+
+def get_cached_energy_rate_computer():
+    cache = dict()
+    def compute_energy_rate(candidate, region, atoms_map, mfcfg):
+        _mf_kwargs = gocell.config.copy(mfcfg)
+        bg_margin  = _mf_kwargs.pop('min_background_margin')
+        mf_region  = candidate.get_modelfit_region(region, atoms_map, min_background_margin=bg_margin)
+        mf_region_hash = _hash_mask(mf_region.mask)
+        cache_hit  = cache.get(mf_region_hash, None)
+        if cache_hit is None:
+            if (mf_region.model[mf_region.mask] > 0).all() or (mf_region.model[mf_region.mask] < 0).all():
+                energy = 0
+            else:
+                with contextlib.redirect_stdout(None):
+                    J, model, status = gocell.candidates._modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                energy = J(model)
+            cache_hit = energy / mf_region.mask.sum()
+            cache[mf_region_hash] = cache_hit
+        return cache_hit
+    return compute_energy_rate
 
 
 class TopDownSegmentation(gocell.pipeline.Stage):
@@ -144,6 +156,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max())
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
+    compute_energy_rate = get_cached_energy_rate_computer()
 
     leaf_candidates = []
     split_queue = queue.Queue()
@@ -153,7 +166,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
     else:
         leaf_candidates.append(root_candidate)
 
-    seed_distances  = ndi.distance_transform_edt(~root_candidate.seed)
+    seed_distances = ndi.distance_transform_edt(~root_candidate.seed)
     while not split_queue.empty():
         c0 = split_queue.get()
         c0_mask = c0.get_mask(atoms_map)
