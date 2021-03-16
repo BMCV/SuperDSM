@@ -274,7 +274,9 @@ class Task:
         if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
             out.write(f'\nSkipping task: {self._fmt_path(self.path)} ({run_count})')
             return
-        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} ({run_count})', aux.Text.YELLOW))
+        task_info = f'{run_count}'
+        if self.last_stage is not None: task_info = f'{task_info}, last stage: {self.last_stage}'
+        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} ({task_info})', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         try:
@@ -304,7 +306,14 @@ class Task:
             out2.write('')
             if not dry and len(discarded_workloads) > 0:
                 out2.write(aux.Text.style('Discarded workload: ', aux.Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
-            if one_shot or ((first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess') or (self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('modelfit'))) and not self.result_path.exists()):
+            
+            skip_writing_results_conditions = [
+                one_shot,
+                self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('modelfit') and not self.result_path.exists(),
+                first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess')
+            ]
+            skip_evaluation = (self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'))
+            if any(skip_writing_results_conditions):
                 out2.write('Skipping writing results')
             else:
                 if not dry:
@@ -314,8 +323,9 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
+                    if not one_shot and skip_evaluation: self.digest_path.write_text(config_digest)
                 out2.write(aux.Text.style('Results written to: ', aux.Text.BOLD) + self._fmt_path(self.result_path))
-            if evaluation == 'none' or (self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess')):
+            if evaluation == 'none' or skip_evaluation:
                 out2.write('Skipping evaluation')
             else:
                 if not dry:
@@ -411,7 +421,7 @@ class Task:
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('modelfit') + 1:
             return None, {}
         else:
-            out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "evaluate"})')
+            out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "load"})')
             if not dry:
                 with gzip.open(pickup_task.result_path, 'rb') as fin:
                     data = dill.load(fin)
@@ -505,7 +515,11 @@ if __name__ == '__main__':
     if args.last_stage is not None and not args.oneshot:
         parser.error('Using "--last-stage" only allowed if "--oneshot" is used')
 
-    loader = BatchLoader(override_cfg=dict(last_stage=args.last_stage))
+    override_cfg = dict()
+    if args.last_stage is not None:
+        override_cfg['last_stage'] = args.last_stage
+        
+    loader = BatchLoader(override_cfg=override_cfg)
     loader.load(args.path)
 
     args.task     = [get_path(args.path,     task_path) for     task_path in args.task    ]

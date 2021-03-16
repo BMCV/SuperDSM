@@ -12,10 +12,13 @@ import skimage.morphology as morph
 import queue, contextlib, math, hashlib
 
 
-def get_next_seed(region, where, score_func, footprint_radius=1):
+def get_next_seed(region, where, score_func, connectivity=4):
+    if   connectivity == 4: footprint = morph.disk(1)
+    elif connectivity == 8: footprint = np.ones((3,3))
+    else: raise ValeError(f'unknown connectivity: {connectivity}')
     mask  = np.logical_and(region.mask, where)
     image = region.model
-    image_max = ndi.maximum_filter(image, footprint=morph.disk(footprint_radius))
+    image_max = ndi.maximum_filter(image, footprint=footprint)
     max_mask  = np.logical_and(image_max == image, mask)
     if max_mask.any():
         maxima = ndi.label(max_mask)[0]
@@ -83,6 +86,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
                                                   outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
+        seed_connectivity = gocell.config.get_value(cfg, 'seed_connectivity', 4)
         min_region_radius = gocell.config.get_value(cfg, 'min_region_radius', 10)
         max_atom_energy_rate = gocell.config.get_value(cfg, 'max_atom_energy_rate', 0.05)
         min_energy_rate_improvement = gocell.config.get_value(cfg, 'min_energy_rate_improvement', 0.1)
@@ -115,7 +119,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         mfcfg_id = ray.put(mfcfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
             cluster_label_offset = atoms_map.max()
@@ -148,13 +152,13 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg):
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity):
     min_region_size = 2 * math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label)
     masked_cluster = cluster.get_region(y_mask)
     root_candidate = gocell.candidates.Candidate()
     root_candidate.footprint = frozenset([1])
-    root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max())
+    root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
     compute_energy_rate = get_cached_energy_rate_computer()
 
@@ -174,7 +178,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         c1 = gocell.candidates.Candidate()
         c2 = gocell.candidates.Candidate()
         c1.seed = c0.seed
-        c2.seed = get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max())
+        c2.seed = get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
         assert not np.logical_and(c1.seed, c2.seed).any()
         if c2.seed is None:
             leaf_candidates.append(c0)
