@@ -123,8 +123,8 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
             cluster_label_offset = atoms_map.max()
-            cluster = y.get_region(clusters == cluster_label)
-            atoms_map[cluster.mask] = cluster_label_offset + cluster_atoms_map[cluster.mask]
+            cluster = y.get_region(clusters == cluster_label, shrink=True)
+            atoms_map[cluster.full_mask] = cluster_label_offset + cluster_atoms_map[cluster.mask]
             for atom_candidate in cluster_atoms:
                 atom_candidate_by_label[cluster_label_offset + list(atom_candidate.footprint)[0]] = atom_candidate
             out.intermediate(f'Analyzing clusters... {ret_idx + 1} / {len(futures)}')
@@ -154,8 +154,8 @@ def process_cluster(*args, **kwargs):
 
 def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity):
     min_region_size = 2 * math.pi * (min_region_radius ** 2)
-    cluster = y.get_region(clusters == cluster_label)
-    masked_cluster = cluster.get_region(y_mask)
+    cluster = y.get_region(clusters == cluster_label, shrink=True)
+    masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = gocell.candidates.Candidate()
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
