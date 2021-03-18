@@ -86,18 +86,17 @@ def create_config(base_cfg, im):
         radius   = scale * math.sqrt(2)
         diameter = 2 * radius
 
-        _create_config_entry(config, 'preprocess1/sigma2'           , scale      , 1   )
-        _create_config_entry(config, 'find_seeds/min_seed_distance' , radius     , 0.33)
-        _create_config_entry(config, 'generations/alpha'            , radius ** 2, 0.2 )
-        _create_config_entry(config, 'generations/max_seed_distance', diameter   , 1   )
-        _create_config_entry(config, 'postprocess/min_obj_radius'   , radius     , 0.2 )
-        _create_config_entry(config, 'postprocess/max_obj_radius'   , radius     , 1.0 )
-        _create_config_entry(config, 'postprocess/min_glare_radius' , radius     , 0.5 )
+        _create_config_entry(config, 'preprocess/sigma2'            , scale      ,    1.0)
+        _create_config_entry(config, 'generations/alpha'            , radius ** 2,    0.2)
+        _create_config_entry(config, 'generations/max_seed_distance', diameter   , np.inf)
+        _create_config_entry(config, 'postprocess/min_obj_radius'   , radius     ,    0.0)
+        _create_config_entry(config, 'postprocess/max_obj_radius'   , radius     , np.inf)
+        _create_config_entry(config, 'postprocess/min_glare_radius' , radius     , np.inf)
     
     if version >= 2:
-        _create_config_entry(config, 'generations/rho'             , scale ** 2, 0.015 ** 2)
-        _create_config_entry(config, 'generations/smooth_amount'   , scale     , 0.2, type=int, _min=4)
-        _create_config_entry(config, 'generations/smooth_subsample', scale     , 0.4, type=int, _min=8)
+        _create_config_entry(config, 'modelfit/rho'             , scale ** 2, 0.015 ** 2)
+        _create_config_entry(config, 'modelfit/smooth_amount'   , scale     , 0.2, type=int, _min=4)
+        _create_config_entry(config, 'modelfit/smooth_subsample', scale     , 0.4, type=int, _min=8)
 
     return config, scale
 
