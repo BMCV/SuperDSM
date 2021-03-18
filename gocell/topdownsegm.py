@@ -127,6 +127,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
             atoms_map[cluster.full_mask] = cluster_label_offset + cluster_atoms_map[cluster.mask]
             for atom_candidate in cluster_atoms:
                 atom_candidate_by_label[cluster_label_offset + list(atom_candidate.footprint)[0]] = atom_candidate
+                atom_candidate.seed = np.round(ndi.center_of_mass(atom_candidate.seed)).astype(int) + cluster.offset
             out.intermediate(f'Analyzing clusters... {ret_idx + 1} / {len(futures)}')
             
         atoms_map, label_translation = normalize_labels_map(atoms_map, first_label=1, skip_labels=[0])
@@ -135,7 +136,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         out.write(f'Extracted {atoms_map.max()} atoms')
         
         # Compute adjacencies graph
-        atom_nodes  = [np.round(ndi.center_of_mass(atom_candidate_by_label[atom_label].seed)).astype(int) for atom_label in sorted(label_translation.values())]
+        atom_nodes  = [atom_candidate_by_label[atom_label].seed for atom_label in sorted(label_translation.values())]
         adjacencies = gocell.atoms.AtomAdjacencyGraph(atoms_map, clusters, fg_mask, atom_nodes, out)
         
         return {
