@@ -9,6 +9,9 @@ import scipy.ndimage as ndi
 import numpy as np
 
 
+DEFAULT_MAX_WORK_AMOUNT = 10 ** 6
+
+
 def _get_generation_log_dir(log_root_dir, generation_number):
     if log_root_dir is None: return None
     result = gocell.aux.join_path(log_root_dir, f'gen{generation_number}')
@@ -34,12 +37,13 @@ class GenerationStage(gocell.pipeline.Stage):
         try_lower_alpha   = gocell.config.get_value(cfg,   'try_lower_alpha', gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA)
         lower_alpha_mul   = gocell.config.get_value(cfg,   'lower_alpha_mul', gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL)
         max_seed_distance = gocell.config.get_value(cfg, 'max_seed_distance', np.inf)
+        max_work_amount   = gocell.config.get_value(cfg,   'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
 
         assert 0 < lower_alpha_mul < 1
 
         mode  = 'conservative' if conservative else 'fast'
         mfcfg = gocell.config.copy(input_data['mfcfg'])
-        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, out)[2:]
+        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_surface':  y_surface,
@@ -49,7 +53,7 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, max_seed_distance=np.inf, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = gocell.aux.get_output(out)
 
@@ -83,7 +87,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
 
     generations    = [atoms]
     candidates     =  atoms + universes
-    total_workload = len(candidates) + _estimate_progress(generations, adjacencies, max_seed_distance, skip_last=False)[1]
+    total_workload = len(candidates) + _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, skip_last=False)[1]
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -92,7 +96,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
             out.write('')
             out.intermediate(f'{generation_label}...')
 
-            finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
+            finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
             progress = finished_amount / (remaining_amount + finished_amount)
             progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
@@ -152,14 +156,14 @@ def _get_next_generation(previous_generation, adjacencies, max_seed_distance, **
     return [new_footprint for _, new_footprint, _ in _iterate_generation(previous_generation, adjacencies, max_seed_distance, **kwargs)]
 
 
-def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=10**6, ignored_cluster_labels=set(), skip_last=False):
+def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=DEFAULT_MAX_WORK_AMOUNT, ignored_cluster_labels=set(), skip_last=False):
     previous_generation = [c.footprint for c in generations[-1]]
     remaining_amount    =  0
     while len(previous_generation) > 0:
         next_generation     = _get_next_generation(previous_generation, adjacencies, max_seed_distance, ignored_cluster_labels=ignored_cluster_labels, skip_last=skip_last)
         remaining_amount   += len(next_generation)
         previous_generation = next_generation
-        if remaining_amount > max_amount: return None
+        if remaining_amount > max_amount: raise ValueError('estimated work amount is too large')
     finished_amount = len(sum(generations, []))
     return finished_amount, remaining_amount
 

@@ -109,7 +109,12 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     if first_stage != '':
         out.intermediate('Creating configuration...')
         t0 = time.time()
-        cfg, scale = automation.create_config(cfg, g_raw)
+        if histological:
+            g_gray = g_raw.mean(axis=2)
+            g_gray = g_gray.max() - g_gray
+        else:
+            g_gray = g_raw
+        cfg, scale = automation.create_config(cfg, g_gray)
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
             json.dump(cfg, fout)
@@ -118,7 +123,9 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
-            img = render.render_adjacencies(data, override_img=render.render_ymap(data), edge_color=(0,1,0), endpoint_color=(0,1,0))
+            ymap = render.render_ymap(data)
+            ymap = render.render_atoms(data, override_img=ymap, border_color=(0,0,0), border_radius=1)
+            img  = render.render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             io.imwrite(adj_filepath, img)
 
     atomic_stage = pipeline.stages[pipeline.find('top-down-segmentation')]

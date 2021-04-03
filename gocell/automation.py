@@ -82,7 +82,8 @@ def create_config(base_cfg, im):
         scale = None
 
     if version >= 1:
-        scale    = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
+        scale = gocell.config.get_value(config, 'AF_scale', None)
+        if scale is None: scale = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
         radius   = scale * math.sqrt(2)
         diameter = 2 * radius
 
