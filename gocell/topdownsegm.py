@@ -120,9 +120,11 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
         futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        max_energy_rate = -np.inf
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
             cluster_label_offset = atoms_map.max()
+            max_energy_rate = max((cluster_max_energy_rate, max_energy_rate))
             cluster = y.get_region(clusters == cluster_label, shrink=True)
             atoms_map[cluster.full_mask] = cluster_label_offset + cluster_atoms_map[cluster.mask]
             for atom_candidate in cluster_atoms:
@@ -133,7 +135,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         atoms_map, label_translation = normalize_labels_map(atoms_map, first_label=1, skip_labels=[0])
         for old_label, atom_candidate in dict(atom_candidate_by_label).items():
             atom_candidate_by_label[label_translation[old_label]] = atom_candidate
-        out.write(f'Extracted {atoms_map.max()} atoms')
+        out.write(f'Extracted {atoms_map.max()} atoms (max energy rate: {max_energy_rate:g})')
         
         # Compute adjacencies graph
         atom_nodes  = [atom_candidate_by_label[atom_label].seed for atom_label in sorted(label_translation.values())]
