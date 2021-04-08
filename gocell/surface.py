@@ -8,11 +8,11 @@ def get_pixel_map(shape, normalized=False):
     return np.indices(shape) / z
 
 
-def bbox(mask, exclude_end=True):
+def bbox(mask, include_end=True):
     mask_a0 = mask.any(axis=0)
     mask_a1 = mask.any(axis=1)
     ret = np.array([np.where(mask_a1)[0][[0, -1]], np.where(mask_a0)[0][[0, -1]]])
-    if exclude_end: ret += np.array([0, 1])
+    if include_end: ret += np.array([0, 1])
     return ret, np.s_[ret[0][0] : ret[0][1], ret[1][0] : ret[1][1]]
 
 

@@ -55,8 +55,10 @@ def _hash_mask(mask):
     return hashlib.sha1(mask).digest()
 
 
-def get_cached_energy_rate_computer():
+def get_cached_energy_rate_computer(y, cluster, version=1):
     cache = dict()
+    if version >= 2:
+        mf_buffer = gocell.surface.Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_energy_rate(candidate, region, atoms_map, mfcfg):
         _mf_kwargs = gocell.config.copy(mfcfg)
         bg_margin  = _mf_kwargs.pop('min_background_margin')
@@ -65,10 +67,19 @@ def get_cached_energy_rate_computer():
         cache_hit  = cache.get(mf_region_hash, None)
         if cache_hit is None:
             if (mf_region.model[mf_region.mask] > 0).all() or (mf_region.model[mf_region.mask] < 0).all():
-                energy = 0
+                energy = None if version >= 1 else 0.0
             else:
-                with contextlib.redirect_stdout(None):
-                    J, model, status = gocell.candidates._modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                if version == 1:
+                    mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
+                    with contextlib.redirect_stdout(None):
+                        J, model, status = gocell.candidates._modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                elif version >= 2:
+                    mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
+                    with contextlib.redirect_stdout(None):
+                        J, model, status = gocell.candidates._modelfit(mf_buffer, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                    mf_buffer.mask[cluster.full_mask].fill(False)
+                else:
+                    raise ValueError(f'unknown version: {version}')
                 energy = J(model)
             cache_hit = energy / mf_region.mask.sum()
             cache[mf_region_hash] = cache_hit
@@ -91,6 +102,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         max_atom_energy_rate = gocell.config.get_value(cfg, 'max_atom_energy_rate', 0.05)
         min_energy_rate_improvement = gocell.config.get_value(cfg, 'min_energy_rate_improvement', 0.1)
         max_cluster_marker_irregularity = gocell.config.get_value(cfg, 'max_cluster_marker_irregularity', 0.2)
+        version = gocell.config.get_value(cfg, 'version', 1)
 
         mfcfg = gocell.config.copy(input_data['mfcfg'])
         mfcfg['smooth_amount'] = np.inf
@@ -119,7 +131,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         mfcfg_id = ray.put(mfcfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity, version) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         max_energy_rate = -np.inf
         for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
@@ -155,7 +167,7 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity):
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity, version):
     min_region_size = 2 * math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
@@ -163,7 +175,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
-    compute_energy_rate = get_cached_energy_rate_computer()
+    compute_energy_rate = get_cached_energy_rate_computer(y, cluster, version)
 
     leaf_candidates = []
     split_queue = queue.Queue()
@@ -203,8 +215,28 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         assert c2_mask[cluster.mask].any() and not np.logical_and(~cluster.mask, c2_mask).any()
 
         for c in (c1, c2):
-            c.energy_rate = compute_energy_rate(c, masked_cluster, atoms_map, mfcfg)
+            try:
+                c.energy_rate = compute_energy_rate(c, masked_cluster, atoms_map, mfcfg)
+            except:
+                c.energy_rate = None
+                
+        if c1.energy_rate is None and c2.energy_rate is None:
+            split_queue.put(c0) ## try again with different seed
+            atoms_map = atoms_map_previous
+            continue
             
+        if c1.energy_rate is None and c2.energy_rate is not None:
+            c0.seed = c2.seed   ## change the seed for current region…
+            split_queue.put(c0) ## …and try again with different seed
+            atoms_map = atoms_map_previous
+            continue
+            
+        if c1.energy_rate is not None and c2.energy_rate is None:
+            split_queue.put(c0) ## try again with different seed
+            atoms_map = atoms_map_previous
+            continue
+            
+        assert c1.energy_rate is not None and c2.energy_rate is not None, str((c1.energy_rate, c2.energy_rate))
         energy_rate_improvement = 1 - max((c1.energy_rate, c2.energy_rate)) / c0.energy_rate
         if energy_rate_improvement < min_energy_rate_improvement:
             split_queue.put(c0) ## try again with different seed
