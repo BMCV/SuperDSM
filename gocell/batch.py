@@ -194,6 +194,17 @@ class Task:
         self.          gt_loader = self.data.get('gt_loader'       , None)
         self.   gt_loader_kwargs = self.data.get('gt_loader_kwargs', {}  )
 
+        if 'base_config_path' in self.data:
+            base_config_path = self.data['base_config_path']
+            base_config_path = pathlib.Path(base_config_path.replace('{DIRNAME}', path.name))
+            if not base_config_path.is_absolute():
+                base_config_path = path / base_config_path
+            with base_config_path.open('r') as base_config_fin:
+                base_config = json.load(base_config_fin)
+            parent_config = config.get_value(parent_task.data, 'config', {})
+            self.data['config'] = config.derive(config.derive(parent_config, base_config), config.get_value(data, 'config', {}))
+            del self.data['base_config_path']
+
         if self.runnable:
 
             assert self.file_ids            is not None
@@ -203,17 +214,6 @@ class Task:
             assert self.gt_is_unique        is not None
             assert self.gt_loader           is not None
             assert self.gt_loader_kwargs    is not None
-
-            if 'base_config_path' in self.data:
-                base_config_path = self.data['base_config_path']
-                base_config_path = pathlib.Path(base_config_path.replace('{DIRNAME}', path.name))
-                if not base_config_path.is_absolute():
-                    base_config_path = path / base_config_path
-                with base_config_path.open('r') as base_config_fin:
-                    base_config = json.load(base_config_fin)
-                parent_config = config.get_value(parent_task.data, 'config', {})
-                self.data['config'] = config.derive(config.derive(parent_config, base_config), config.get_value(data, 'config', {}))
-                del self.data['base_config_path']
 
             self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
             self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
