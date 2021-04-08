@@ -286,6 +286,7 @@ class Task:
         out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} ({task_info})', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
+        assert self.last_stage is None or self.last_stage == '' or not np.isinf(pipeline.find(self.last_stage)), f'unknown stage "{self.last_stage}"'
         try:
             first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
