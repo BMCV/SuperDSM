@@ -516,6 +516,7 @@ if __name__ == '__main__':
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     parser.add_argument('--last-stage', help='override the "last_stage" setting', type=str, default=None)
     parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
+    parser.add_argument('--skip-evaluation', help='skips evaluation', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
@@ -546,7 +547,8 @@ if __name__ == '__main__':
         run_task_count += 1
         newpid = os.fork()
         if newpid == 0:
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, 'full', args.print_study, args.debug, out)
+            evaluation = 'none' if args.skip_evaluation else 'full'
+            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, evaluation, args.print_study, args.debug, out)
             if args.analyze_fn:
                 task.analyze_fn(dry, out=out)
             os._exit(0)
