@@ -126,7 +126,7 @@ if __name__ == '__main__':
             out.intermediate(f'  Processing image... {outputfile}')
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             if args.mode == 'seg':
-                img = gocell.render.render_result_over_image(dataframe, border=border_width, normalize_img=args.enhance)
+                img = gocell.render.render_postprocessed_result(dataframe, seg_border=border_width, normalize_img=args.enhance)
             elif args.mode == 'fgc':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
                 img  = gocell.render.render_foreground_clusters(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
