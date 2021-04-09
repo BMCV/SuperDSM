@@ -53,7 +53,7 @@ class GenerationStage(gocell.pipeline.Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, max_seed_distance=np.inf, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=gocell.minsetcover.DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=gocell.minsetcover.DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = gocell.aux.get_output(out)
 
@@ -84,10 +84,15 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
     out.write(f'Clusters solved trivially: {len(trivial_cluster_labels)} / {len(adjacencies.cluster_labels)}')
+    
+    if max_work_amount is None:
+        __estimate_progress = lambda *args, **kwargs: (np.nan, np.nan)
+    else:
+        __estimate_progress = lambda *args, **kwargs: _estimate_progress(*args, max_amount=max_work_amount, **kwargs)
 
     generations    = [atoms]
     candidates     =  atoms + universes
-    total_workload = len(candidates) + _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, skip_last=False)[1]
+    total_workload = len(candidates) + __estimate_progress(generations, adjacencies, max_seed_distance, skip_last=False)[1]
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -96,9 +101,11 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
             out.write('')
             out.intermediate(f'{generation_label}...')
 
-            finished_amount, remaining_amount = _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
-            progress = finished_amount / (remaining_amount + finished_amount)
-            progress_text = '** WARNING ** COMPUTATIONAL LOAD TOO HIGH **' if progress is None else f'(finished {100 * progress:.0f}% or more)'
+            finished_amount, remaining_amount = __estimate_progress(generations, adjacencies, max_seed_distance, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
+            if np.isnan(finished_amount) or np.isnan(remaining_amount): progress_text = 'progress unknown'
+            else:
+                progress = finished_amount / (remaining_amount + finished_amount)
+                progress_text = f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {gocell.aux.Text.style(progress_text, gocell.aux.Text.BOLD)}')
             
             new_generation, new_candidates = _process_generation(cover, candidates, generations[-1], y_surface, g_atoms, adjacencies, mfcfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
@@ -110,7 +117,8 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
             costs.append(cover.costs)
             out.write(f'Solution costs: {costs[-1]:,g}')
 
-    discarded_workload = gocell.aux.get_discarded_workload(len(candidates), total_workload)
+    if np.isnan(total_workload): discarded_workload = np.nan
+    else: discarded_workload = gocell.aux.get_discarded_workload(len(candidates), total_workload)
     out.write('')
     out.write(f'Discarded workload: {100 * discarded_workload:.1f}%')
     return generations, costs, cover, candidates, total_workload
