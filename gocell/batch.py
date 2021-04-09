@@ -310,7 +310,9 @@ class Task:
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
-                if not dry and 'candidates' in data[file_id]: discarded_workloads.append(aux.get_discarded_workload(data[file_id]))
+                if not dry and 'candidates' in data[file_id]:
+                    discarded_workload = aux.get_discarded_workload(data[file_id])
+                    if not np.isnan(discarded_workload): discarded_workloads.append(discarded_workload)
             out2.write('')
             if not dry and len(discarded_workloads) > 0:
                 out2.write(aux.Text.style('Discarded workload: ', aux.Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')

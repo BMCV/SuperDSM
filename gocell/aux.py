@@ -313,6 +313,7 @@ def get_discarded_workload(*args):
         total_workload = args[1]
     else:
         raise ValueError('unknown arguments')
+    if np.isnan(total_workload): return np.nan
     assert computed_candidates_num <= total_workload, f'{computed_candidates_num} <= {total_workload}'
     return 1 - (computed_candidates_num / total_workload if total_workload > 0 else 1)
 
