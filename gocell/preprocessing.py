@@ -36,6 +36,9 @@ class PreprocessingStage(gocell.pipeline.Stage):
             _tmp1 = (sigma2 - _tmp1).clip(0, np.inf)
             _tmp1 = (_tmp1 / _tmp1.max()) ** 2
             threshold_combined = (1 - _tmp1) * threshold_clipped + _tmp1 * threshold_original
+            
+        if gocell.config.get_value(cfg, 'lower_clip_mean', False):
+            threshold_combined = np.max([threshold_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
         y = ndi.gaussian_filter(g_raw, sigma1) - threshold_combined
         
