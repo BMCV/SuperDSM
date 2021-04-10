@@ -341,6 +341,7 @@ class Task:
                 if not dry:
                     shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
                     del data
+                    out2.intermediate('Evaluating...')
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(config_digest)
