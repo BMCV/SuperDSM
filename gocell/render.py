@@ -150,17 +150,10 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
 
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
 
-    #if normalize_img:
-    #    g = gocell.surface.Surface.create_from_image(_fetch_image_from_data(data, normalize_img) if override_img is None else override_img)
-    #else:
-    #    g = gocell.surface.Surface(data['g_raw'].shape)
-    #    g.model = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
-
     if isinstance(candidates, str): candidates = data[candidates]
     if is_legal == True: is_legal = lambda m: True
 
-    #img = np.zeros((g.model.shape[0], g.model.shape[1], 3))
-    #for i in range(3): img[:, :, i] = g.model * g.mask
+    assert override_img is None, 'override_img is not supported anymore'
     img = _fetch_rgb_image_from_data(data, normalize_img)
     img_shape = img.shape[:2]
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
@@ -210,12 +203,14 @@ def render_result_over_image(data, candidates_key='postprocessed_candidates', me
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
-    im_seg  = np.dstack([_fetch_image_from_data(data, normalize_img=normalize_img) if override_img is None else override_img] * 3).copy()
+    assert override_img is None, 'override_img is not supported anymore'
+    im_seg  = _fetch_rgb_image_from_data(data, normalize_img)
     im_seg /= im_seg.max()
     seg_objects = rasterize_labels(data, merge_overlap_threshold=merge_overlap_threshold)
+    se = morphology.disk(border / 2)
     for l in set(seg_objects.flatten()) - {0}:
         seg_obj = (seg_objects == l)
-        seg_bnd = np.logical_xor(morphology.binary_erosion(seg_obj, morphology.disk(border / 2)), morphology.binary_dilation(seg_obj, morphology.disk(border)))
+        seg_bnd = np.logical_xor(morphology.binary_erosion(seg_obj, se), morphology.binary_dilation(seg_obj, se))
         if isinstance(colors, dict):
             if candidate not in colors: continue
             colorchannels = COLORMAP[colors[candidate]]
@@ -253,12 +248,13 @@ def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_
     # First, we determine which objects overlap sufficiently
     merge_list = []
     merge_mask = [False] * len(objects)
-    for i1, i2 in ((i1, i2) for i1, obj1 in enumerate(objects) for i2, obj2 in enumerate(objects[:i1])):
-        obj1, obj2 = objects[i1], objects[i2]
-        overlap = np.logical_and(obj1, obj2).sum() / (0. + min([obj1.sum(), obj2.sum()]))
-        if overlap > merge_overlap_threshold:
-            merge_list.append((i1, i2))  # i2 is always smaller than i1
-            merge_mask[i1] = True
+    if merge_overlap_threshold <= 1:
+        for i1, i2 in ((i1, i2) for i1, obj1 in enumerate(objects) for i2, obj2 in enumerate(objects[:i1])):
+            obj1, obj2 = objects[i1], objects[i2]
+            overlap = np.logical_and(obj1, obj2).sum() / (0. + min([obj1.sum(), obj2.sum()]))
+            if overlap > merge_overlap_threshold:
+                merge_list.append((i1, i2))  # i2 is always smaller than i1
+                merge_mask[i1] = True
 
     # Next, we associate a (potentially non-unique) label to each object
     labels, obj_indices_by_label = list(range(1, 1 + len(objects))), {}
