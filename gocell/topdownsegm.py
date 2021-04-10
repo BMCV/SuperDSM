@@ -168,7 +168,10 @@ def process_cluster(*args, **kwargs):
 
 
 def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity, version):
-    min_region_size = 2 * math.pi * (min_region_radius ** 2)
+    if version < 3:
+        min_region_size = 2 * math.pi * (min_region_radius ** 2)
+    else:
+        min_region_size = math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = gocell.candidates.Candidate()
@@ -189,6 +192,10 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
     while not split_queue.empty():
         c0 = split_queue.get()
         c0_mask = c0.get_mask(atoms_map)
+        
+        if version >= 3 and (c0_mask.sum() < 2 * min_region_size):
+            leaf_candidates.append(c0) ## the region is too small to be split
+            continue
 
         c1 = gocell.candidates.Candidate()
         c2 = gocell.candidates.Candidate()
@@ -203,9 +210,18 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
 
         new_atom_label   = atoms_map.max() + 1
         c1_mask, c2_mask = watershed_split(cluster.get_region(c0_mask), c1.seed, c2.seed)
-        if c1_mask.sum() < min_region_size or c2_mask.sum() < min_region_size:
+        
+        if version <= 2 and (c1_mask.sum() < min_region_size or c2_mask.sum() < min_region_size):
             split_queue.put(c0) ## try again with different seed
             continue
+        
+        elif version >= 3:
+            if c1_mask.sum() < min_region_size:
+                c0.seed = c2.seed   ## change the seed for current region…
+                split_queue.put(c0) ## …and try again with different seed
+            if c2_mask.sum() < min_region_size:
+                split_queue.put(c0) ## try again with different seed
+                continue
             
         atoms_map_previous = atoms_map.copy()
         atoms_map[c2_mask] = new_atom_label
