@@ -98,11 +98,11 @@ class TopDownSegmentation(gocell.pipeline.Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         seed_connectivity = gocell.config.get_value(cfg, 'seed_connectivity', 4)
-        min_region_radius = gocell.config.get_value(cfg, 'min_region_radius', 10)
+        min_region_radius = gocell.config.get_value(cfg, 'min_region_radius', 15)
         max_atom_energy_rate = gocell.config.get_value(cfg, 'max_atom_energy_rate', 0.05)
         min_energy_rate_improvement = gocell.config.get_value(cfg, 'min_energy_rate_improvement', 0.1)
         max_cluster_marker_irregularity = gocell.config.get_value(cfg, 'max_cluster_marker_irregularity', 0.2)
-        version = gocell.config.get_value(cfg, 'version', 1)
+        version = gocell.config.get_value(cfg, 'version', 3)
 
         mfcfg = gocell.config.copy(input_data['mfcfg'])
         mfcfg['smooth_amount'] = np.inf
@@ -216,9 +216,12 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
             continue
         
         elif version >= 3:
+            
             if c1_mask.sum() < min_region_size:
                 c0.seed = c2.seed   ## change the seed for current region…
                 split_queue.put(c0) ## …and try again with different seed
+                continue
+                
             if c2_mask.sum() < min_region_size:
                 split_queue.put(c0) ## try again with different seed
                 continue
