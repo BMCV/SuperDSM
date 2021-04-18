@@ -196,7 +196,7 @@ class Task:
 
         if 'base_config_path' in self.data:
             base_config_path = self.data['base_config_path']
-            base_config_path = pathlib.Path(base_config_path.replace('{DIRNAME}', path.name))
+            base_config_path = pathlib.Path(base_config_path.replace('{DIRNAME}', path.name).replace('{ROOTDIR}', str(self.root_path)))
             if not base_config_path.is_absolute():
                 base_config_path = path / base_config_path
             with base_config_path.open('r') as base_config_fin:
@@ -248,6 +248,11 @@ class Task:
             except json.JSONDecodeError as err:
                 raise ValueError(f'Error processing: "{task_file}"')
         return None
+    
+    @property
+    def root_path(self):
+        if self.parent_task is not None: return self.parent_task.root_path
+        else: return self.path
 
     def _fmt_path(self, path):
         if isinstance(path, str): path = pathlib.Path(path)
@@ -271,19 +276,27 @@ class Task:
             return {_resolve_timings_key(key, self.file_ids): timings[key] for key in timings}
         else:
             return {}
+        
+    @property
+    def config_digest(self):
+        return hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
+        
+    @property
+    def is_pending(self):
+        return self.runnable and not (self.digest_path.exists() and self.digest_path.read_text() == self.config_digest)
 
-    def run(self, run_count=1, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, out=None):
+    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, report=None, out=None):
         assert evaluation in ('none', 'legacy', 'full')
         out = aux.get_output(out)
         if not self.runnable: return
         candidates._DEBUG = debug
-        config_digest = hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
-        if not force and self.digest_path.exists() and self.digest_path.read_text() == config_digest:
-            out.write(f'\nSkipping task: {self._fmt_path(self.path)} ({run_count})')
+        if not force and not self.is_pending:
+            out.write(f'\nSkipping task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}')
             return
-        task_info = f'{run_count}'
-        if self.last_stage is not None: task_info = f'{task_info}, last stage: {self.last_stage}'
-        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} ({task_info})', aux.Text.YELLOW))
+        if self.last_stage is not None:
+            if task_info is not None: task_info = f'{task_info}, '
+            task_info = task_info + f'last stage: {self.last_stage}'
+        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         assert self.last_stage is None or self.last_stage == '' or not np.isinf(pipeline.find(self.last_stage)), f'unknown stage "{self.last_stage}"'
@@ -295,6 +308,7 @@ class Task:
             for file_idx, file_id in enumerate(self.file_ids):
                 im_filepath = str(self. im_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
+                if report is not None: report.update(self, progress)
                 out3.write(aux.Text.style(f'\nProcessing file: {im_filepath}', aux.Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
@@ -314,6 +328,7 @@ class Task:
                     discarded_workload = aux.get_discarded_workload(data[file_id])
                     if not np.isnan(discarded_workload): discarded_workloads.append(discarded_workload)
             out2.write('')
+            if report is not None: report.update(self, 'active')
             if not dry and len(discarded_workloads) > 0:
                 out2.write(aux.Text.style('Discarded workload: ', aux.Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
             
@@ -333,7 +348,7 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
-                    if not one_shot and skip_evaluation: self.digest_path.write_text(config_digest)
+                    if not one_shot and skip_evaluation: self.digest_path.write_text(self.config_digest)
                 out2.write(aux.Text.style('Results written to: ', aux.Text.BOLD) + self._fmt_path(self.result_path))
             if evaluation == 'none' or skip_evaluation:
                 out2.write('Skipping evaluation')
@@ -344,7 +359,7 @@ class Task:
                     out2.intermediate('Evaluating...')
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
-                    if not one_shot: self.digest_path.write_text(config_digest)
+                    if not one_shot: self.digest_path.write_text(self.config_digest)
                 out2.write(aux.Text.style('Evaluation study written to: ', aux.Text.BOLD) + self._fmt_path(self.study_path))
                 if not dry and print_study:
                     out2.write('')
@@ -507,6 +522,50 @@ def get_path(root_path, path):
     return pathlib.Path(root_path) / path
 
 
+class StatusReport:
+    def __init__(self, scheduled_tasks, filepath=None):
+        self.scheduled_tasks = scheduled_tasks
+        self.filepath        = filepath
+        self.status          = dict()
+        self.task_progress   = None
+        
+    def get_task_status(self, task):
+        return self.status.get(str(task.path), 'skipped')
+    
+    def update(self, task, status, save=True):
+        if isinstance(status, float):
+            self.task_progress = status
+            status = 'active'
+        else:
+            self.task_progress = None
+        assert status in ('pending', 'done', 'active', 'error')
+        if status in ('done', 'active') and self.get_task_status(task) == 'skipped': return
+        self.status[str(task.path)] = status
+        if save: self.save()
+    
+    def save(self):
+        if self.filepath is None: return
+        with open(str(self.filepath), 'w') as fout:
+            skipped_tasks = []
+            for task in self.scheduled_tasks:
+                status = self.get_task_status(task)
+                prefix, suffix = '', ''
+                if status == 'skipped':
+                    skipped_tasks.append(task)
+                    continue
+                elif status == 'pending': prefix = ' o '
+                elif status ==    'done': prefix = ' ✓ '
+                elif status ==  'active': prefix = '-> '
+                elif status ==   'error': prefix = 'EE '
+                if status == 'active' and self.task_progress is not None:
+                    suffix = f' ({100 * self.task_progress:.0f}%)'
+                fout.write(f'{prefix}{task.path}{suffix}\n')
+            if len(skipped_tasks) > 0:
+                fout.write('\nSkipped tasks:\n')
+                for task in skipped_tasks:
+                    fout.write(f'- {str(task.path)}\n')
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -522,6 +581,7 @@ if __name__ == '__main__':
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
     parser.add_argument('--analyze-fn', help='summarize reasons of false negative detections', action='store_true')
+    parser.add_argument('--report', help='report current status to file', type=str, default='/tmp/godmod-status')
     args = parser.parse_args()
 
     if args.last_stage is not None and not args.oneshot:
@@ -540,16 +600,33 @@ if __name__ == '__main__':
     dry = not args.run
     out = aux.get_output()
     runnable_tasks = [task for task in loader.tasks if task.runnable]
-    run_task_count = 0
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
+    scheduled_tasks     = []
+    run_task_count      =  0
+    pending_tasks_count =  0
+    report = StatusReport(scheduled_tasks, filepath=None if dry else args.report)
     for task in runnable_tasks:
         if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not aux.is_subpath(path, task.path) for path in args.task_dir): continue
-        run_task_count += 1
+        scheduled_tasks.append(task)
+        if task.is_pending or args.force:
+            pending_tasks_count += 1
+            report.update(task, 'pending', save=False)
+    for task in scheduled_tasks:
+        if task.is_pending or args.force:
+            run_task_count += 1
+            task_info = f'{run_task_count} of {pending_tasks_count}'
+        else:
+            task_info = None
+        report.update(task, 'active')
         newpid = os.fork()
         if newpid == 0:
             evaluation = 'none' if args.skip_evaluation else 'full'
-            task.run(run_task_count, dry, args.verbosity, args.force, args.oneshot, evaluation, args.print_study, args.debug, out)
+            try:
+                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, evaluation, args.print_study, args.debug, report, out)
+            except:
+                report.update(task, 'error')
+                raise
             if args.analyze_fn:
                 task.analyze_fn(dry, out=out)
             os._exit(0)
@@ -557,5 +634,6 @@ if __name__ == '__main__':
             if os.waitpid(newpid, 0)[1] != 0:
                 out.write('An error occurred: interrupting')
                 sys.exit(1)
-    out.write(f'\nRan {run_task_count} task(s)')
-
+            else:
+                report.update(task, 'done')
+    out.write(f'\nRan {run_task_count} task(s) out of {len(runnable_tasks)} in total')

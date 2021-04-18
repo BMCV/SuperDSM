@@ -65,10 +65,11 @@ def _estimate_scale(im, min_radius=20, max_radius=200, num_radii=10, thresholds=
     return mean_radius / math.sqrt(2), blobs_doh, radii_inliers
 
 
-def _create_config_entry(cfg, key, factor, default_user_factor, type=None, _min=None, _max=None):
+def _create_config_entry(version, cfg, key, factor, default_user_factor, type=None, _min=None, _max=None):
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
-    gocell.config.set_default_value(cfg, key, factor * gocell.config.get_value(cfg, af_key, default_user_factor))
+    override_none = (version >= 3)
+    gocell.config.set_default_value(cfg, key, factor * gocell.config.get_value(cfg, af_key, default_user_factor), override_none)
     if type is not None: gocell.config.update_value(cfg, key, func=type)
     if _min is not None: gocell.config.update_value(cfg, key, func=lambda value: max((value, _min)))
     if _max is not None: gocell.config.update_value(cfg, key, func=lambda value: min((value, _max)))
@@ -87,17 +88,23 @@ def create_config(base_cfg, im):
         radius   = scale * math.sqrt(2)
         diameter = 2 * radius
 
-        _create_config_entry(config, 'preprocess/sigma2'            , scale      ,    1.0)
-        _create_config_entry(config, 'generations/alpha'            , radius ** 2,    0.2)
-        _create_config_entry(config, 'generations/max_seed_distance', diameter   , np.inf)
-        _create_config_entry(config, 'postprocess/min_obj_radius'   , radius     ,    0.0)
-        _create_config_entry(config, 'postprocess/max_obj_radius'   , radius     , np.inf)
-        _create_config_entry(config, 'postprocess/min_glare_radius' , radius     , np.inf)
+        _create_config_entry(version, config, 'preprocess/sigma2'            , scale      ,    1.0)
+        _create_config_entry(version, config, 'generations/alpha'            , radius ** 2,    0.2)
+        _create_config_entry(version, config, 'generations/max_seed_distance', diameter   , np.inf)
+        _create_config_entry(version, config, 'postprocess/min_obj_radius'   , radius     ,    0.0)
+        _create_config_entry(version, config, 'postprocess/max_obj_radius'   , radius     , np.inf)
+        _create_config_entry(version, config, 'postprocess/min_glare_radius' , radius     , np.inf)
     
     if version >= 2:
-        _create_config_entry(config, 'modelfit/rho'             , scale ** 2, 0.015 ** 2)
-        _create_config_entry(config, 'modelfit/smooth_amount'   , scale     , 0.2, type=int, _min=4)
-        _create_config_entry(config, 'modelfit/smooth_subsample', scale     , 0.4, type=int, _min=8)
+        _create_config_entry(version, config, 'modelfit/rho'             , scale ** 2, 0.015 ** 2)
+        _create_config_entry(version, config, 'modelfit/smooth_amount'   , scale     , 0.2, type=int, _min=4)
+        _create_config_entry(version, config, 'modelfit/smooth_subsample', scale     , 0.4, type=int, _min=8)
+    
+    if version >= 3:
+        _create_config_entry(version, config, 'top-down-segmentation/min_region_radius', radius, 0.25, type=int)
+    
+    if version >= 4:
+        _create_config_entry(version, config, 'top-down-modelfit/min_background_margin', scale, 0.2, type=int)
 
     return config, scale
 

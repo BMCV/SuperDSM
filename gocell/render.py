@@ -92,8 +92,10 @@ def _fetch_image_from_data(data, normalize_img=True):
     return img
 
 
-def _fetch_rgb_image_from_data(data, normalize_img=True):
-    if 'g_rgb' in data:
+def _fetch_rgb_image_from_data(data, normalize_img=True, override_img=None):
+    if override_img is not None:
+        img = override_img if override_img.ndim == 3 else np.dstack([override_img] * 3)
+    elif 'g_rgb' in data:
         img = data['g_rgb']
         if img.max() > 1: img = img / 255
     else:
@@ -141,7 +143,7 @@ def render_regions_over_image(img, regions, background_label=None, color=(0,1,0)
     return (255 * result).clip(0, 255).astype('uint8')
 
 
-COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2]}
+COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2], 'w': [0,1,2]}
 
 
 def render_model_shapes_over_image(data, candidates='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
@@ -153,8 +155,7 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     if isinstance(candidates, str): candidates = data[candidates]
     if is_legal == True: is_legal = lambda m: True
 
-    assert override_img is None, 'override_img is not supported anymore'
-    img = _fetch_rgb_image_from_data(data, normalize_img)
+    img = _fetch_rgb_image_from_data(data, normalize_img, override_img)
     img_shape = img.shape[:2]
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()

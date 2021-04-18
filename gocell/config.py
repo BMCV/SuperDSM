@@ -5,14 +5,15 @@ def pop_value(kwargs, kw, default):
     return kwargs.pop(kw) if kw in kwargs else default
 
 
-def set_default_value(kwargs, kw, default):
+def set_default_value(kwargs, kw, default, override_none=False):
     if '/' in kw:
         keys = kw.split('/')
         for key in keys[:-1]:
-            kwargs = set_default_value(kwargs, key, {})
-        return set_default_value(kwargs, keys[-1], default)
+            kwargs = set_default_value(kwargs, key, {}, override_none)
+        return set_default_value(kwargs, keys[-1], default, override_none)
     else:
-        if kw not in kwargs: kwargs[kw] = default
+        if kw not in kwargs or (override_none and kwargs[kw] is None):
+            kwargs[kw] = default
         return kwargs[kw]
 
 
