@@ -40,10 +40,11 @@ class Postprocessing(gocell.pipeline.Stage):
         contrast_response_epsilon = gocell.config.get_value(cfg, 'contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
 
         # mask-based post-processing
-        mask_stdamp       = gocell.config.get_value(cfg,       'mask_stdamp',    2)
-        mask_max_distance = gocell.config.get_value(cfg, 'mask_max_distance',    0)
-        mask_smoothness   = gocell.config.get_value(cfg,   'mask_smoothness',    3)
-        fill_holes        = gocell.config.get_value(cfg,        'fill_holes', True)
+        mask_stdamp          = gocell.config.get_value(cfg,          'mask_stdamp',    2)
+        mask_max_distance    = gocell.config.get_value(cfg,    'mask_max_distance',    0)
+        mask_smoothness      = gocell.config.get_value(cfg,      'mask_smoothness',    3)
+        fill_holes           = gocell.config.get_value(cfg,           'fill_holes', True)
+        mask_process_version = gocell.config.get_value(cfg, 'mask_process_version',    1)
 
         # autofluorescence glare removal
         glare_detection_smoothness = gocell.config.get_value(cfg, 'glare_detection_smoothness',      3)
@@ -71,6 +72,7 @@ class Postprocessing(gocell.pipeline.Stage):
             'contrast_response_epsilon':  contrast_response_epsilon,
             'mask_stdamp':                mask_stdamp,
             'mask_max_distance':          mask_max_distance,
+            'mask_process_version':       mask_process_version,
             'fill_holes':                 fill_holes,
             'min_glare_radius':           min_glare_radius,
             'min_boundary_glare_radius':  min_boundary_glare_radius,
@@ -202,7 +204,7 @@ def _process_candidate(cidx, candidate, params):
         is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
     energy_rate  = _compute_energy_rate(candidate, params['y'], params['g_atoms'])
     contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'], params['contrast_response_version'])
-    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
+    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'], params['mask_process_version'])
     eccentricity = _compute_eccentricity(candidate)
 
     return cidx, {
@@ -216,7 +218,8 @@ def _process_candidate(cidx, candidate, params):
     }
 
 
-def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
+def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False, version=1):
+    assert version in (1,2)
     if stdamp <= 0 or max_distance <= 0:
         if fill_holes:
             return candidate.fg_offset, ndi.morphology.binary_fill_holes(candidate.fg_fragment)
@@ -232,6 +235,14 @@ def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
     extra_bg  = np.logical_not(extra_fg)
     extra_fg  = np.logical_and(extra_mask_superset, extra_fg)
     extra_bg  = np.logical_and(extra_mask_superset, extra_bg)
+    
+    if version >= 2:
+        extra_fg_labels = ndi.label(extra_fg)[0]
+        for label in np.unique(extra_fg_labels):
+            if label == 0: continue
+            extra_fg_cc = (extra_fg_labels == label)
+            if not mask[extra_fg_cc].any(): extra_fg[extra_fg_cc] = False
+        
     mask[extra_fg] = True
     mask[extra_bg] = False
     fg_offset, fg_fragment = gocell.candidates.extract_foreground_fragment(mask)

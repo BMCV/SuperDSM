@@ -136,7 +136,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
-        im_result = render.render_result_over_image(result_data, border=seg_border)
+        im_result = render.render_result_over_image(result_data, border_width=seg_border)
         aux.mkdir(pathlib.Path(seg_filepath).parents[0])
         io.imwrite(seg_filepath, im_result)
     return result_data, timings

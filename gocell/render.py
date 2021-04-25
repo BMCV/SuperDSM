@@ -79,11 +79,15 @@ def render_ymap(data, clim=None, cmap='bwr'):
     return ymap
 
 
-def normalize_image(img):
+def normalize_image(img, spread=1, ret_minmax=False):
     if not np.allclose(img.std(), 0):
-        img = img.clip(max([img.min(), img.mean() - img.std()]), min([img.max(), img.mean() + img.std()]))
-    img = img - img.min()
-    return img / img.max()
+        minval, maxval = max([img.min(), img.mean() - spread * img.std()]), min([img.max(), img.mean() + spread * img.std()])
+        img = img.clip(minval, maxval)
+    else:
+        minval, maxval = 0, 1
+    img  = img - img.min()
+    img /= img.max()
+    return img, minval, maxval if ret_minmax else img
 
 
 def _fetch_image_from_data(data, normalize_img=True):
@@ -200,18 +204,42 @@ def render_postprocessed_result(data, postprocessed_candidates='postprocessed_ca
     return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors, normalize_img=normalize_img)
 
 
-def render_result_over_image(data, candidates_key='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border=6, override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+class ContourPaint:
+    def __init__(self, fg_mask, radius, where='center'):
+        self.fg_mask = fg_mask
+        self.where   = where
+        self.radius  = radius
+        self.selem   = morphology.disk(self.radius if where == 'center' else self.radius * 2)
+        if where == 'outer':
+            self.center_paint = ContourPaint(fg_mask, radius, where='center')
+    
+    def get_contour_mask(self, mask):
+        if self.where == 'center':
+            contour = np.logical_xor(morphology.binary_erosion(mask, self.selem), morphology.binary_dilation(mask, self.selem))
+        elif self.where == 'outer':
+            contour = np.logical_xor(mask, morphology.binary_dilation(mask, self.selem))
+            mask2   = np.logical_and(self.fg_mask, contour)
+            contour = np.logical_and(contour, ~mask2)
+            mask3   = morphology.binary_dilation(mask2, self.center_paint.selem)
+            contour = np.logical_or(contour, np.logical_and(mask3, self.center_paint.get_contour_mask(mask)))
+        elif self.where == 'inner':
+            contour = np.logical_xor(mask, morphology.binary_erosion(mask, self.selem))
+        return contour
+
+
+def render_result_over_image(data, candidates='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+    assert border_width % 2 == 0
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
     assert override_img is None, 'override_img is not supported anymore'
     im_seg  = _fetch_rgb_image_from_data(data, normalize_img)
     im_seg /= im_seg.max()
-    seg_objects = rasterize_labels(data, merge_overlap_threshold=merge_overlap_threshold)
-    se = morphology.disk(border / 2)
+    seg_objects = rasterize_labels(data, candidates=candidates, merge_overlap_threshold=merge_overlap_threshold)
+    cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
+    #se = morphology.disk(border / 2)
     for l in set(seg_objects.flatten()) - {0}:
-        seg_obj = (seg_objects == l)
-        seg_bnd = np.logical_xor(morphology.binary_erosion(seg_obj, se), morphology.binary_dilation(seg_obj, se))
+        seg_bnd = cp.get_contour_mask(seg_objects == l)
         if isinstance(colors, dict):
             if candidate not in colors: continue
             colorchannels = COLORMAP[colors[candidate]]

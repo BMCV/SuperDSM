@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', help='output directory', default=None)
     parser.add_argument('--imageid', help='only export image ID', default=[], action='append')
     parser.add_argument('--border', help='border width', type=int, default=None)
+    parser.add_argument('--border-position', help='border position (inner, center, outer)', type=str, default='center')
     parser.add_argument('--enhance', help='apply contrast enhancement', action='store_true')
     parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), the raw images (img), the foreground clusters (fgc), the adjacency graphs (adj), or the atoms (atm)', default='seg')
     parser.add_argument('--gt-shuffle', help='shuffle colors of ground truth', default=[], action='append')
@@ -44,6 +45,8 @@ if __name__ == '__main__':
     border_width = args.border
     if border_width is None and args.mode in DEFAULT_BORDER:
         border_width = DEFAULT_BORDER[args.mode]
+        
+    border_position = args.border_position
 
     if args.ymap.startswith('/'):
         args.ymap = args.ymap[1:]
@@ -126,7 +129,7 @@ if __name__ == '__main__':
             out.intermediate(f'  Processing image... {outputfile}')
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             if args.mode == 'seg':
-                img = gocell.render.render_result_over_image(dataframe, border=border_width, normalize_img=args.enhance)
+                img = gocell.render.render_result_over_image(dataframe, border_width=border_width, border_position=border_position, normalize_img=args.enhance)
             elif args.mode == 'fgc':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
                 img  = gocell.render.render_foreground_clusters(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
