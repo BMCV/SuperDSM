@@ -106,7 +106,10 @@ def _fetch_rgb_image_from_data(data, normalize_img=True, override_img=None):
         img = data['g_raw']
         if normalize_img: img = normalize_image(img)
         img = np.dstack([img] * 3)
-    return img.copy()
+    img = img.copy()
+    img[img < 0] = 0
+    img[img > 1] = 1
+    return img
 
 
 def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
@@ -232,8 +235,7 @@ def render_result_over_image(data, candidates='postprocessed_candidates', merge_
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
-    assert override_img is None, 'override_img is not supported anymore'
-    im_seg  = _fetch_rgb_image_from_data(data, normalize_img)
+    im_seg  = _fetch_rgb_image_from_data(data, normalize_img, override_img)
     im_seg /= im_seg.max()
     seg_objects = rasterize_labels(data, candidates=candidates, merge_overlap_threshold=merge_overlap_threshold)
     cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
