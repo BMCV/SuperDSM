@@ -87,7 +87,7 @@ def normalize_image(img, spread=1, ret_minmax=False):
         minval, maxval = 0, 1
     img  = img - img.min()
     img /= img.max()
-    return img, minval, maxval if ret_minmax else img
+    return (img, minval, maxval) if ret_minmax else img
 
 
 def _fetch_image_from_data(data, normalize_img=True):
