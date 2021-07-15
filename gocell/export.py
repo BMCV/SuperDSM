@@ -111,7 +111,7 @@ if __name__ == '__main__':
             gocell.io.imwrite(str(outputfile), img)
     elif args.mode in ('seg', 'fgc', 'adj', 'atm'):
         if args.mode in ('fgc', 'adj', 'atm'):
-            task.last_stage = 'atoms'
+            task.last_stage = 'top-down-segmentation'
         if args.mode in ('fgc', 'adj'):
             ymap_spec = tuple(tf(val) for val, tf in zip(args.ymap.split(':'), (float, float, float, str)))
             ymapping  = lambda y: np.exp(ymap_spec[2] * y) / (1 + np.exp(ymap_spec[2] * y)) - 0.5

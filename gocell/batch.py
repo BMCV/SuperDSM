@@ -295,6 +295,7 @@ class Task:
             return
         if self.last_stage is not None:
             if task_info is not None: task_info = f'{task_info}, '
+            else: task_info = ''
             task_info = task_info + f'last stage: {self.last_stage}'
         out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', aux.Text.YELLOW))
         out2 = out.derive(margin=2)
