@@ -1,6 +1,6 @@
-import gocell.aux
-import gocell.config
-import gocell.surface
+from ._aux import get_output, copy_dict, mkdir
+from gocell.config import get_config_value
+from gocell.surface import Surface
 
 import math
 import numpy as np
@@ -30,9 +30,9 @@ class Stage(object):
         if name in self._callbacks: self._callbacks[name].remove(cb)
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
-        out = gocell.aux.get_output(out)
-        cfg = gocell.config.get_value(cfg, self.cfg_key, {})
-        if gocell.config.get_value(cfg, 'enabled', self.ENABLED_BY_DEFAULT):
+        out = get_output(out)
+        cfg = get_config_value(cfg, self.cfg_key, {})
+        if get_config_value(cfg, 'enabled', self.ENABLED_BY_DEFAULT):
             out.intermediate(f'Starting stage "{self.name}"')
             self._callback('start', data)
             input_data = {}
@@ -76,12 +76,12 @@ class Pipeline:
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
         assert 'preprocess1' not in cfg.keys(), 'config version is deprecated'
-        cfg = gocell.aux.copy_dict(cfg)
-        if log_root_dir is not None: gocell.aux.mkdir(log_root_dir)
+        cfg = copy_dict(cfg)
+        if log_root_dir is not None: mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].name
         if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
-        out  = gocell.aux.get_output(out)
+        out  = get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
         if ctrl.step('init'): data = self.init(g_raw, cfg)
         else: assert data is not None, 'data argument must be provided if first_stage is used'
@@ -93,13 +93,13 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
-        if gocell.config.get_value(cfg, 'histological', False):
+        if get_config_value(cfg, 'histological', False):
             g_rgb = g_raw
             g_raw = g_raw.mean(axis=2)
             g_raw = g_raw.max() - g_raw
         else:
             g_rgb = None
-        data = dict(g_raw = gocell.surface.Surface.create_from_image(g_raw).model) ## does some normalization
+        data = dict(g_raw = Surface.create_from_image(g_raw).model) ## does some normalization
         if g_rgb is not None:
             data['g_rgb'] = g_rgb
         return data
@@ -138,18 +138,18 @@ def create_pipeline(stages):
 
 
 def create_default_pipeline():
-    import gocell.preprocessing
-    import gocell.modelfit_config
-    import gocell.topdownsegm
-    import gocell.generations
-    import gocell.postprocessing
+    from .preprocessing import PreprocessingStage
+    from .modelfit_config import ModelfitConfigStage
+    from .topdownsegm import TopDownSegmentation
+    from .generations import GenerationStage
+    from .postprocessing import Postprocessing
 
     stages = [
-        gocell.preprocessing.PreprocessingStage(),
-        gocell.modelfit_config.ModelfitConfigStage(),
-        gocell.topdownsegm.TopDownSegmentation(),
-        gocell.generations.GenerationStage(),
-        gocell.postprocessing.Postprocessing(),
+        PreprocessingStage(),
+        ModelfitConfigStage(),
+        TopDownSegmentation(),
+        GenerationStage(),
+        Postprocessing(),
     ]
 
     return create_pipeline(stages)

@@ -1,14 +1,13 @@
-import .render
-import .batch
-import .aux
-import .io
+from .render import colorize_labels, normalize_image, render_ymap, render_result_over_image, render_atoms, render_adjacencies
+from .batch import Task, _resolve_timings_key
+from ._aux import get_output
+from .io import imread, imwrite
 
 import numpy as np
 import gzip, dill, pathlib
 
 
 DEFAULT_OUTDIR = {
-    'gt' : 'export-gt',
     'seg': 'export-seg',
     'img': 'export-img',
     'fgc': 'export-fgc',
@@ -34,12 +33,11 @@ if __name__ == '__main__':
     parser.add_argument('--border', help='border width', type=int, default=None)
     parser.add_argument('--border-position', help='border position (inner, center, outer)', type=str, default='center')
     parser.add_argument('--enhance', help='apply contrast enhancement', action='store_true')
-    parser.add_argument('--mode', help='export the ground truth (gt), the segmentation results (seg), the raw images (img), the foreground clusters (fgc), the adjacency graphs (adj), or the atoms (atm)', default='seg')
-    parser.add_argument('--gt-shuffle', help='shuffle colors of ground truth', default=[], action='append')
+    parser.add_argument('--mode', help='export the segmentation results (seg), the raw images (img), the foreground clusters (fgc), the adjacency graphs (adj), or the atoms (atm)', default='seg')
     parser.add_argument('--ymap', help='intensity mapping for y-map rendering', default='-0.8:+1:5:seismic')
     args = parser.parse_args()
 
-    if args.mode not in ('gt', 'seg', 'img', 'fgc', 'adj', 'atm'):
+    if args.mode not in ('seg', 'img', 'fgc', 'adj', 'atm'):
         parser.error(f'Unknown mode: "{args.mode}"')
 
     border_width = args.border
@@ -72,55 +70,42 @@ if __name__ == '__main__':
 
     tasks = []
     for _taskdir in _taskdirs[::-1]:
-        task = gocell.batch.Task.create_from_directory(_taskdir, tasks[-1] if len(tasks) > 0 else None)
+        task = Task.create_from_directory(_taskdir, tasks[-1] if len(tasks) > 0 else None)
         if task is not None:
             tasks.append(task)
     task = tasks[-1]
     if not task.runnable:
-        task = gocell.batch.Task.create_from_directory(task.path, tasks[-2], force_runnable=True)
+        task = Task.create_from_directory(task.path, tasks[-2], force_runnable=True)
 
-    out = gocell.aux.get_output(None)
+    out = get_output(None)
     if len(args.imageid) > 0:
-        task.file_ids = [gocell.batch._resolve_timings_key(file_id, task.file_ids) for file_id in args.imageid]
+        task.file_ids = [_resolve_timings_key(file_id, task.file_ids) for file_id in args.imageid]
     task.seg_pathpattern = None
     task.log_pathpattern = None
     task.adj_pathpattern = None
     task._load_timings = lambda *args: {}
 
-    if args.mode == 'gt':
-        shuffles = {}
-        for shuffle_spec in args.gt_shuffle:
-            image_id, shuffle_seed = shuffle_spec.split(':')
-            image_id = gocell.batch._resolve_timings_key(image_id, task.file_ids)
-            shuffles[image_id] = int(shuffle_seed)
-        for image_id in task.file_ids:
-            outputfile = outdir / f'{image_id}.png'
-            out.intermediate(f'Processing image... {outputfile}')
-            gt = gocell.batch.load_gt(task.gt_loader, filepath=task.gt_pathpattern % image_id, **task.gt_loader_kwargs)
-            gt = gocell.render.colorize_labels(gt, shuffle=shuffles.get(image_id, 0))
-            outputfile.parents[0].mkdir(parents=True, exist_ok=True)
-            gocell.io.imwrite(str(outputfile), gt)
-    elif args.mode == 'img':
+    if args.mode == 'img':
         for image_id in task.file_ids:
             im_filepath = str(task.im_pathpattern) % image_id
             outputfile = outdir / f'{image_id}.png'
             out.intermediate(f'Processing image... {outputfile}')
-            img = gocell.io.imread(im_filepath)
-            if args.enhance: img = gocell.render.normalize_image(img)
+            img = imread(im_filepath)
+            if args.enhance: img = normalize_image(img)
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
-            gocell.io.imwrite(str(outputfile), img)
+            imwrite(str(outputfile), img)
     elif args.mode in ('seg', 'fgc', 'adj', 'atm'):
         if args.mode in ('fgc', 'adj', 'atm'):
             task.last_stage = 'top-down-segmentation'
         if args.mode in ('fgc', 'adj'):
             ymap_spec = tuple(tf(val) for val, tf in zip(args.ymap.split(':'), (float, float, float, str)))
             ymapping  = lambda y: np.exp(ymap_spec[2] * y) / (1 + np.exp(ymap_spec[2] * y)) - 0.5
-            render_ymap = lambda y: gocell.render.render_ymap(ymapping(y.clip(*ymap_spec[:2])), clim=(ymapping(np.array(ymap_spec[:2]))), cmap=ymap_spec[3])[:,:,:3]
+            render_ymap = lambda y: render_ymap(ymapping(y.clip(*ymap_spec[:2])), clim=(ymapping(np.array(ymap_spec[:2]))), cmap=ymap_spec[3])[:,:,:3]
             ymap_legend = render_ymap(np.linspace(*ymap_spec[:2], 200)[None, :])
             ymap_legend = np.vstack([ymap_legend] * 10)
             ymap_legendfile = outdir / f'ymap_legend.png'
             out.write(f'\nWriting legend: {ymap_legendfile}')
-            gocell.io.imwrite(str(ymap_legendfile), ymap_legend)
+            imwrite(str(ymap_legendfile), ymap_legend)
         data = task.run(one_shot=True, force=True, evaluation='none', out=out)
         out.write('\nRunning export:')
         for image_id in task.file_ids:
@@ -129,17 +114,17 @@ if __name__ == '__main__':
             out.intermediate(f'  Processing image... {outputfile}')
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
             if args.mode == 'seg':
-                img = gocell.render.render_result_over_image(dataframe, border_width=border_width, border_position=border_position, normalize_img=args.enhance)
+                img = render_result_over_image(dataframe, border_width=border_width, border_position=border_position, normalize_img=args.enhance)
             elif args.mode == 'fgc':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
-                img  = gocell.render.render_foreground_clusters(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
+                img  = render_foreground_clusters(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
             elif args.mode == 'adj':
                 ymap = render_ymap(dataframe['y'])[:,:,:3]
-                ymap = gocell.render.render_atoms(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
-                img  = gocell.render.render_adjacencies(dataframe, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
+                ymap = render_atoms(dataframe, override_img=ymap, border_color=(0,0,0), border_radius=border_width // 2)
+                img  = render_adjacencies(dataframe, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             elif args.mode == 'atm':
-                img = gocell.render.render_atoms(dataframe, border_color=(0,1,0), border_radius=border_width // 2, normalize_img=args.enhance)
-            gocell.io.imwrite(str(outputfile), img)
+                img = render_atoms(dataframe, border_color=(0,1,0), border_radius=border_width // 2, normalize_img=args.enhance)
+            imwrite(str(outputfile), img)
             out.write(f'  Exported {outputfile}')
         out.write('\n')
     out.write(f'Exported {len(task.file_ids)} files')

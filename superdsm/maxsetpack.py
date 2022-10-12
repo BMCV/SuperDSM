@@ -1,4 +1,5 @@
-import ._aux as aux
+from ._aux as import get_output
+
 import numpy as np
 import cvxpy as cp
 import scipy.sparse
@@ -8,7 +9,7 @@ def solve_maxsetpack(candidates, out=None):
     accepted_candidates  = []  ## primal variable
     remaining_candidates = list(candidates)
 
-    out = gocell.aux.get_output(out)
+    out = get_output(out)
     w = lambda c: c.energy
     while len(remaining_candidates) > 0:
 
@@ -24,7 +25,7 @@ def solve_maxsetpack(candidates, out=None):
 
 
 def solve_maxsetpack_lp(candidates, out=None):
-    out   = gocell.aux.get_output(out)
+    out = get_output(out)
     n = len(candidates)
     m = 1 + max(max(c.footprint) for c in candidates)
     u = cp.Variable(n)

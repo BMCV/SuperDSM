@@ -1,8 +1,8 @@
-import gocell.config
-import gocell.pipeline
-import gocell.aux
-import gocell.candidates
-import gocell.atoms
+from .config import copy_config, get_config_value, copy_config
+from .pipeline import Stage
+from .aux import get_ray_1by1
+from .candidates import _modelfit, Candidate
+from .atoms import AtomAdjacencyGraph
 
 import ray
 import scipy.ndimage as ndi
@@ -60,7 +60,7 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
     if version >= 2:
         mf_buffer = gocell.surface.Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_energy_rate(candidate, region, atoms_map, mfcfg):
-        _mf_kwargs = gocell.config.copy(mfcfg)
+        _mf_kwargs = copy_config(mfcfg)
         bg_margin  = _mf_kwargs.pop('min_background_margin')
         mf_region  = candidate.get_modelfit_region(region, atoms_map, min_background_margin=bg_margin)
         mf_region_hash = _hash_mask(mf_region.mask)
@@ -72,11 +72,11 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
                 if version == 1:
                     mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
                     with contextlib.redirect_stdout(None):
-                        J, model, status = gocell.candidates._modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                        J, model, status = _modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
                 elif version >= 2:
                     mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
                     with contextlib.redirect_stdout(None):
-                        J, model, status = gocell.candidates._modelfit(mf_buffer, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                        J, model, status = _modelfit(mf_buffer, smooth_mat_allocation_lock=None, **_mf_kwargs)
                     mf_buffer.mask[cluster.full_mask].fill(False)
                 else:
                     raise ValueError(f'unknown version: {version}')
@@ -87,7 +87,7 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
     return compute_energy_rate
 
 
-class TopDownSegmentation(gocell.pipeline.Stage):
+class TopDownSegmentation(Stage):
 
     ENABLED_BY_DEFAULT = True
 
@@ -97,14 +97,14 @@ class TopDownSegmentation(gocell.pipeline.Stage):
                                                   outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        seed_connectivity = gocell.config.get_value(cfg, 'seed_connectivity', 4)
-        min_region_radius = gocell.config.get_value(cfg, 'min_region_radius', 15)
-        max_atom_energy_rate = gocell.config.get_value(cfg, 'max_atom_energy_rate', 0.05)
-        min_energy_rate_improvement = gocell.config.get_value(cfg, 'min_energy_rate_improvement', 0.1)
-        max_cluster_marker_irregularity = gocell.config.get_value(cfg, 'max_cluster_marker_irregularity', 0.2)
-        version = gocell.config.get_value(cfg, 'version', 3)
+        seed_connectivity = get_config_value(cfg, 'seed_connectivity', 4)
+        min_region_radius = get_config_value(cfg, 'min_region_radius', 15)
+        max_atom_energy_rate = get_config_value(cfg, 'max_atom_energy_rate', 0.05)
+        min_energy_rate_improvement = get_config_value(cfg, 'min_energy_rate_improvement', 0.1)
+        max_cluster_marker_irregularity = get_config_value(cfg, 'max_cluster_marker_irregularity', 0.2)
+        version = get_config_value(cfg, 'version', 3)
 
-        mfcfg = gocell.config.copy(input_data['mfcfg'])
+        mfcfg = copy_config(input_data['mfcfg'])
         mfcfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')
@@ -133,7 +133,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         clusters_id = ray.put(clusters)
         futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity, version) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         max_energy_rate = -np.inf
-        for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+        for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
             cluster_label_offset = atoms_map.max()
             max_energy_rate = max((cluster_max_energy_rate, max_energy_rate))
@@ -151,7 +151,7 @@ class TopDownSegmentation(gocell.pipeline.Stage):
         
         # Compute adjacencies graph
         atom_nodes  = [atom_candidate_by_label[atom_label].seed for atom_label in sorted(label_translation.values())]
-        adjacencies = gocell.atoms.AtomAdjacencyGraph(atoms_map, clusters, fg_mask, atom_nodes, out)
+        adjacencies = AtomAdjacencyGraph(atoms_map, clusters, fg_mask, atom_nodes, out)
         
         return {
             'y_mask': y_mask,
@@ -174,7 +174,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         min_region_size = math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
-    root_candidate = gocell.candidates.Candidate()
+    root_candidate = Candidate()
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
@@ -197,8 +197,8 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
             leaf_candidates.append(c0) ## the region is too small to be split
             continue
 
-        c1 = gocell.candidates.Candidate()
-        c2 = gocell.candidates.Candidate()
+        c1 = Candidate()
+        c2 = Candidate()
         c1.seed = c0.seed
         c2.seed = get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
         assert not np.logical_and(c1.seed, c2.seed).any()

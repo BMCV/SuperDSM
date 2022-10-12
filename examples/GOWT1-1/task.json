@@ -7,15 +7,11 @@
     },
 
     "im_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/01/t%02d.tif",
-    "gt_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/01_GT/SEG/man_seg%02d.tif",
-    "gt_is_unique": false,
-    "gt_loader": "default",
     "seg_pathpattern": "seg/t%02d.png",
     "adj_pathpattern": "adj/dna-%d.png",
     "log_pathpattern": "log/t%02d",
     "cfg_pathpattern": "cfg/dna-%d.json",
     "file_ids": [2,5,6,7,8,10,12,13,14,15,16,17,18,19,20,21,27,28,29,31,32,33,34,37,39,40,41,44,45,46,47],
-    "fully_annotated_ids": [21,31,33,39],
 
     "dilate": 0,
     "merge_overlap_threshold": Infinity

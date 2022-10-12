@@ -1,4 +1,5 @@
-import gocell.io as io
+from .io import imread
+
 import numpy as np
 
 
@@ -47,7 +48,7 @@ class Surface:
     
     @staticmethod
     def create_from_file(filepath):
-        img = io.imread(filepath)
+        img = imread(filepath)
         return Surface.create_from_image(img)
     
     def get_map(self, normalized=True, pad=0):

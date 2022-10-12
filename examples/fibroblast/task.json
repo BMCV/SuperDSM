@@ -7,9 +7,6 @@
     },
 
     "im_pathpattern": "~/Documents/phd/data/kalinin2017/im/%s.tif",
-    "gt_pathpattern": "~/Documents/phd/data/kalinin2017/gt/%s.tif",
-    "gt_is_unique": true,
-    "gt_loader": "default",
     "seg_pathpattern": "seg/%s.png",
     "adj_pathpattern": "adj/%s.png",
     "log_pathpattern": "log/%s",

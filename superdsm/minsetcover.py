@@ -1,4 +1,4 @@
-import ._aux as aux
+from ._aux import get_output
 
 
 def _merge_minsetcover(candidates, accepted_candidates, alpha):
@@ -26,7 +26,7 @@ def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     remaining_candidates = list(candidates)
     uncovered_atoms      = set.union(*[c.footprint for c in candidates])
 
-    out = gocell.aux.get_output(out)
+    out = get_output(out)
     w = lambda c: c.energy + alpha
     while len(remaining_candidates) > 0:
 
@@ -55,7 +55,7 @@ DEFAULT_LOWER_ALPHA_MUL = 0.8
 
 
 def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL, merge_lower_alpha=False, out=None):
-    out = gocell.aux.get_output(out)
+    out = get_output(out)
     solution1 = gocell.minsetcover._solve_minsetcover(candidates, alpha, merge, out)
     if try_lower_alpha > 0 and alpha > 0:
         new_alpha = alpha * lower_alpha_mul

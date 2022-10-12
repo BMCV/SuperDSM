@@ -1,5 +1,4 @@
-import gocell.surface
-import gocell.aux
+from .aux import render_candidate_foregrounds
 
 import numpy as np
 import warnings, math
@@ -166,13 +165,13 @@ def render_model_shapes_over_image(data, candidates='postprocessed_candidates', 
     img_shape = img.shape[:2]
     border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
     merged_candidates = set()
-    for candidate, foreground in zip(candidates, gocell.aux.render_candidate_foregrounds(img.shape[:2], candidates)):
+    for candidate, foreground in zip(candidates, render_candidate_foregrounds(img.shape[:2], candidates)):
         if candidate in merged_candidates: continue
         merged_candidates |= {candidate}
         model_shape = foreground
         if labels is not None:
             label = np.bincount(labels[model_shape]).argmax()
-            for candidate1, foreground1 in zip(candidates, gocell.aux.render_candidate_foregrounds(img.shape[:2], candidates)):
+            for candidate1, foreground1 in zip(candidates, render_candidate_foregrounds(img.shape[:2], candidates)):
                 if candidate1 in merged_candidates: continue
                 model1_shape = foreground1
                 label1 = np.bincount(labels[model1_shape]).argmax()
@@ -266,7 +265,7 @@ def rasterize_objects(data, candidates, dilate=0):
     else:
         dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
-    for foreground in gocell.aux.render_candidate_foregrounds(data['g_raw'].shape, candidates):
+    for foreground in render_candidate_foregrounds(data['g_raw'].shape, candidates):
         if dilate > 0:   foreground = dilation(foreground, morphology.disk( dilate))
         elif dilate < 0: foreground =  erosion(foreground, morphology.disk(-dilate))
         if foreground.any(): yield foreground.copy()

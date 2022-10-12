@@ -7,12 +7,6 @@
     },
 
     "im_pathpattern": "~/Documents/phd/data/coelho2009/dna-images/gnf/dna-%d.png",
-    "gt_pathpattern": "~/Documents/phd/data/coelho2009/segmented-lpc/gnf/dna-%d.xcf",
-    "gt_is_unique": true,
-    "gt_loader": "xcf",
-    "gt_loader_kwargs": {
-        "layername": "foreground"
-    },
     "seg_pathpattern": "seg/dna-%d.png",
     "adj_pathpattern": "adj/dna-%d.png",
     "log_pathpattern": "log/dna-%d",

@@ -1,6 +1,5 @@
-import gocell.surface as surface
-import gocell.aux     as aux
-import gocell._mkl    as mkl
+from gocell._aux import SystemSemaphore, uplift_smooth_matrix
+from gocell._mkl import dot as mkl_dot, gram as mkl_gram
 
 import numpy as np
 import cvxopt
@@ -15,7 +14,7 @@ from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as 
 
 def mkl_dot(A, B):
     if A.shape[1] == B.shape[0] == 1: return A @ B
-    return mkl.dot(A, B)
+    return mkl_dot(A, B)
 
 
 class PolynomialModelType:
@@ -67,7 +66,7 @@ class PolynomialModel:
     def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl.dot(smooth_mat, self.ξ)
+        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl_dot(smooth_mat, self.ξ)
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
@@ -135,7 +134,7 @@ def _convmat(filter_mask, img_shape, row_mask=None, col_mask=None, lock=None):
     print('.', end='')
     z = skimage.util.view_as_windows(z, img_shape)[::-1, ::-1]
     print('.', end='\n')
-    with aux.SystemSemaphore.get_lock(lock):
+    with SystemSemaphore.get_lock(lock):
         col_mask_where = np.nonzero(col_mask)
         row_mask_where = np.nonzero(row_mask)
         return z[row_mask_where[0][:,None], row_mask_where[1][:,None], col_mask_where[0], col_mask_where[1]]
@@ -197,7 +196,7 @@ class SmoothMatrixFactory:
             print('using null-matrix')
             mat = np.empty((mask.sum(), 0))
         mat = csr_matrix(mat).astype(np.float64, copy=False)
-        if uplift: mat = aux.uplift_smooth_matrix(mat, mask)
+        if uplift: mat = uplift_smooth_matrix(mat, mask)
         print('-- smooth matrix finished --')
         return mat
     
@@ -300,7 +299,7 @@ class Energy:
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
-                [mkl_dot(D2, D1.T), mkl.gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
+                [mkl_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
@@ -403,9 +402,4 @@ class CP:
         ret = cvxopt.solvers.cp(self)
         if alarm_set: signal.alarm(0)
         return ret
-#        dims = dict(l=0, q=[], s=[2])
-#        h = cvxopt.matrix(np.zeros(4))
-#        G = cvxopt.spmatrix(np.ones(4), [0,1,2,3], [0,2,2,1], size=(4, len(self.params0)))
-#        with aux.CvxoptFrame(feastol=1e-5, reltol=1e-4, abstol=1e-4):
-#            return cvxopt.solvers.cp(self, G, h, dims)
 

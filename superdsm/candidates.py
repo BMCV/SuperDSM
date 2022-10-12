@@ -1,6 +1,5 @@
-import .aux
-import .surface
-import .modelfit
+from ._aux import copy_dict, uplift_smooth_matrix, join_path, get_output, SystemSemaphore, get_ray_1by1
+from .modelfit import PolynomialModel, CP, SmoothMatrixFactory, Energy
 
 import ray
 import sys, io, contextlib, traceback, time
@@ -56,7 +55,7 @@ class Candidate(BaseCandidate):
         self.on_boundary     = state.on_boundary
         self.is_optimal      = state.is_optimal
         self.processing_time = state.processing_time
-        self._default_kwargs = gocell.aux.copy_dict(state._default_kwargs)
+        self._default_kwargs = copy_dict(state._default_kwargs)
         return self
 
     def copy(self):
@@ -77,7 +76,7 @@ def extract_foreground_fragment(fg_mask):
 
 
 def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
-    modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
+    modelfit_kwargs = copy_dict(modelfit_kwargs)
     min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
     region = candidate.get_modelfit_region(y, g_atoms, min_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
@@ -99,7 +98,7 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
         J, result, status = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
         dt = time.time() - t0
         padded_mask = np.pad(region.mask, 1)
-        smooth_mat  = gocell.aux.uplift_smooth_matrix(J.smooth_mat, padded_mask)
+        smooth_mat  = uplift_smooth_matrix(J.smooth_mat, padded_mask)
         padded_foreground = (result.map_to_image_pixels(y, region, pad=1).s(x_map, smooth_mat) > 0)
         foreground = padded_foreground[1:-1, 1:-1]
         if foreground.any():
@@ -123,7 +122,7 @@ def _ray_process_candidate_logged(*args, **kwargs):
 def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
     try:
         if log_root_dir is not None:
-            log_filename = gocell.aux.join_path(log_root_dir, f'{cidx}.txt')
+            log_filename = join_path(log_root_dir, f'{cidx}.txt')
             with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
                 with contextlib.redirect_stdout(log_file):
                     try:
@@ -144,10 +143,10 @@ DEFAULT_PROCESSING_STATUS_LINE = ('Processing candidates', 'Processed candidates
 
 
 def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, status_line=DEFAULT_PROCESSING_STATUS_LINE, out=None):
-    out = gocell.aux.get_output(out)
-    modelfit_kwargs = gocell.aux.copy_dict(modelfit_kwargs)
+    out = get_output(out)
+    modelfit_kwargs = copy_dict(modelfit_kwargs)
     smooth_mat_max_allocations = modelfit_kwargs.pop('smooth_mat_max_allocations', np.inf)
-    with gocell.aux.SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
+    with SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
         candidates = list(candidates)
         fallbacks  = 0
         x_map      = y.get_map(normalized=False, pad=1)
@@ -169,7 +168,7 @@ def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, lo
         mf_kwargs_id = ray.put(modelfit_kwargs)
         lock_id      = ray.put(lock)
         futures      = [_ray_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
-        for ret in gocell.aux.get_ray_1by1(futures): yield ret
+        for ret in get_ray_1by1(futures): yield ret
 
 
 _process_candidates._DEBUG = False
@@ -184,7 +183,7 @@ def _estimate_initialization(region):
     fg_center = roi_xmap[:, fg_center[0], fg_center[1]]
     halfaxes_lengths = (roi_xmap[:, fg] - fg_center[:, None]).std(axis=1)
     halfaxes_lengths = np.max([halfaxes_lengths, np.full(halfaxes_lengths.shape, 1e-8)], axis=0)
-    return gocell.modelfit.PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
+    return PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
 
 
 def _print_cvxopt_solution(solution):
@@ -216,8 +215,8 @@ def _compute_gocell_solution(J_gocell, CP_params):
 
     # Pass 1: Try zeros initialization
     try:
-        solution_info  = gocell.modelfit.CP(J_gocell, np.zeros(6), **CP_params).solve()
-        solution_array = gocell.modelfit.PolynomialModel(np.array(solution_info['x'])).array
+        solution_info  = CP(J_gocell, np.zeros(6), **CP_params).solve()
+        solution_array = PolynomialModel(np.array(solution_info['x'])).array
         solution_value = J_gocell(solution_array)
         print(f'solution: {solution_value}')
     except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
@@ -234,8 +233,8 @@ def _compute_gocell_solution(J_gocell, CP_params):
             print('initialization worse than previous solution - skipping retry')
         else:
             try:
-                solution_info  = gocell.modelfit.CP(J_gocell, initialization.array, **CP_params).solve()
-                solution_array = gocell.modelfit.PolynomialModel(np.array(solution_info['x'])).array
+                solution_info  = CP(J_gocell, initialization.array, **CP_params).solve()
+                solution_array = PolynomialModel(np.array(solution_info['x'])).array
                 solution_value = J_gocell(solution_array)
                 print(f'solution: {solution_value}')
             except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
@@ -251,8 +250,8 @@ def _compute_gocell_solution(J_gocell, CP_params):
 
 def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     _print_heading('initializing')
-    smooth_matrix_factory = gocell.modelfit.SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
-    J = gocell.modelfit.Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
+    smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
+    J = Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
     status = None
@@ -261,14 +260,14 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
     else:
         if init == 'gocell':
             _print_heading('convex programming starting: GOCELL')
-            J_gocell = gocell.modelfit.Energy(region, epsilon, rho, gocell.modelfit.SmoothMatrixFactory.NULL_FACTORY)
+            J_gocell = Energy(region, epsilon, rho, SmoothMatrixFactory.NULL_FACTORY)
             params = _compute_gocell_solution(J_gocell, CP_params)
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
         _print_heading('convex programming starting: GODMOD')
-        solution_info = gocell.modelfit.CP(J, params, **CP_params).solve()
+        solution_info = CP(J, params, **CP_params).solve()
         solution = np.array(solution_info['x'])
         _print_cvxopt_solution(solution_info)
         if solution_info['status'] == 'unknown' and J(solution) > J(params):
@@ -284,5 +283,5 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         _print_heading('GODMOD failed: falling back to GOCELL result')
         solution = params
     _print_heading('finished')
-    return J, gocell.modelfit.PolynomialModel(solution), status
+    return J, PolynomialModel(solution), status
 

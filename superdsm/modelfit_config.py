@@ -1,5 +1,5 @@
-import .config
-import .pipeline
+from .config import get_config_value
+from .pipeline import Stage
 
 
 MODELFIT_KWARGS_DEFAULTS = {
@@ -18,7 +18,7 @@ MODELFIT_KWARGS_DEFAULTS = {
 }
 
 
-class ModelfitConfigStage(gocell.pipeline.Stage):
+class ModelfitConfigStage(Stage):
 
     ENABLED_BY_DEFAULT = True
 
@@ -27,7 +27,7 @@ class ModelfitConfigStage(gocell.pipeline.Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         mfcfg = {
-            key: gocell.config.get_value(cfg, key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
+            key: get_config_value(cfg, key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
         }
         
         return {
