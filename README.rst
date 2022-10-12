@@ -5,9 +5,13 @@ SuperDSM is a globally optimal segmentation method based on superadditivity and 
 
 The documentation is available here: https://superdsm.readthedocs.io
 
-----
-
 Publications:
 
 `L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, 2022, doi: 10.1109/TPAMI.2022.3185583.
 <https://doi.org/10.1109/TPAMI.2022.3185583>`_
+
+----
+
+Copyright (c) 2017-2022 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
+
+This work is licensed under the terms of the MIT license. For a copy, see LICENSE.
