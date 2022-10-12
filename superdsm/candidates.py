@@ -1,15 +1,12 @@
-import gocell.aux
-import gocell.surface
-import gocell.modelfit
+import .aux
+import .surface
+import .modelfit
 
 import ray
 import sys, io, contextlib, traceback, time
 import scipy.ndimage as ndi
 import numpy as np
 import skimage.morphology as morph
-
-
-_DEBUG = False
 
 
 class BaseCandidate:
@@ -162,7 +159,7 @@ def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, st
 
 
 def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):
-    if _DEBUG: ## run serially
+    if _process_candidates._DEBUG: ## run serially
         for cidx, c in enumerate(candidates):
             yield _process_candidate_logged(log_root_dir, cidx, y, g_atoms, x_map, c, modelfit_kwargs, lock)
     else: ## run in parallel
@@ -173,6 +170,9 @@ def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, lo
         lock_id      = ray.put(lock)
         futures      = [_ray_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
         for ret in gocell.aux.get_ray_1by1(futures): yield ret
+
+
+_process_candidates._DEBUG = False
 
 
 def _estimate_initialization(region):

@@ -1,7 +1,7 @@
-import gocell.render
-import gocell.batch
-import gocell.aux
-import gocell.io
+import .render
+import .batch
+import .aux
+import .io
 
 import numpy as np
 import gzip, dill, pathlib

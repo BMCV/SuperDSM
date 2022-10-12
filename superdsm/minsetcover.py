@@ -1,4 +1,4 @@
-import gocell.aux
+import ._aux as aux
 
 
 def _merge_minsetcover(candidates, accepted_candidates, alpha):

@@ -1,9 +1,9 @@
-import gocell.config
-import gocell.pipeline
-import gocell.aux
-import gocell.candidates
-import gocell.minsetcover
-import gocell.maxsetpack
+import .config
+import .pipeline
+import .aux
+import .candidates
+import .minsetcover
+import .maxsetpack
 
 import scipy.ndimage as ndi
 import numpy as np

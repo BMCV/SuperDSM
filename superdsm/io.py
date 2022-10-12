@@ -1,6 +1,6 @@
 import skimage.io, skimage.transform
 import os, warnings
-import gocell._warps as _warps
+import ._warps as _warps
 
 
 def imwrite(filepath, img, shape=None, antialias=False):

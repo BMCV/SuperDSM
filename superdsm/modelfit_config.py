@@ -1,5 +1,5 @@
-import gocell.config
-import gocell.pipeline
+import .config
+import .pipeline
 
 
 MODELFIT_KWARGS_DEFAULTS = {

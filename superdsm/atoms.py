@@ -1,4 +1,4 @@
-import gocell.aux
+from ._aux import get_output
 
 import numpy as np
 import skimage.morphology as morph
@@ -8,7 +8,7 @@ import skimage.segmentation
 class AtomAdjacencyGraph:
 
     def __init__(self, g_atoms, g_clusters, fg_mask, seeds, out=None):
-        out = gocell.aux.get_output(out)
+        out = get_output(out)
         self._adjacencies, se = {atom_label: set() for atom_label in range(1, g_atoms.max() + 1)}, morph.disk(1)
         self._atoms_by_cluster, self._cluster_by_atom = {}, {}
         self._seeds = seeds

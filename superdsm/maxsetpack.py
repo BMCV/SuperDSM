@@ -1,4 +1,4 @@
-import gocell.aux
+import ._aux as aux
 import numpy as np
 import cvxpy as cp
 import scipy.sparse

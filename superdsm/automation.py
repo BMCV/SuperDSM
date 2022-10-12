@@ -1,5 +1,5 @@
-import gocell.render
-import gocell.config
+from .render import normalize_image
+from .config import set_default_config_value, update_config_value, copy_config, get_config_value
 
 import skimage
 import math
@@ -42,7 +42,7 @@ def _estimate_scale(im, min_radius=20, max_radius=200, num_radii=10, thresholds=
     sigma_list = np.linspace(min_radius, max_radius, num_radii) / math.sqrt(2)
     sigma_list = np.concatenate([[sigma_list.min() / 2], sigma_list])
     
-    im_norm  = gocell.render.normalize_image(im)
+    im_norm  = normalize_image(im)
     im_norm /= im_norm.max()
 
     blobs_mask  = {sigma: ndi.gaussian_laplace(im_norm, sigma) < 0 for sigma in sigma_list}

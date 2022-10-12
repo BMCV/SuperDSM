@@ -1,10 +1,11 @@
-import gocell.config     as config
-import gocell.pipeline   as pipeline
-import gocell.candidates as candidates
-import gocell.aux        as aux
-import gocell.io         as io
-import gocell.render     as render
-import gocell.automation as automation
+from .config import get_config_value, derive_config
+from .pipeline import create_default_pipeline
+from .candidates import _process_candidates
+from ._aux import get_output, mkdir, Text, get_discarded_workload, is_subpath
+from .io import imread, imwrite
+from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
+from .automation import create_config
+
 import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil
 import ray
 import numpy as np
@@ -39,7 +40,7 @@ def load_unlabeled_xcf_gt(xcf_path, layername='foreground'):
 
 def load_gt(loader, filepath, **loader_kwargs):
     if loader == 'default':
-        return io.imread(filepath)
+        return imread(filepath)
     elif loader == 'xcf':
         return load_unlabeled_xcf_gt(filepath, **loader_kwargs)
 
@@ -48,7 +49,7 @@ FP_INVARIANT_MEASURES = frozenset(['SEG', 'd/Split', 'd/Merge', 'd/FN'])
 
 
 def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, out=None):
-    out = aux.get_output(out)
+    out = get_output(out)
     import segmetrics
 
     segmetrics.detection.FalseMerge.ACCUMULATIVE    = False
@@ -74,7 +75,7 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
 
     chunk_ids = sorted(data.keys())
     for chunk_idx, chunk_id in enumerate(chunk_ids):
-        actual = render.rasterize_labels(data[chunk_id], **rasterize_kwargs)
+        actual = rasterize_labels(data[chunk_id], **rasterize_kwargs)
         expected = load_gt(gt_loader, filepath=gt_pathpattern % chunk_id, **gt_loader_kwargs)
         study.set_expected(expected, unique=gt_is_unique)
         study.process(actual, unique=True, chunk_id=chunk_id)
@@ -84,7 +85,7 @@ def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, ra
 
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
-        out = aux.get_output(out)
+        out = get_output(out)
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
         return None, {}
     else:
@@ -92,18 +93,18 @@ def _process_file(dry, *args, out=None, **kwargs):
 
 
 def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None):
-    if seg_filepath is not None: aux.mkdir(pathlib.Path(seg_filepath).parents[0])
-    if adj_filepath is not None: aux.mkdir(pathlib.Path(adj_filepath).parents[0])
-    if log_filepath is not None: aux.mkdir(pathlib.Path(log_filepath).parents[0])
-    if cfg_filepath is not None: aux.mkdir(pathlib.Path(cfg_filepath).parents[0])
+    if seg_filepath is not None: mkdir(pathlib.Path(seg_filepath).parents[0])
+    if adj_filepath is not None: mkdir(pathlib.Path(adj_filepath).parents[0])
+    if log_filepath is not None: mkdir(pathlib.Path(log_filepath).parents[0])
+    if cfg_filepath is not None: mkdir(pathlib.Path(cfg_filepath).parents[0])
 
-    histological  = config.get_value(cfg, 'histological', False)
+    histological  = get_config_value(cfg, 'histological', False)
     imread_kwargs = {}
     if histological:
         imread_kwargs['as_gray'] = False
 
-    g_raw = io.imread(im_filepath, **imread_kwargs)
-    out   = aux.get_output(out)
+    g_raw = imread(im_filepath, **imread_kwargs)
+    out   = get_output(out)
 
     timings = {}
     if first_stage != '':
@@ -114,7 +115,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
             g_gray = g_gray.max() - g_gray
         else:
             g_gray = g_raw
-        cfg, scale = automation.create_config(cfg, g_gray)
+        cfg, scale = create_config(cfg, g_gray)
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
             json.dump(cfg, fout)
@@ -123,10 +124,10 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     def write_adjacencies_image(name, data):
         if adj_filepath is not None:
-            ymap = render.render_ymap(data)
-            ymap = render.render_atoms(data, override_img=ymap, border_color=(0,0,0), border_radius=1)
-            img  = render.render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
-            io.imwrite(adj_filepath, img)
+            ymap = render_ymap(data)
+            ymap = render_atoms(data, override_img=ymap, border_color=(0,0,0), border_radius=1)
+            img  = render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
+            imwrite(adj_filepath, img)
 
     atomic_stage = pipeline.stages[pipeline.find('top-down-segmentation')]
     atomic_stage.add_callback('end', write_adjacencies_image)
@@ -136,9 +137,9 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
     if seg_filepath is not None:
         if seg_border is None: seg_border = 8
-        im_result = render.render_result_over_image(result_data, border_width=seg_border)
-        aux.mkdir(pathlib.Path(seg_filepath).parents[0])
-        io.imwrite(seg_filepath, im_result)
+        im_result = render_result_over_image(result_data, border_width=seg_border)
+        mkdir(pathlib.Path(seg_filepath).parents[0])
+        imwrite(seg_filepath, im_result)
     return result_data, timings
 
 
@@ -184,7 +185,7 @@ class Task:
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
         self.path = path
-        self.data = data if parent_task is None else config.derive(parent_task.data, data)
+        self.data = data if parent_task is None else derive_config(parent_task.data, data)
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
         self.fully_annotated_ids = frozenset(self.data['fully_annotated_ids']) if 'fully_annotated_ids' in self.data else self.file_ids
@@ -201,8 +202,8 @@ class Task:
                 base_config_path = path / base_config_path
             with base_config_path.open('r') as base_config_fin:
                 base_config = json.load(base_config_fin)
-            parent_config = config.get_value(parent_task.data, 'config', {})
-            self.data['config'] = config.derive(config.derive(parent_config, base_config), config.get_value(data, 'config', {}))
+            parent_config = get_config_value(parent_task.data, 'config', {})
+            self.data['config'] = derive_config(derive_config(parent_config, base_config), get_config_value(data, 'config', {}))
             del self.data['base_config_path']
 
         if self.runnable:
@@ -263,7 +264,7 @@ class Task:
         for key, val in self.environ.items():
             os.environ[key] = str(val)
         ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
-        _pipeline = pipeline.create_default_pipeline()
+        _pipeline = create_default_pipeline()
         return _pipeline
 
     def _shutdown(self):
@@ -287,9 +288,9 @@ class Task:
 
     def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, report=None, out=None):
         assert evaluation in ('none', 'legacy', 'full')
-        out = aux.get_output(out)
+        out = get_output(out)
         if not self.runnable: return
-        candidates._DEBUG = debug
+        _process_candidates._DEBUG = debug
         if not force and not self.is_pending:
             out.write(f'\nSkipping task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}')
             return
@@ -297,7 +298,7 @@ class Task:
             if task_info is not None: task_info = f'{task_info}, '
             else: task_info = ''
             task_info = task_info + f'last stage: {self.last_stage}'
-        out.write(aux.Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', aux.Text.YELLOW))
+        out.write(Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', Text.YELLOW))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         assert self.last_stage is None or self.last_stage == '' or not np.isinf(pipeline.find(self.last_stage)), f'unknown stage "{self.last_stage}"'
@@ -310,7 +311,7 @@ class Task:
                 im_filepath = str(self. im_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
-                out3.write(aux.Text.style(f'\nProcessing file: {im_filepath}', aux.Text.BOLD) + f' ({100 * progress:.0f}%)')
+                out3.write(Text.style(f'\nProcessing file: {im_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict( im_filepath = im_filepath,
                               seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
                               adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
@@ -318,7 +319,7 @@ class Task:
                               cfg_filepath = str(self.cfg_pathpattern) % file_id if self.cfg_pathpattern is not None else None,
                                 seg_border = self.seg_border,
                                 last_stage = self.last_stage,
-                                       cfg = config.derive(self.config, {}))
+                                       cfg = derive_config(self.config, {}))
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
@@ -326,12 +327,12 @@ class Task:
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
                 if not dry and 'candidates' in data[file_id]:
-                    discarded_workload = aux.get_discarded_workload(data[file_id])
+                    discarded_workload = get_discarded_workload(data[file_id])
                     if not np.isnan(discarded_workload): discarded_workloads.append(discarded_workload)
             out2.write('')
             if report is not None: report.update(self, 'active')
             if not dry and len(discarded_workloads) > 0:
-                out2.write(aux.Text.style('Discarded workload: ', aux.Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
+                out2.write(Text.style('Discarded workload: ', Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
             
             skip_writing_results_conditions = [
                 one_shot,
@@ -350,7 +351,7 @@ class Task:
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
                     if not one_shot and skip_evaluation: self.digest_path.write_text(self.config_digest)
-                out2.write(aux.Text.style('Results written to: ', aux.Text.BOLD) + self._fmt_path(self.result_path))
+                out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if evaluation == 'none' or skip_evaluation:
                 out2.write('Skipping evaluation')
             else:
@@ -361,20 +362,20 @@ class Task:
                     study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
                     self.write_evaluation_results(shallow_data.keys(), study)
                     if not one_shot: self.digest_path.write_text(self.config_digest)
-                out2.write(aux.Text.style('Evaluation study written to: ', aux.Text.BOLD) + self._fmt_path(self.study_path))
+                out2.write(Text.style('Evaluation study written to: ', Text.BOLD) + self._fmt_path(self.study_path))
                 if not dry and print_study:
                     out2.write('')
                     study.print_results(write=out2.write, line_suffix='', pad=2)
             for obj_name in ('data', 'shallow_data'):
                 if obj_name in locals(): return locals()[obj_name]
         except:
-            out.write(aux.Text.style(f'\nError while processing task: {self._fmt_path(self.path)}', aux.Text.RED))
+            out.write(Text.style(f'\nError while processing task: {self._fmt_path(self.path)}', Text.RED))
             raise
         finally:
             self._shutdown()
 
     def analyze_fn(self, dry=False, pp_logfilename='postprocessing.txt', out=None):
-        out = aux.get_output(out)
+        out = get_output(out)
         out = out.derive(margin=2)
         if not self.runnable or dry: return
         if self.log_pathpattern is None: return
@@ -443,7 +444,7 @@ class Task:
         return pickup_candidates[np.argmax(pickup_candidate_scores)]
 
     def find_first_stage_name(self, pipeline, dry=False, out=None):
-        out = aux.get_output(out)
+        out = get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('modelfit') + 1:
             return None, {}
@@ -599,7 +600,7 @@ if __name__ == '__main__':
     args.task_dir = [get_path(args.path, task_dir_path) for task_dir_path in args.task_dir]
 
     dry = not args.run
-    out = aux.get_output()
+    out = get_output()
     runnable_tasks = [task for task in loader.tasks if task.runnable]
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
@@ -608,7 +609,7 @@ if __name__ == '__main__':
     pending_tasks_count =  0
     report = StatusReport(scheduled_tasks, filepath=None if dry else args.report)
     for task in runnable_tasks:
-        if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not aux.is_subpath(path, task.path) for path in args.task_dir): continue
+        if (len(args.task) > 0 or len(args.task_dir) > 0) and all(task.path != path for path in args.task) and all(not is_subpath(path, task.path) for path in args.task_dir): continue
         scheduled_tasks.append(task)
         if task.is_pending or args.force:
             pending_tasks_count += 1
