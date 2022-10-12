@@ -9,5 +9,5 @@ The documentation is available here: https://superdsm.readthedocs.io
 
 Publications:
 
-- L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, 2022, doi: 10.1109/TPAMI.2022.3185583.
-
+`L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, 2022, doi: 10.1109/TPAMI.2022.3185583.
+<https://doi.org/10.1109/TPAMI.2022.3185583>`_
