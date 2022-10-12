@@ -15,4 +15,17 @@ To use SuperDSM, first install it using conda:
 Usage
 -----
 
-to be written
+Batch processing
+****************
+
+To run SuperDSM from command line, use:
+
+.. code-block:: console
+
+   python -m 'gocell.batch'
+
+To export (intermediate) results, use:
+
+.. code-block:: console
+
+   python -m 'gocell.export'
