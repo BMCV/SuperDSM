@@ -1,0 +1,4 @@
+{
+    "runnable": true,
+    "base_config_path": "../../configs/{DIRNAME}.json"
+}

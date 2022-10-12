@@ -1,0 +1,22 @@
+{
+    "runnable": false,
+    "num_cpus": 16,
+    "environ": {
+        "MKL_NUM_THREADS": 2,
+        "OPENBLAS_NUM_THREADS": 2
+    },
+
+    "im_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/02/t%02d.tif",
+    "gt_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/02_GT/SEG/man_seg%02d.tif",
+    "gt_is_unique": true,
+    "gt_loader": "default",
+    "seg_pathpattern": "seg/t%02d.png",
+    "adj_pathpattern": "adj/dna-%d.png",
+    "log_pathpattern": "log/t%02d",
+    "cfg_pathpattern": "cfg/dna-%d.json",
+    "file_ids": [1,22,25,27,28,29,30,35,39,46,47,52,55,60,65,72,76,80,82,91],
+    "fully_annotated_ids": [1,52,55,72],
+
+    "dilate": 0,
+    "merge_overlap_threshold": Infinity
+}

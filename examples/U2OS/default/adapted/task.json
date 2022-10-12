@@ -1,0 +1,14 @@
+{
+    "runnable": true,
+    
+    "generations": {
+        "AF_alpha": 0.15
+    },
+    "modelfit": {
+        "AF_rho": 7.5e-5
+    },
+    "postprocess": {
+        "mask_max_distance": 2,
+        "mask_stdamp": 3
+    }
+}

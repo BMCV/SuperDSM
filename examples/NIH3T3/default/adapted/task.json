@@ -1,0 +1,20 @@
+{
+    "runnable": true,
+    
+    "preprocess": {
+        "sigma2": 40
+    },
+    "generations": {
+        "alpha": 1200
+    },
+    "modelfit": {
+        "rho": 0.6
+    },
+    "postprocess": {
+        "min_glare_radius": 50,
+        "min_obj_radius": 22,
+        "mask_stdamp": 3,
+        "max_energy_rate": 0.35,
+        "min_contrast_response": 0.325
+    }
+}

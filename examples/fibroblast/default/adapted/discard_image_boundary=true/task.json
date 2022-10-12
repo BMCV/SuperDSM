@@ -1,0 +1,7 @@
+{
+    "runnable": true,
+    
+    "postprocess": {
+        "discard_image_boundary": true
+    }
+}

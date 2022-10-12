@@ -1,0 +1,24 @@
+{
+    "af_version": 2,
+    
+    "preprocess" : {
+        "threshold_clip": 3
+    },
+    "modelfit": {
+        "AF_rho": 0.0005
+    },
+    "top-down-segmentation": {
+        "min_region_radius": 15,
+        "seed_connectivity": 8
+    },
+    "generations" : {
+        "AF_alpha": 0.33
+    },
+    "postprocess": {
+        "mask_max_distance": 1,
+        "mask_stdamp": 2,
+        "min_contrast_response": 0.35,
+        "max_energy_rate": 0.2,
+        "max_eccentricity": 0.99
+    }
+}
