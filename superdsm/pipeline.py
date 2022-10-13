@@ -1,6 +1,6 @@
 from ._aux import get_output, copy_dict, mkdir
-from gocell.config import get_config_value
-from gocell.surface import Surface
+from .config import get_config_value
+from .surface import Surface
 
 import math
 import numpy as np

@@ -1,0 +1,10 @@
+numpy>=1.18
+scipy
+scikit-image>=0.18
+ipython
+dill
+ray
+posix_ipc
+cvxopt
+cvxpy
+matplotlib>=3.0

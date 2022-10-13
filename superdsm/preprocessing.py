@@ -1,5 +1,5 @@
-import gocell.config
-import gocell.pipeline
+from .config import get_config_value
+from .pipeline import Stage
 
 import math
 import scipy.ndimage as ndi
@@ -7,7 +7,7 @@ import skimage.morphology as morph
 import numpy as np
 
 
-class PreprocessingStage(gocell.pipeline.Stage):
+class PreprocessingStage(Stage):
 
     ENABLED_BY_DEFAULT = True
 
@@ -19,10 +19,10 @@ class PreprocessingStage(gocell.pipeline.Stage):
     def process(self, input_data, cfg, out, log_root_dir):
         g_raw = input_data['g_raw']
 
-        sigma1 = gocell.config.get_value(cfg, 'sigma1', math.sqrt(2))
-        sigma2 = gocell.config.get_value(cfg, 'sigma2', 40)
-        threshold_clip = gocell.config.get_value(cfg, 'threshold_clip', 3)
-        threshold_max  = gocell.config.get_value(cfg, 'threshold_max' , None)
+        sigma1 = get_config_value(cfg, 'sigma1', math.sqrt(2))
+        sigma2 = get_config_value(cfg, 'sigma2', 40)
+        threshold_clip = get_config_value(cfg, 'threshold_clip', 3)
+        threshold_max  = get_config_value(cfg, 'threshold_max' , None)
 
         threshold_original = ndi.gaussian_filter(g_raw, sigma2)
         if threshold_max is None:
@@ -42,7 +42,7 @@ class PreprocessingStage(gocell.pipeline.Stage):
         else:
             threshold_combined = ndi.maximum_filter(threshold_original, size=threshold_max * sigma2)
             
-        if gocell.config.get_value(cfg, 'lower_clip_mean', False):
+        if get_config_value(cfg, 'lower_clip_mean', False):
             threshold_combined = np.max([threshold_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
         y = ndi.gaussian_filter(g_raw, sigma1) - threshold_combined

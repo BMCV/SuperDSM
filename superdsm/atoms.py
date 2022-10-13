@@ -83,20 +83,6 @@ class AtomAdjacencyGraph:
     def get_atom_degree(self, atom_label):
         return len(self[atom_label])
 
-#    def get_search_depth(self, atom_label):
-#        visited_atoms = {atom_label}
-#        next_atoms    = [(neighbor, 1) for neighbor in self[atom_label]]
-#        max_depth     = 0
-#        while len(next_atoms) > 0:
-#            current_atom, current_depth = next_atoms[0]
-#            next_atoms = next_atoms[1:]
-#            visited_atoms |= {current_atom}
-#            max_depth = max((max_depth, current_depth))
-#            for neighbor in self[current_atom]:
-#                if neighbor in visited_atoms or neighbor in (atom[0] for atom in next_atoms): continue
-#                next_atoms.append((neighbor, current_depth + 1))
-#        return max_depth
-
     def is_symmetric(self):
         for atom1 in self.atom_labels:
             if not all(atom1 in self[atom2] for atom2 in self[atom1]):

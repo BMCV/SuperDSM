@@ -6,13 +6,10 @@ from .io import imread, imwrite
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
 
-import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil
+import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil, time, itertools, re
 import ray
 import numpy as np
 import scipy.ndimage as ndi
-import time
-import itertools
-import re
 
 
 def _format_runtime(seconds):
