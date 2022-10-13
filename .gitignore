@@ -8,3 +8,4 @@
 /examples/*/seg/*.png
 /examples/*/log/*.tgz
 /examples/*/cfg/*.json
+/examples/data
