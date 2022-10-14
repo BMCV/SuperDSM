@@ -1,6 +1,5 @@
-import skimage.io, skimage.transform
+import skimage.io, skimage.transform._warps
 import os, warnings
-import ._warps as _warps
 
 
 def imwrite(filepath, img, shape=None, antialias=False):
@@ -16,7 +15,7 @@ def imwrite(filepath, img, shape=None, antialias=False):
             elif isinstance(antialias, bool):
                 aa = antialias
                 order = 1 if antialias else 0
-        img = _warps.resize(img, shape, order=order, anti_aliasing=aa, anti_aliasing_sigma=aa_sigma, mode='reflect')
+        img = skimage.transform._warps.resize(img, shape, order=order, anti_aliasing=aa, anti_aliasing_sigma=aa_sigma, mode='reflect')
     filepath = os.path.expanduser(filepath)
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
