@@ -6,11 +6,14 @@ import requests
 import tempfile
 import shutil
 
+requests.packages.urllib3.disable_warnings()
+
 root_dir = pathlib.Path(os.path.realpath(__file__)).parent
 data_dir = root_dir / 'data'
 
 def load_data(url, datasets, **kwargs):
-    with tempfile.NamedTemporaryFile('wb', suffix=pathlib.Path(url).suffix.lower()) as archive_file:
+    archive_suffix = ''.join(pathlib.Path(url).suffixes)
+    with tempfile.NamedTemporaryFile('wb', suffix=archive_suffix) as archive_file:
         print(f'Downloading archive: {url}')
         with requests.get(url, stream=True, **kwargs) as req:
             req.raise_for_status()
@@ -23,7 +26,7 @@ def load_data(url, datasets, **kwargs):
             src_root = pathlib.Path(archive_dirpath)
             for src, dst in datasets:
                 print(f'Populating {data_dir / dst}')
-                shutil.move(src_root / src, data_dir / dst)
+                shutil.move(str(src_root / src), str(data_dir / dst))
 
 load_data(
     'http://data.celltrackingchallenge.net/training-datasets/Fluo-N2DH-GOWT1.zip',
@@ -39,3 +42,17 @@ load_data(
         ('data/images/dna-images/ic100', 'NIH3T3'),
     ],
     verify=False)
+
+load_data(
+    'https://kostrykin.github.io/SuperDSM/fibroblast-prolif.tar.bz2',
+    [
+        ('fibroblast-prolif/prolif', 'fibroblast/prolif')
+    ]
+)
+
+load_data(
+    'https://kostrykin.github.io/SuperDSM/fibroblast-ss.tar.bz2',
+    [
+        ('fibroblast-ss/ss', 'fibroblast/ss')
+    ]
+)
