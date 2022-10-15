@@ -1,8 +1,9 @@
 from .config import copy_config, get_config_value, copy_config
 from .pipeline import Stage
-from .aux import get_ray_1by1
+from ._aux import get_ray_1by1
 from .candidates import _modelfit, Candidate
 from .atoms import AtomAdjacencyGraph
+from .surface import Surface
 
 import ray
 import scipy.ndimage as ndi
@@ -58,7 +59,7 @@ def _hash_mask(mask):
 def get_cached_energy_rate_computer(y, cluster, version=1):
     cache = dict()
     if version >= 2:
-        mf_buffer = gocell.surface.Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
+        mf_buffer = Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_energy_rate(candidate, region, atoms_map, mfcfg):
         _mf_kwargs = copy_config(mfcfg)
         bg_margin  = _mf_kwargs.pop('min_background_margin')
@@ -108,7 +109,7 @@ class TopDownSegmentation(Stage):
         mfcfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')
-        y = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False)
+        y = Surface.create_from_image(input_data['y'], normalize=False)
         fg_mask = (y.model > 0)
         fg_bd   = np.logical_xor(fg_mask, morph.binary_erosion(fg_mask, morph.disk(1)))
         y_mask  = np.ones(y.model.shape, bool)

@@ -1,5 +1,5 @@
-from gocell._aux import SystemSemaphore, uplift_smooth_matrix
-from gocell._mkl import dot as mkl_dot, gram as mkl_gram
+from ._aux import SystemSemaphore, uplift_smooth_matrix
+from ._mkl import dot as mkl_dot, gram as mkl_gram
 
 import numpy as np
 import cvxopt
@@ -12,7 +12,7 @@ from scipy        import ndimage
 from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
 
-def mkl_dot(A, B):
+def fast_dot(A, B):
     if A.shape[1] == B.shape[0] == 1: return A @ B
     return mkl_dot(A, B)
 
@@ -66,7 +66,7 @@ class PolynomialModel:
     def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + mkl_dot(smooth_mat, self.ξ)
+        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + fast_dot(smooth_mat, self.ξ)
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
@@ -299,7 +299,7 @@ class Energy:
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
-                [mkl_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
+                [fast_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0

@@ -1,4 +1,4 @@
-from ._aux as import get_output
+from ._aux import get_output
 
 import numpy as np
 import cvxpy as cp

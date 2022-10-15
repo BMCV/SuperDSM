@@ -19,67 +19,6 @@ def _format_runtime(seconds):
     return f'{hours:02}:{minutes:02}:{seconds:02}'
 
 
-def load_xcf_layer(xcf_path, layername):
-    with tempfile.NamedTemporaryFile() as png_file:
-        subprocess.call(['xcf2png', xcf_path, layername, '-o', png_file.name])
-        img = skimage.io.imread(png_file.name, plugin='matplotlib', format='png')[:,:,3]
-        if img is None: warnings.warn('couldn\'t load XCF layer "%s" from file: %s' % (layername, xcf_path))
-        return img
-
-def load_unlabeled_xcf_gt(xcf_path, layername='foreground'):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        foreground = load_xcf_layer(xcf_path, layername)
-    regions = ndi.label(foreground, structure=skimage.morphology.disk(1))[0]
-    assert np.all((regions == 0) == (foreground == 0))
-    return regions
-
-
-def load_gt(loader, filepath, **loader_kwargs):
-    if loader == 'default':
-        return imread(filepath)
-    elif loader == 'xcf':
-        return load_unlabeled_xcf_gt(filepath, **loader_kwargs)
-
-
-FP_INVARIANT_MEASURES = frozenset(['SEG', 'd/Split', 'd/Merge', 'd/FN'])
-
-
-def evaluate(data, gt_pathpattern, gt_is_unique, gt_loader, gt_loader_kwargs, rasterize_kwargs, out=None):
-    out = get_output(out)
-    import segmetrics
-
-    segmetrics.detection.FalseMerge.ACCUMULATIVE    = False
-    segmetrics.detection.FalseSplit.ACCUMULATIVE    = False
-    segmetrics.detection.FalsePositive.ACCUMULATIVE = False
-    segmetrics.detection.FalseNegative.ACCUMULATIVE = False
-
-    study = segmetrics.study.Study()
-    study.add_measure(segmetrics. regional.Dice()         , 'Dice')
-    study.add_measure(segmetrics. regional.JaccardIndex() , 'Jaccard')
-    study.add_measure(segmetrics. regional.RandIndex()    , 'Rand')
-    study.add_measure(segmetrics. regional.ISBIScore()    , 'SEG')
-    study.add_measure(segmetrics.detection.FalseSplit()   , 'd/Split')
-    study.add_measure(segmetrics.detection.FalseMerge()   , 'd/Merge')
-    study.add_measure(segmetrics.detection.FalsePositive(), 'd/FP')
-    study.add_measure(segmetrics.detection.FalseNegative(), 'd/FN')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           , skip_fn=False), 'NSD')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e'), skip_fn=False), 'HSD (a2e)')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a'), skip_fn=False), 'HSD (e2a)')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.NSD()           , skip_fn=True ), 'NSD*')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('a2e'), skip_fn=True ), 'HSD* (a2e)')
-    study.add_measure(segmetrics.boundary.ObjectBasedDistance(segmetrics.boundary.Hausdorff('e2a'), skip_fn=True ), 'HSD* (e2a)')
-
-    chunk_ids = sorted(data.keys())
-    for chunk_idx, chunk_id in enumerate(chunk_ids):
-        actual = rasterize_labels(data[chunk_id], **rasterize_kwargs)
-        expected = load_gt(gt_loader, filepath=gt_pathpattern % chunk_id, **gt_loader_kwargs)
-        study.set_expected(expected, unique=gt_is_unique)
-        study.process(actual, unique=True, chunk_id=chunk_id)
-        out.intermediate(f'Evaluated {chunk_idx + 1} / {len(data)}')
-    return study
-
-
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = get_output(out)
@@ -186,11 +125,7 @@ class Task:
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
         self.fully_annotated_ids = frozenset(self.data['fully_annotated_ids']) if 'fully_annotated_ids' in self.data else self.file_ids
-        self.     im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
-        self.     gt_pathpattern = os.path.expanduser(self.data['gt_pathpattern']) if 'gt_pathpattern' in self.data else None
-        self.       gt_is_unique = self.data.get('gt_is_unique'    , None)
-        self.          gt_loader = self.data.get('gt_loader'       , None)
-        self.   gt_loader_kwargs = self.data.get('gt_loader_kwargs', {}  )
+        self.im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
 
         if 'base_config_path' in self.data:
             base_config_path = self.data['base_config_path']
@@ -208,10 +143,6 @@ class Task:
             assert self.file_ids            is not None
             assert self.fully_annotated_ids is not None
             assert self.im_pathpattern      is not None
-            assert self.gt_pathpattern      is not None
-            assert self.gt_is_unique        is not None
-            assert self.gt_loader           is not None
-            assert self.gt_loader_kwargs    is not None
 
             self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
             self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
@@ -349,20 +280,6 @@ class Task:
                         json.dump(self.config, fout)
                     if not one_shot and skip_evaluation: self.digest_path.write_text(self.config_digest)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
-            if evaluation == 'none' or skip_evaluation:
-                out2.write('Skipping evaluation')
-            else:
-                if not dry:
-                    shallow_data = {file_id : {key : data[file_id][key] for key in ('g_raw', 'postprocessed_candidates')} for file_id in self.file_ids}
-                    del data
-                    out2.intermediate('Evaluating...')
-                    study = evaluate(shallow_data, self.gt_pathpattern, self.gt_is_unique, self.gt_loader, self.gt_loader_kwargs, dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate), out=out2)
-                    self.write_evaluation_results(shallow_data.keys(), study)
-                    if not one_shot: self.digest_path.write_text(self.config_digest)
-                out2.write(Text.style('Evaluation study written to: ', Text.BOLD) + self._fmt_path(self.study_path))
-                if not dry and print_study:
-                    out2.write('')
-                    study.print_results(write=out2.write, line_suffix='', pad=2)
             for obj_name in ('data', 'shallow_data'):
                 if obj_name in locals(): return locals()[obj_name]
         except:
@@ -370,45 +287,6 @@ class Task:
             raise
         finally:
             self._shutdown()
-
-    def analyze_fn(self, dry=False, pp_logfilename='postprocessing.txt', out=None):
-        out = get_output(out)
-        out = out.derive(margin=2)
-        if not self.runnable or dry: return
-        if self.log_pathpattern is None: return
-        log_path_parent = self.log_pathpattern.parent
-        while not log_path_parent.is_dir():
-            log_path_parent = log_path_parent.parent
-        if self.fn_analysis_path.is_file() and self.fn_analysis_path.stat().st_mtime >= log_path_parent.stat().st_mtime: return
-        pp_logfile_line_pattern = re.compile(r'^object at x=([0-9]+), y=([0-9]+): ([^(]+).*?$')
-        reasons_histogram = {}
-        for file_id in self.file_ids:
-            log_filepath = str(self.log_pathpattern) % file_id
-            compressed_logs_filepath = f'{log_filepath}.tgz'
-            out.intermediate(f'Analyzing false-negative detections for file: {file_id}')
-            expected = load_gt(self.gt_loader, filepath=self.gt_pathpattern % file_id, **self.gt_loader_kwargs)
-            if not dry:
-                with tarfile.open(compressed_logs_filepath, 'r:gz') as tar:
-                    if not pp_logfilename in tar.getnames(): continue
-                    pp_logfile_info = tar.getmember(pp_logfilename)
-                    pp_logfile = tar.extractfile(pp_logfile_info)
-                    pp_logfile_text = pp_logfile.read().decode('utf-8')
-                    for pp_logfile_line in pp_logfile_text.split('\n'):
-                        if len(pp_logfile_line) == 0: continue
-                        match = pp_logfile_line_pattern.match(pp_logfile_line)
-                        if match is None: raise ValueError(f'Log file {compressed_logs_filepath} contains malformed line: {pp_logfile_line}')
-                        x = int(match.group(1))
-                        y = int(match.group(2))
-                        reason = match.group(3)
-                        y = np.clip(y, 0, expected.shape[0] - 1)
-                        x = np.clip(x, 0, expected.shape[1] - 1)
-                        is_fn = (expected[y,x] > 0)
-                        if is_fn:
-                            reasons_histogram[reason] = reasons_histogram.get(reason, 0) + 1
-        with self.fn_analysis_path.open('w', newline='') as fout:
-            csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            for reason, count in reasons_histogram.items():
-                csv_writer.writerow([reason, count])
 
     def find_runnable_parent_task(self):
         if self.parent_task is None: return None

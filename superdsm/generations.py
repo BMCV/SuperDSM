@@ -1,9 +1,10 @@
 from .config import get_config_value, copy_config
 from .pipeline import Stage
-from ._aux import join_path, mkdir, Text, get_discarded_workload
+from ._aux import get_output, join_path, mkdir, Text, get_discarded_workload
 from .candidates import process_candidates, Candidate
 from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL
 from .maxsetpack import solve_maxsetpack
+from .surface import Surface
 
 import scipy.ndimage as ndi
 import numpy as np
@@ -29,7 +30,7 @@ class GenerationStage(Stage):
                                               outputs = ['y_surface', 'cover', 'candidates', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_surface         = gocell.surface.Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
+        y_surface         = Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
         g_atoms           = input_data['g_atoms']
         adjacencies       = input_data['adjacencies']
         conservative      = get_config_value(cfg,      'conservative', True)

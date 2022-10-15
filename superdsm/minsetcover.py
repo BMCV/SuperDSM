@@ -56,7 +56,7 @@ DEFAULT_LOWER_ALPHA_MUL = 0.8
 
 def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL, merge_lower_alpha=False, out=None):
     out = get_output(out)
-    solution1 = gocell.minsetcover._solve_minsetcover(candidates, alpha, merge, out)
+    solution1 = _solve_minsetcover(candidates, alpha, merge, out)
     if try_lower_alpha > 0 and alpha > 0:
         new_alpha = alpha * lower_alpha_mul
         out.write(f'MINSETCOVER retry with lower alpha: {new_alpha:g}')

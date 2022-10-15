@@ -9,8 +9,8 @@ def set_config_default_value(kwargs, kw, default, override_none=False):
     if '/' in kw:
         keys = kw.split('/')
         for key in keys[:-1]:
-            kwargs = set_default_config_value(kwargs, key, {}, override_none)
-        return set_default_config_value(kwargs, keys[-1], default, override_none)
+            kwargs = set_config_default_value(kwargs, key, {}, override_none)
+        return set_config_default_value(kwargs, keys[-1], default, override_none)
     else:
         if kw not in kwargs or (override_none and kwargs[kw] is None):
             kwargs[kw] = default

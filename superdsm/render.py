@@ -1,4 +1,4 @@
-from .aux import render_candidate_foregrounds
+from ._aux import render_candidate_foregrounds
 
 import numpy as np
 import warnings, math

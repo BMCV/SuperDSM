@@ -1,6 +1,7 @@
 from .pipeline import Stage
 from .config import get_config_value
 from .candidates import BaseCandidate, extract_foreground_fragment
+from ._aux import get_ray_1by1, join_path
 
 import scipy.ndimage      as ndi
 import skimage.morphology as morph
@@ -86,7 +87,7 @@ class Postprocessing(Stage):
 
         postprocessed_candidates = []
         log_entries = []
-        for ret_idx, ret in enumerate(gocell.aux.get_ray_1by1(futures)):
+        for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             candidate, candidate_results = candidates[ret[0]], ret[1]
             candidate = PostprocessedCandidate(candidate)
 
@@ -128,7 +129,7 @@ class Postprocessing(Stage):
             out.intermediate(f'Post-processing candidates... {ret_idx + 1} / {len(futures)}')
 
         if log_root_dir is not None:
-            log_filename = gocell.aux.join_path(log_root_dir, 'postprocessing.txt')
+            log_filename = join_path(log_root_dir, 'postprocessing.txt')
             with open(log_filename, 'w') as log_file:
                 for c, comment in log_entries:
                     location = (c.fg_offset + np.divide(c.fg_fragment.shape, 2)).round().astype(int)

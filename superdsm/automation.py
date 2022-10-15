@@ -1,5 +1,5 @@
 from .render import normalize_image
-from .config import set_default_config_value, update_config_value, copy_config, get_config_value
+from .config import set_config_default_value, update_config_value, copy_config, get_config_value
 
 import skimage
 import math
@@ -69,21 +69,21 @@ def _create_config_entry(version, cfg, key, factor, default_user_factor, type=No
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     override_none = (version >= 3)
-    gocell.config.set_default_value(cfg, key, factor * gocell.config.get_value(cfg, af_key, default_user_factor), override_none)
-    if type is not None: gocell.config.update_value(cfg, key, func=type)
-    if _min is not None: gocell.config.update_value(cfg, key, func=lambda value: max((value, _min)))
-    if _max is not None: gocell.config.update_value(cfg, key, func=lambda value: min((value, _max)))
+    set_config_default_value(cfg, key, factor * get_config_value(cfg, af_key, default_user_factor), override_none)
+    if type is not None: update_config_value(cfg, key, func=type)
+    if _min is not None: update_config_value(cfg, key, func=lambda value: max((value, _min)))
+    if _max is not None: update_config_value(cfg, key, func=lambda value: min((value, _max)))
 
 
 def create_config(base_cfg, im):
-    config   = gocell.config.copy(base_cfg)
-    version  = gocell.config.get_value(config, 'af_version', 1)
+    config   = copy_config(base_cfg)
+    version  = get_config_value(config, 'af_version', 1)
 
     if version == 0:
         scale = None
 
     if version >= 1:
-        scale = gocell.config.get_value(config, 'AF_scale', None)
+        scale = get_config_value(config, 'AF_scale', None)
         if scale is None: scale = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
         radius   = scale * math.sqrt(2)
         diameter = 2 * radius
