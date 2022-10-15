@@ -1,11 +1,10 @@
 *.pyc
 /build
 *.swp
-/examples/*.xlsx
-/examples/*/*.csv
-/examples/*/*.gz
-/examples/*/adj/*.png
-/examples/*/seg/*.png
-/examples/*/log/*.tgz
-/examples/*/cfg/*.json
+/examples/**/*.csv
+/examples/**/*.gz
+/examples/**/adj
+/examples/**/seg
+/examples/**/log
+/examples/**/cfg
 /examples/data
