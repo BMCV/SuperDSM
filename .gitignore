@@ -3,6 +3,8 @@
 *.swp
 /examples/**/*.csv
 /examples/**/*.gz
+/examples/**/.*.json
+/examples/**/.digest
 /examples/**/adj
 /examples/**/seg
 /examples/**/log

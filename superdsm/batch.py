@@ -81,6 +81,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
 def find_first_differing_stage(pipeline, config1, config2):
     stage_names = [stage.name for stage in pipeline.stages]
+    if config1.get('AF_scale', None) != config2.get('AF_scale', None): return stage_names[0]
     for stage_name in stage_names:
         if      (stage_name in config1 and stage_name not in config2) or \
                 (stage_name not in config1 and stage_name in config2) or \
@@ -154,7 +155,6 @@ class Task:
             self.timings_json_path = path / '.timings.json'
             self.      digest_path = path / '.digest'
             self.  digest_cfg_path = path / '.digest.cfg.json'
-            self. fn_analysis_path = path / 'fn.csv'
             self.           config = self.data['config']
             self.       seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
             self.           dilate = self.data['dilate']
@@ -214,8 +214,7 @@ class Task:
     def is_pending(self):
         return self.runnable and not (self.digest_path.exists() and self.digest_path.read_text() == self.config_digest)
 
-    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, evaluation='full', print_study=False, debug=False, report=None, out=None):
-        assert evaluation in ('none', 'legacy', 'full')
+    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, debug=False, report=None, out=None):
         out = get_output(out)
         if not self.runnable: return
         _process_candidates._DEBUG = debug
@@ -226,7 +225,7 @@ class Task:
             if task_info is not None: task_info = f'{task_info}, '
             else: task_info = ''
             task_info = task_info + f'last stage: {self.last_stage}'
-        out.write(Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', Text.YELLOW))
+        out.write(Text.style(f'\nEntering task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}', Text.BLUE))
         out2 = out.derive(margin=2)
         pipeline = self._initialize()
         assert self.last_stage is None or self.last_stage == '' or not np.isinf(pipeline.find(self.last_stage)), f'unknown stage "{self.last_stage}"'
@@ -267,7 +266,6 @@ class Task:
                 self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('modelfit') and not self.result_path.exists(),
                 first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess')
             ]
-            skip_evaluation = (self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'))
             if any(skip_writing_results_conditions):
                 out2.write('Skipping writing results')
             else:
@@ -278,8 +276,8 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         json.dump(self.config, fout)
-                    if not one_shot and skip_evaluation: self.digest_path.write_text(self.config_digest)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
+            if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):
                 if obj_name in locals(): return locals()[obj_name]
         except:
@@ -331,25 +329,6 @@ class Task:
                 return stage_name, data
             else:
                 return stage_name, {}
-
-    def write_evaluation_results(self, chunk_ids, study):
-        measure_names = sorted(study.measures.keys())
-        rows = [[str(self.path)], ['ID'] + measure_names]
-        for chunk_id in chunk_ids:
-            row = [chunk_id] + [np.mean(study.results[measure_name][chunk_id]) for measure_name in measure_names]
-            rows.append(row)
-        rows.append([''])
-        for measure_name in measure_names:
-            measure = study.measures[measure_name]
-            chunks  = study. results[measure_name]
-            values  = list(itertools.chain(*[chunks[chunk_id] for chunk_id in chunks if chunk_id in self.fully_annotated_ids or measure_name in FP_INVARIANT_MEASURES]))
-            fnc = np.sum if measure.ACCUMULATIVE else np.mean
-            val = fnc(values)
-            rows[-1].append(val)
-        with self.study_path.open('w', newline='') as fout:
-            csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            for row in rows:
-                csv_writer.writerow(row)
 
     def write_timings(self, timings):
         file_ids = timings.keys()
@@ -452,12 +431,9 @@ if __name__ == '__main__':
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     parser.add_argument('--last-stage', help='override the "last_stage" setting', type=str, default=None)
-    parser.add_argument('--print-study', help='print out evaluation results', action='store_true')
-    parser.add_argument('--skip-evaluation', help='skips evaluation', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
-    parser.add_argument('--analyze-fn', help='summarize reasons of false negative detections', action='store_true')
     parser.add_argument('--report', help='report current status to file', type=str, default='/tmp/godmod-status')
     args = parser.parse_args()
 
@@ -498,14 +474,11 @@ if __name__ == '__main__':
         report.update(task, 'active')
         newpid = os.fork()
         if newpid == 0:
-            evaluation = 'none' if args.skip_evaluation else 'full'
             try:
-                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, evaluation, args.print_study, args.debug, report, out)
+                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, args.debug, report, out)
             except:
                 report.update(task, 'error')
                 raise
-            if args.analyze_fn:
-                task.analyze_fn(dry, out=out)
             os._exit(0)
         else:
             if os.waitpid(newpid, 0)[1] != 0:

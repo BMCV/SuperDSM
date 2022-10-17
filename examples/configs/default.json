@@ -1,5 +1,5 @@
 {
-    "af_version": 2,
+    "af_version": 4,
     
     "preprocess" : {
         "threshold_clip": 3
@@ -8,7 +8,7 @@
         "AF_rho": 0.0005
     },
     "top-down-segmentation": {
-        "min_region_radius": 15,
+        "AF_min_region_radius": 0.33,
         "seed_connectivity": 8
     },
     "generations" : {
