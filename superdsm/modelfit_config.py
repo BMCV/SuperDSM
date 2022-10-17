@@ -1,4 +1,3 @@
-from .config import get_config_value
 from .pipeline import Stage
 
 
@@ -27,7 +26,7 @@ class ModelfitConfigStage(Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         mfcfg = {
-            key: get_config_value(cfg, key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
+            key: cfg.get(key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
         }
         
         return {

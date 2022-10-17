@@ -1,5 +1,4 @@
 from .pipeline import Stage
-from .config import get_config_value
 from .candidates import BaseCandidate, extract_foreground_fragment
 from ._aux import get_ray_1by1, join_path
 
@@ -23,36 +22,36 @@ class Postprocessing(Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
-        max_energy_rate           = get_config_value(cfg,           'max_energy_rate',  np.inf)
-        discard_image_boundary    = get_config_value(cfg,    'discard_image_boundary',   False)
-        min_boundary_obj_radius   = get_config_value(cfg,   'min_boundary_obj_radius',       0)
-        min_obj_radius            = get_config_value(cfg,            'min_obj_radius',       0)
-        max_obj_radius            = get_config_value(cfg,            'max_obj_radius',  np.inf)
-        max_eccentricity          = get_config_value(cfg,          'max_eccentricity',       1)
-        max_boundary_eccentricity = get_config_value(cfg, 'max_boundary_eccentricity',  np.inf)
+        max_energy_rate           = cfg.get(          'max_energy_rate',  np.inf)
+        discard_image_boundary    = cfg.get(   'discard_image_boundary',   False)
+        min_boundary_obj_radius   = cfg.get(  'min_boundary_obj_radius',       0)
+        min_obj_radius            = cfg.get(           'min_obj_radius',       0)
+        max_obj_radius            = cfg.get(           'max_obj_radius',  np.inf)
+        max_eccentricity          = cfg.get(         'max_eccentricity',       1)
+        max_boundary_eccentricity = cfg.get('max_boundary_eccentricity',  np.inf)
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
         get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
-        contrast_response_version = get_config_value(cfg, 'contrast_response_version',  2)
-        exterior_scale            = get_config_value(cfg,            'exterior_scale',  5)
-        exterior_offset           = get_config_value(cfg,           'exterior_offset',  5)
-        min_contrast_response     = get_config_value(cfg,     'min_contrast_response', -np.inf)
-        contrast_response_epsilon = get_config_value(cfg, 'contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
+        contrast_response_version = cfg.get('contrast_response_version',  2)
+        exterior_scale            = cfg.get(           'exterior_scale',  5)
+        exterior_offset           = cfg.get(          'exterior_offset',  5)
+        min_contrast_response     = cfg.get(    'min_contrast_response', -np.inf)
+        contrast_response_epsilon = cfg.get('contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
 
         # mask-based post-processing
-        mask_stdamp          = get_config_value(cfg,          'mask_stdamp',    2)
-        mask_max_distance    = get_config_value(cfg,    'mask_max_distance',    0)
-        mask_smoothness      = get_config_value(cfg,      'mask_smoothness',    3)
-        fill_holes           = get_config_value(cfg,           'fill_holes', True)
-        mask_process_version = get_config_value(cfg, 'mask_process_version',    1)
+        mask_stdamp          = cfg.get(         'mask_stdamp',    2)
+        mask_max_distance    = cfg.get(   'mask_max_distance',    0)
+        mask_smoothness      = cfg.get(     'mask_smoothness',    3)
+        fill_holes           = cfg.get(          'fill_holes', True)
+        mask_process_version = cfg.get('mask_process_version',    1)
 
         # autofluorescence glare removal
-        glare_detection_smoothness = get_config_value(cfg, 'glare_detection_smoothness',      3)
-        glare_detection_num_layers = get_config_value(cfg, 'glare_detection_num_layers',      5)
-        glare_detection_min_layer  = get_config_value(cfg,  'glare_detection_min_layer',    0.5)
-        min_glare_radius           = get_config_value(cfg,           'min_glare_radius', np.inf)
-        min_boundary_glare_radius  = get_config_value(cfg,  'min_boundary_glare_radius', min_glare_radius)
+        glare_detection_smoothness = cfg.get('glare_detection_smoothness',      3)
+        glare_detection_num_layers = cfg.get('glare_detection_num_layers',      5)
+        glare_detection_min_layer  = cfg.get( 'glare_detection_min_layer',    0.5)
+        min_glare_radius           = cfg.get(          'min_glare_radius', np.inf)
+        min_boundary_glare_radius  = cfg.get( 'min_boundary_glare_radius', min_glare_radius)
 
         # mask image pixels allowed for estimation of mean background intesity during contrast computation
         background_mask = np.zeros(input_data['g_raw'].shape, bool)

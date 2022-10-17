@@ -1,12 +1,12 @@
-from .config import get_config_value, derive_config
 from .pipeline import create_default_pipeline
 from .candidates import _process_candidates
 from ._aux import get_output, mkdir, Text, get_discarded_workload, is_subpath
 from .io import imread, imwrite
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
+from .config import Config
 
-import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, hashlib, tarfile, shutil, time, itertools, re
+import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, tarfile, shutil, time, itertools, re
 import ray
 import numpy as np
 import scipy.ndimage as ndi
@@ -34,7 +34,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     if log_filepath is not None: mkdir(pathlib.Path(log_filepath).parents[0])
     if cfg_filepath is not None: mkdir(pathlib.Path(cfg_filepath).parents[0])
 
-    histological  = get_config_value(cfg, 'histological', False)
+    histological  = cfg.get('histological', False)
     imread_kwargs = {}
     if histological:
         imread_kwargs['as_gray'] = False
@@ -54,7 +54,7 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
         cfg, scale = create_config(cfg, g_gray)
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
-            json.dump(cfg, fout)
+            cfg.dump_json(fout)
         if scale is not None:
             out.write(f'Estimated scale: {scale:.2f}')
 
@@ -80,6 +80,8 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
 
 
 def find_first_differing_stage(pipeline, config1, config2):
+    assert isinstance(config1, dict)
+    assert isinstance(config2, dict)
     stage_names = [stage.name for stage in pipeline.stages]
     if config1.get('AF_scale', None) != config2.get('AF_scale', None): return stage_names[0]
     for stage_name in stage_names:
@@ -122,7 +124,7 @@ class Task:
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
         self.path = path
-        self.data = data if parent_task is None else derive_config(parent_task.data, data)
+        self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
         self.fully_annotated_ids = frozenset(self.data['fully_annotated_ids']) if 'fully_annotated_ids' in self.data else self.file_ids
@@ -135,9 +137,9 @@ class Task:
                 base_config_path = path / base_config_path
             with base_config_path.open('r') as base_config_fin:
                 base_config = json.load(base_config_fin)
-            parent_config = get_config_value(parent_task.data, 'config', {})
-            self.data['config'] = derive_config(derive_config(parent_config, base_config), get_config_value(data, 'config', {}))
-            del self.data['base_config_path']
+            parent_config = parent_task.data.get('config', {})
+            self.data['config'] = parent_config.derive(base_config).merge(data.get('config', {}))
+            del self.data.entries['base_config_path']
 
         if self.runnable:
 
@@ -145,10 +147,10 @@ class Task:
             assert self.fully_annotated_ids is not None
             assert self.im_pathpattern      is not None
 
-            self.  seg_pathpattern = path / self.data['seg_pathpattern'] if 'seg_pathpattern' in self.data else None
-            self.  adj_pathpattern = path / self.data['adj_pathpattern'] if 'adj_pathpattern' in self.data else None
-            self.  log_pathpattern = path / self.data['log_pathpattern'] if 'log_pathpattern' in self.data else None
-            self.  cfg_pathpattern = path / self.data['cfg_pathpattern'] if 'cfg_pathpattern' in self.data else None
+            self.  seg_pathpattern = path / self.data.entries.get('seg_pathpattern', None)
+            self.  adj_pathpattern = path / self.data.entries.get('adj_pathpattern', None)
+            self.  log_pathpattern = path / self.data.entries.get('log_pathpattern', None)
+            self.  cfg_pathpattern = path / self.data.entries.get('cfg_pathpattern', None)
             self.      result_path = path / DATA_DILL_GZ_FILENAME
             self.       study_path = path / 'study.csv'
             self.     timings_path = path / 'timings.csv'
@@ -156,11 +158,11 @@ class Task:
             self.      digest_path = path / '.digest'
             self.  digest_cfg_path = path / '.digest.cfg.json'
             self.           config = self.data['config']
-            self.       seg_border = self.data['seg_border'] if 'seg_border' in self.data else None
+            self.       seg_border = self.data.entries.get('seg_border', None)
             self.           dilate = self.data['dilate']
             self.  merge_threshold = self.data['merge_overlap_threshold']
-            self.       last_stage = self.data['last_stage'] if 'last_stage' in self.data else None
-            self.          environ = self.data['environ'] if 'environ' in self.data else {}
+            self.       last_stage = self.data.entries.get('last_stage', None)
+            self.          environ = self.data.entries.get('environ', {})
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
@@ -208,7 +210,7 @@ class Task:
         
     @property
     def config_digest(self):
-        return hashlib.md5(json.dumps(self.config).encode('utf8')).hexdigest()
+        return self.config.md5.hexdigest()
         
     @property
     def is_pending(self):
@@ -246,7 +248,7 @@ class Task:
                               cfg_filepath = str(self.cfg_pathpattern) % file_id if self.cfg_pathpattern is not None else None,
                                 seg_border = self.seg_border,
                                 last_stage = self.last_stage,
-                                       cfg = derive_config(self.config, {}))
+                                       cfg = self.config.copy())
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
@@ -275,7 +277,7 @@ class Task:
                     with gzip.open(self.result_path, 'wb') as fout:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
-                        json.dump(self.config, fout)
+                        self.config.dump_json(fout)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):
@@ -301,12 +303,12 @@ class Task:
         pickup_candidates = []
         previous_task = self.find_parent_task_with_result()
         if previous_task is not None:
-            first_stage = find_first_differing_stage(pipeline, self.config, previous_task.config)
+            first_stage = find_first_differing_stage(pipeline, self.config.entries, previous_task.config.entries)
             pickup_candidates.append((previous_task, first_stage))
         if self.result_path.exists() and self.digest_cfg_path.exists():
             with self.digest_cfg_path.open('r') as fin:
                 config = json.load(fin)
-            first_stage = find_first_differing_stage(pipeline, self.config, config)
+            first_stage = find_first_differing_stage(pipeline, self.config.entries, config)
             pickup_candidates.append((self, first_stage))
         return pickup_candidates
 

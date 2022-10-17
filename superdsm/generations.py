@@ -1,6 +1,5 @@
-from .config import get_config_value, copy_config
 from .pipeline import Stage
-from ._aux import get_output, join_path, mkdir, Text, get_discarded_workload
+from ._aux import get_output, join_path, mkdir, Text, get_discarded_workload, copy_dict
 from .candidates import process_candidates, Candidate
 from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL
 from .maxsetpack import solve_maxsetpack
@@ -33,17 +32,17 @@ class GenerationStage(Stage):
         y_surface         = Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
         g_atoms           = input_data['g_atoms']
         adjacencies       = input_data['adjacencies']
-        conservative      = get_config_value(cfg,      'conservative', True)
-        alpha             = get_config_value(cfg,             'alpha', 0)
-        try_lower_alpha   = get_config_value(cfg,   'try_lower_alpha', DEFAULT_TRY_LOWER_ALPHA)
-        lower_alpha_mul   = get_config_value(cfg,   'lower_alpha_mul', DEFAULT_LOWER_ALPHA_MUL)
-        max_seed_distance = get_config_value(cfg, 'max_seed_distance', np.inf)
-        max_work_amount   = get_config_value(cfg,   'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
+        conservative      = cfg.get(     'conservative', True)
+        alpha             = cfg.get(            'alpha', 0)
+        try_lower_alpha   = cfg.get(  'try_lower_alpha', DEFAULT_TRY_LOWER_ALPHA)
+        lower_alpha_mul   = cfg.get(  'lower_alpha_mul', DEFAULT_LOWER_ALPHA_MUL)
+        max_seed_distance = cfg.get('max_seed_distance', np.inf)
+        max_work_amount   = cfg.get(  'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
 
         assert 0 < lower_alpha_mul < 1
 
         mode  = 'conservative' if conservative else 'fast'
-        mfcfg = copy_config(input_data['mfcfg'])
+        mfcfg = copy_dict(input_data['mfcfg'])
         cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, max_work_amount, out)[2:]
 
         return {

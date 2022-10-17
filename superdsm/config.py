@@ -1,64 +1,106 @@
 import json
+import hashlib
 
 
-def pop_config_value(kwargs, kw, default):
-    return kwargs.pop(kw) if kw in kwargs else default
+def _cleanup_value(value):
+    return value.entries if isinstance(value, Config) else value
 
 
-def set_config_default_value(kwargs, kw, default, override_none=False):
-    if '/' in kw:
-        keys = kw.split('/')
-        for key in keys[:-1]:
-            kwargs = set_config_default_value(kwargs, key, {}, override_none)
-        return set_config_default_value(kwargs, keys[-1], default, override_none)
-    else:
-        if kw not in kwargs or (override_none and kwargs[kw] is None):
-            kwargs[kw] = default
-        return kwargs[kw]
+class Config:
 
-
-def get_config_value(config, key, default):
-    if '/' in key:
-        keys = key.split('/')
-        for key in keys[:-1]:
-            config = get_config_value(config, key, {})
-        return get_config_value(config, keys[-1], default)
-    else:
-        if key not in config: config[key] = default
-        return config[key]
-
-
-def update_config_value(config, key, func):
-    if '/' in key:
-        keys = key.split('/')
-        for key in keys[:-1]:
-            config = get_config_value(config, key, {})
-        return update_config_value(config, keys[-1], func)
-    else:
-        config[key] = func(config[key])
-        return config[key]
-
-
-def set_config_value(config, key, value):
-    update_config_value(config, key, lambda *args: value)
-
-
-def update_config(base_cfg, cfg_override):
-    for key, val in cfg_override.items():
-        if key not in base_cfg.keys() or not isinstance(val, dict):
-            base_cfg[key] = val
+    def __init__(self, other=None):
+        if isinstance(other, dict):
+            self.entries = other
+        elif isinstance(other, Config):
+            self.entries = json.loads(json.dumps(other.entries))
         else:
-            if not isinstance(base_cfg[key], dict):
-                base_cfg[key] = {}
-            update_config(base_cfg[key], val)
-    return base_cfg
+            raise ValueError(f'Unknown argument: ' + other)
 
+    def pop(self, key, default):
+        if '/' in key:
+            keys = key.split('/')
+            config = self
+            for key in keys[:-1]:
+                config = config.get(key, {})
+            return config.pop(keys[-1], default)
+        else:
+            return self.entries.pop(key, default)
 
-def derive_config(base_cfg, cfg_override):
-    cfg = json.loads(json.dumps(base_cfg))
-    return update_config(cfg, cfg_override)
+    def set_default(self, key, default, override_none=False):
+        if '/' in key:
+            keys = key.split('/')
+            config = self
+            for key in keys[:-1]:
+                config = config.set_default(key, {}, override_none)
+            return config.set_default(keys[-1], default, override_none)
+        else:
+            if key not in self.entries or (override_none and self.entries[key] is None):
+                self.entries[key] = _cleanup_value(default)
+            return self[key]
 
+    def get(self, key, default):
+        if '/' in key:
+            keys = key.split('/')
+            config = self
+            for key in keys[:-1]:
+                config = config.get(key, {})
+            return config.get(keys[-1], default)
+        else:
+            if key not in self.entries: self.entries[key] = _cleanup_value(default)
+            value = self.entries[key]
+            return Config(value) if isinstance(value, dict) else value
 
-def copy_config(base_cfg):
-    return derive_config(base_cfg, dict())
+    def __getitem__(self, key):
+        if '/' in key:
+            keys = key.split('/')
+            config = self
+            for key in keys[:-1]:
+                config = config[key]
+            return config[keys[-1]]
+        else:
+            value = self.entries[key]
+            return Config(value) if isinstance(value, dict) else value
+
+    def __contains__(self, key):
+        try:
+            self[key]
+            return True
+        except KeyError:
+            return False
+
+    def update(self, key, func):
+        if '/' in key:
+            keys = key.split('/')
+            config = self
+            for key in keys[:-1]:
+                config = config.get(key, {})
+            return config.update(keys[-1], func)
+        else:
+            self.entries[key] = _cleanup_value(func(self.entries.get(key, None)))
+            return self.entries[key]
+
+    def __setitem__(self, key, value):
+        self.update(key, lambda *args: value)
+        return self
+
+    def merge(self, config_override):
+        for key, val in _cleanup_value(config_override).items():
+            if not isinstance(val, dict):
+                self.entries[key] = val
+            else:
+                self.get(key, {}).merge(val)
+        return self
+
+    def copy(self):
+        return Config(self)
+
+    def derive(self, config_override):
+        return self.copy().merge(config_override)
+
+    def dump_json(self, fp):
+        json.dump(self.entries, fp)
+        
+    @property
+    def md5(self):
+        return hashlib.md5(json.dumps(self.entries).encode('utf8'))
 

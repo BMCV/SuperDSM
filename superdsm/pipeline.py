@@ -1,5 +1,4 @@
 from ._aux import get_output, copy_dict, mkdir
-from .config import get_config_value
 from .surface import Surface
 
 import math
@@ -31,8 +30,8 @@ class Stage(object):
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
         out = get_output(out)
-        cfg = get_config_value(cfg, self.cfg_key, {})
-        if get_config_value(cfg, 'enabled', self.ENABLED_BY_DEFAULT):
+        cfg = cfg.get(self.cfg_key, {})
+        if cfg.get('enabled', self.ENABLED_BY_DEFAULT):
             out.intermediate(f'Starting stage "{self.name}"')
             self._callback('start', data)
             input_data = {}
@@ -75,8 +74,8 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
-        assert 'preprocess1' not in cfg.keys(), 'config version is deprecated'
-        cfg = copy_dict(cfg)
+        assert 'preprocess1' not in cfg, 'config version is deprecated'
+        cfg = cfg.copy()
         if log_root_dir is not None: mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].name
@@ -93,7 +92,7 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
-        if get_config_value(cfg, 'histological', False):
+        if cfg.get('histological', False):
             g_rgb = g_raw
             g_raw = g_raw.mean(axis=2)
             g_raw = g_raw.max() - g_raw
@@ -138,14 +137,14 @@ def create_pipeline(stages):
 
 
 def create_default_pipeline():
-    from .preprocessing import PreprocessingStage
+    from .preprocessing import Preprocessing
     from .modelfit_config import ModelfitConfigStage
     from .topdownsegm import TopDownSegmentation
     from .generations import GenerationStage
     from .postprocessing import Postprocessing
 
     stages = [
-        PreprocessingStage(),
+        Preprocessing(),
         ModelfitConfigStage(),
         TopDownSegmentation(),
         GenerationStage(),

@@ -1,6 +1,5 @@
-from .config import copy_config, get_config_value, copy_config
 from .pipeline import Stage
-from ._aux import get_ray_1by1
+from ._aux import get_ray_1by1, copy_dict
 from .candidates import _modelfit, Candidate
 from .atoms import AtomAdjacencyGraph
 from .surface import Surface
@@ -61,7 +60,7 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
     if version >= 2:
         mf_buffer = Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_energy_rate(candidate, region, atoms_map, mfcfg):
-        _mf_kwargs = copy_config(mfcfg)
+        _mf_kwargs = copy_dict(mfcfg)
         bg_margin  = _mf_kwargs.pop('min_background_margin')
         mf_region  = candidate.get_modelfit_region(region, atoms_map, min_background_margin=bg_margin)
         mf_region_hash = _hash_mask(mf_region.mask)
@@ -98,14 +97,14 @@ class TopDownSegmentation(Stage):
                                                   outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        seed_connectivity = get_config_value(cfg, 'seed_connectivity', 4)
-        min_region_radius = get_config_value(cfg, 'min_region_radius', 15)
-        max_atom_energy_rate = get_config_value(cfg, 'max_atom_energy_rate', 0.05)
-        min_energy_rate_improvement = get_config_value(cfg, 'min_energy_rate_improvement', 0.1)
-        max_cluster_marker_irregularity = get_config_value(cfg, 'max_cluster_marker_irregularity', 0.2)
-        version = get_config_value(cfg, 'version', 3)
+        seed_connectivity = cfg.get('seed_connectivity', 4)
+        min_region_radius = cfg.get('min_region_radius', 15)
+        max_atom_energy_rate = cfg.get('max_atom_energy_rate', 0.05)
+        min_energy_rate_improvement = cfg.get('min_energy_rate_improvement', 0.1)
+        max_cluster_marker_irregularity = cfg.get('max_cluster_marker_irregularity', 0.2)
+        version = cfg.get('version', 3)
 
-        mfcfg = copy_config(input_data['mfcfg'])
+        mfcfg = copy_dict(input_data['mfcfg'])
         mfcfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')

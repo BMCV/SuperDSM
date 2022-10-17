@@ -1,4 +1,3 @@
-from .config import get_config_value
 from .pipeline import Stage
 
 import math
@@ -7,22 +6,22 @@ import skimage.morphology as morph
 import numpy as np
 
 
-class PreprocessingStage(Stage):
+class Preprocessing(Stage):
 
     ENABLED_BY_DEFAULT = True
 
     def __init__(self):
-        super(PreprocessingStage, self).__init__('preprocess',
-                                                 inputs  = ['g_raw'],
-                                                 outputs = ['y'])
+        super(Preprocessing, self).__init__('preprocess',
+                                            inputs  = ['g_raw'],
+                                            outputs = ['y'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         g_raw = input_data['g_raw']
 
-        sigma1 = get_config_value(cfg, 'sigma1', math.sqrt(2))
-        sigma2 = get_config_value(cfg, 'sigma2', 40)
-        threshold_clip = get_config_value(cfg, 'threshold_clip', 3)
-        threshold_max  = get_config_value(cfg, 'threshold_max' , None)
+        sigma1 = cfg.get('sigma1', math.sqrt(2))
+        sigma2 = cfg.get('sigma2', 40)
+        threshold_clip = cfg.get('threshold_clip', 3)
+        threshold_max  = cfg.get('threshold_max' , None)
 
         threshold_original = ndi.gaussian_filter(g_raw, sigma2)
         if threshold_max is None:
@@ -42,7 +41,7 @@ class PreprocessingStage(Stage):
         else:
             threshold_combined = ndi.maximum_filter(threshold_original, size=threshold_max * sigma2)
             
-        if get_config_value(cfg, 'lower_clip_mean', False):
+        if cfg.get('lower_clip_mean', False):
             threshold_combined = np.max([threshold_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
         y = ndi.gaussian_filter(g_raw, sigma1) - threshold_combined
