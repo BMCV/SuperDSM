@@ -20,7 +20,9 @@ def imwrite(filepath, img, shape=None, antialias=False):
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
         img = (img * 255).round().astype('uint8')
-    skimage.io.imsave(filepath, img)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', UserWarning)
+        skimage.io.imsave(filepath, img)
 
 
 def imread(filepath, **kwargs):

@@ -238,7 +238,6 @@ def render_result_over_image(data, candidates='postprocessed_candidates', merge_
     im_seg /= im_seg.max()
     seg_objects = rasterize_labels(data, candidates=candidates, merge_overlap_threshold=merge_overlap_threshold)
     cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
-    #se = morphology.disk(border / 2)
     for l in set(seg_objects.flatten()) - {0}:
         seg_bnd = cp.get_contour_mask(seg_objects == l)
         if isinstance(colors, dict):
@@ -310,9 +309,13 @@ def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_
         background = (result == 0).copy()
         result[overlaps] = 0
         dist = ndimage.morphology.distance_transform_edt(result == 0)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', FutureWarning)
-            result = segmentation.watershed(dist, result, mask=np.logical_not(background))
+        result = segmentation.watershed(dist, result, mask=np.logical_not(background))
+
+    # Work-around for this bug: https://github.com/scikit-image/scikit-image/issues/6587
+    if result.dtype == np.int32:
+        assert not (result < 0).any()
+        assert not (result >= 2 ** 16).any()
+        result = result.astype('uint16')
 
     # In rare cases it can happen that two or more objects overlap exactly, in which case the above code
     # will eliminate both objects. We will fix this by checking for such occasions explicitly:

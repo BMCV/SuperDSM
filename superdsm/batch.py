@@ -19,6 +19,11 @@ def _format_runtime(seconds):
     return f'{hours:02}:{minutes:02}:{seconds:02}'
 
 
+def _resolve_pathpattern(pathpattern, fileid):
+    if pathpattern is None: return None
+    else: return str(pathpattern) % fileid
+
+
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = get_output(out)
@@ -28,18 +33,19 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None):
-    if seg_filepath is not None: mkdir(pathlib.Path(seg_filepath).parents[0])
-    if adj_filepath is not None: mkdir(pathlib.Path(adj_filepath).parents[0])
-    if log_filepath is not None: mkdir(pathlib.Path(log_filepath).parents[0])
-    if cfg_filepath is not None: mkdir(pathlib.Path(cfg_filepath).parents[0])
+def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, cfg, first_stage, last_stage, rasterize_kwargs, out=None):
+    if     seg_filepath is not None: mkdir(pathlib.Path(    seg_filepath).parents[0])
+    if     adj_filepath is not None: mkdir(pathlib.Path(    adj_filepath).parents[0])
+    if     log_filepath is not None: mkdir(pathlib.Path(    log_filepath).parents[0])
+    if     cfg_filepath is not None: mkdir(pathlib.Path(    cfg_filepath).parents[0])
+    if overlay_filepath is not None: mkdir(pathlib.Path(overlay_filepath).parents[0])
 
     histological  = cfg.get('histological', False)
     imread_kwargs = {}
     if histological:
         imread_kwargs['as_gray'] = False
 
-    g_raw = imread(im_filepath, **imread_kwargs)
+    g_raw = imread(img_filepath, **imread_kwargs)
     out   = get_output(out)
 
     timings = {}
@@ -71,11 +77,17 @@ def __process_file(pipeline, data, im_filepath, seg_filepath, seg_border, log_fi
     atomic_stage.remove_callback('end', write_adjacencies_image)
     timings.update(_timings)
 
-    if seg_filepath is not None:
+    if overlay_filepath is not None:
         if seg_border is None: seg_border = 8
-        im_result = render_result_over_image(result_data, border_width=seg_border)
+        img_overlay = render_result_over_image(result_data, border_width=seg_border)
+        mkdir(pathlib.Path(overlay_filepath).parents[0])
+        imwrite(overlay_filepath, img_overlay)
+
+    if seg_filepath is not None:
+        seg_result = rasterize_labels(result_data, **rasterize_kwargs)
         mkdir(pathlib.Path(seg_filepath).parents[0])
-        imwrite(seg_filepath, im_result)
+        imwrite(seg_filepath, seg_result)
+
     return result_data, timings
 
 
@@ -126,9 +138,8 @@ class Task:
         self.path = path
         self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
-        self.file_ids = sorted(frozenset(self.data['file_ids'])) if 'file_ids' in self.data else None
-        self.fully_annotated_ids = frozenset(self.data['fully_annotated_ids']) if 'fully_annotated_ids' in self.data else self.file_ids
-        self.im_pathpattern = os.path.expanduser(self.data['im_pathpattern']) if 'im_pathpattern' in self.data else None
+        self.file_ids = sorted(frozenset(self.data.entries['file_ids'])) if 'file_ids' in self.data else None
+        self.img_pathpattern = os.path.expanduser(self.data.entries.get('img_pathpattern', None))
 
         if 'base_config_path' in self.data:
             base_config_path = self.data['base_config_path']
@@ -143,26 +154,26 @@ class Task:
 
         if self.runnable:
 
-            assert self.file_ids            is not None
-            assert self.fully_annotated_ids is not None
-            assert self.im_pathpattern      is not None
+            assert self.file_ids        is not None
+            assert self.img_pathpattern is not None
 
-            self.  seg_pathpattern = path / self.data.entries.get('seg_pathpattern', None)
-            self.  adj_pathpattern = path / self.data.entries.get('adj_pathpattern', None)
-            self.  log_pathpattern = path / self.data.entries.get('log_pathpattern', None)
-            self.  cfg_pathpattern = path / self.data.entries.get('cfg_pathpattern', None)
-            self.      result_path = path / DATA_DILL_GZ_FILENAME
-            self.       study_path = path / 'study.csv'
-            self.     timings_path = path / 'timings.csv'
-            self.timings_json_path = path / '.timings.json'
-            self.      digest_path = path / '.digest'
-            self.  digest_cfg_path = path / '.digest.cfg.json'
-            self.           config = self.data['config']
-            self.       seg_border = self.data.entries.get('seg_border', None)
-            self.           dilate = self.data['dilate']
-            self.  merge_threshold = self.data['merge_overlap_threshold']
-            self.       last_stage = self.data.entries.get('last_stage', None)
-            self.          environ = self.data.entries.get('environ', {})
+            self.    seg_pathpattern = path / self.data.entries.get(    'seg_pathpattern', None)
+            self.    adj_pathpattern = path / self.data.entries.get(    'adj_pathpattern', None)
+            self.    log_pathpattern = path / self.data.entries.get(    'log_pathpattern', None)
+            self.    cfg_pathpattern = path / self.data.entries.get(    'cfg_pathpattern', None)
+            self.overlay_pathpattern = path / self.data.entries.get('overlay_pathpattern', None)
+            self.        result_path = path / DATA_DILL_GZ_FILENAME
+            self.         study_path = path / 'study.csv'
+            self.       timings_path = path / 'timings.csv'
+            self.  timings_json_path = path / '.timings.json'
+            self.        digest_path = path / '.digest'
+            self.    digest_cfg_path = path / '.digest.cfg.json'
+            self.             config = self.data['config']
+            self.         seg_border = self.data.entries.get('seg_border', None)
+            self.             dilate = self.data.entries.get('dilate', 0)
+            self.    merge_threshold = self.data.entries.get('merge_overlap_threshold', np.infty)
+            self.         last_stage = self.data.entries.get('last_stage', None)
+            self.            environ = self.data.entries.get('environ', {})
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
@@ -237,18 +248,20 @@ class Task:
             timings = self._load_timings()
             discarded_workloads = []
             for file_idx, file_id in enumerate(self.file_ids):
-                im_filepath = str(self. im_pathpattern) % file_id
+                img_filepath = str(self.img_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
-                out3.write(Text.style(f'\nProcessing file: {im_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
-                kwargs = dict( im_filepath = im_filepath,
-                              seg_filepath = str(self.seg_pathpattern) % file_id if self.seg_pathpattern is not None else None,
-                              adj_filepath = str(self.adj_pathpattern) % file_id if self.adj_pathpattern is not None else None,
-                              log_filepath = str(self.log_pathpattern) % file_id if self.log_pathpattern is not None else None,
-                              cfg_filepath = str(self.cfg_pathpattern) % file_id if self.cfg_pathpattern is not None else None,
-                                seg_border = self.seg_border,
-                                last_stage = self.last_stage,
-                                       cfg = self.config.copy())
+                out3.write(Text.style(f'\nProcessing file: {img_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
+                kwargs = dict(    img_filepath = img_filepath,
+                                  seg_filepath = _resolve_pathpattern(self.seg_pathpattern    , file_id),
+                                  adj_filepath = _resolve_pathpattern(self.adj_pathpattern    , file_id),
+                                  log_filepath = _resolve_pathpattern(self.log_pathpattern    , file_id),
+                                  cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern    , file_id),
+                              overlay_filepath = _resolve_pathpattern(self.overlay_pathpattern, file_id),
+                              rasterize_kwargs = dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate),
+                                    seg_border = self.seg_border,
+                                    last_stage = self.last_stage,
+                                           cfg = self.config.copy())
                 if file_id not in data: data[file_id] = None
                 if self.last_stage is not None and pipeline.find(self.last_stage) < pipeline.find('postprocess'): kwargs['seg_filepath'] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)

@@ -6,13 +6,11 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "im_pathpattern": "~/Documents/phd/data/coelho2009/dna-images/gnf/dna-%d.png",
+    "img_pathpattern": "~/Documents/phd/data/coelho2009/dna-images/gnf/dna-%d.png",
     "seg_pathpattern": "seg/dna-%d.png",
     "adj_pathpattern": "adj/dna-%d.png",
     "log_pathpattern": "log/dna-%d",
     "cfg_pathpattern": "cfg/dna-%d.json",
-    "file_ids": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49],
-
-    "dilate": 0,
-    "merge_overlap_threshold": Infinity
+    "overlay_pathpattern": "overlays/dna-%d.png",
+    "file_ids": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49]
 }

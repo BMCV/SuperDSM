@@ -6,13 +6,11 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "im_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/02/t%02d.tif",
+    "img_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/02/t%02d.tif",
     "seg_pathpattern": "seg/t%02d.png",
-    "adj_pathpattern": "adj/dna-%d.png",
+    "adj_pathpattern": "adj/dna-%02d.png",
     "log_pathpattern": "log/t%02d",
-    "cfg_pathpattern": "cfg/dna-%d.json",
-    "file_ids": [1,22,25,27,28,29,30,35,39,46,47,52,55,60,65,72,76,80,82,91],
-
-    "dilate": 0,
-    "merge_overlap_threshold": Infinity
+    "cfg_pathpattern": "cfg/dna-%02d.json",
+    "overlay_pathpattern": "overlays/dna-%02d.png",
+    "file_ids": [1,22,25,27,28,29,30,35,39,46,47,52,55,60,65,72,76,80,82,91]
 }
