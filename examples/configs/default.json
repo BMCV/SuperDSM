@@ -1,6 +1,4 @@
 {
-    "af_version": 4,
-    
     "preprocess" : {
         "threshold_clip": 3
     },
