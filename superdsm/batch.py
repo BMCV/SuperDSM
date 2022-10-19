@@ -178,9 +178,13 @@ class Task:
 
     def resolve_path(self, path):
         if path is None: return None
-        return pathlib.Path(os.path.expanduser(str(path))
+        path = pathlib.Path(os.path.expanduser(str(path))
             .replace('{DIRNAME}', self.path.name)
             .replace('{ROOTDIR}', str(self.root_path)))
+        if path.is_absolute():
+            return path.resolve()
+        else:
+            return path.resolve().relative_to(os.getcwd())
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
@@ -258,7 +262,7 @@ class Task:
                 img_filepath = str(self.img_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
-                out3.write(Text.style(f'\nProcessing file: {img_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
+                out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {img_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict(    img_filepath = img_filepath,
                                   seg_filepath = _resolve_pathpattern(self.seg_pathpattern    , file_id),
                                   adj_filepath = _resolve_pathpattern(self.adj_pathpattern    , file_id),
