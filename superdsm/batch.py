@@ -143,7 +143,7 @@ class Task:
         self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data.entries['file_ids'])) if 'file_ids' in self.data else None
-        self.img_pathpattern = self.resolve_path(self.data.entries.get('img_pathpattern', None))
+        self.img_pathpattern = self.data.update('img_pathpattern', lambda img_pathpattern: str(self.resolve_path(img_pathpattern)))
 
         if 'base_config_path' in self.data:
             base_config_path = self.resolve_path(self.data['base_config_path'])
@@ -178,10 +178,9 @@ class Task:
 
     def resolve_path(self, path):
         if path is None: return None
-        path = pathlib.Path(os.path.expanduser(str(path))
+        return pathlib.Path(os.path.expanduser(str(path))
             .replace('{DIRNAME}', self.path.name)
             .replace('{ROOTDIR}', str(self.root_path)))
-        return path if path.is_absolute() else self.path / path
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
@@ -195,7 +194,7 @@ class Task:
                 for key in override_cfg:
                     setattr(task, key, override_cfg[key])
                 return task
-            except json.JSONDecodeError as err:
+            except:
                 raise ValueError(f'Error processing: "{task_file}"')
         return None
     
