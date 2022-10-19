@@ -9,4 +9,5 @@
 /examples/**/seg
 /examples/**/log
 /examples/**/cfg
+/examples/**/overlays
 /examples/data

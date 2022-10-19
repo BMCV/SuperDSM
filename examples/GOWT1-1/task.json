@@ -6,11 +6,11 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "img_pathpattern": "{ROOTDIR}/../data/{DIRNAME}/t%02d.tif",
-    "seg_pathpattern": "seg/t%02d.png",
-    "adj_pathpattern": "adj/dna-%02d.png",
-    "log_pathpattern": "log/t%02d",
-    "cfg_pathpattern": "cfg/dna-%02d.json",
-    "overlay_pathpattern": "overlays/dna-%02d.png",
+    "img_pathpattern": "{ROOTDIR}/../data/{DIRNAME}/t%03d.tif",
+    "seg_pathpattern": "seg/t%03d.png",
+    "adj_pathpattern": "adj/t%03d.png",
+    "log_pathpattern": "log/t%03d",
+    "cfg_pathpattern": "cfg/t%03d.json",
+    "overlay_pathpattern": "overlays/t%03d.png",
     "file_ids": [2,5,6,7,8,10,12,13,14,15,16,17,18,19,20,21,27,28,29,31,32,33,34,37,39,40,41,44,45,46,47]
 }
