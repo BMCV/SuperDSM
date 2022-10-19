@@ -6,7 +6,7 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "img_pathpattern": "~/Documents/phd/data/coelho2009/dna-images/ic100/dna-%d.png",
+    "img_pathpattern": "{ROOTDIR}/data/{DIRNAME}/dna-%d.png",
     "seg_pathpattern": "seg/dna-%d.png",
     "adj_pathpattern": "adj/dna-%d.png",
     "log_pathpattern": "log/dna-%d",

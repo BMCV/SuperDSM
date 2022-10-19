@@ -6,7 +6,7 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "img_pathpattern": "~/Documents/phd/data/isbi2013/N2DH-GOWT1/01/t%02d.tif",
+    "img_pathpattern": "{ROOTDIR}/data/{DIRNAME}/t%02d.tif",
     "seg_pathpattern": "seg/t%02d.png",
     "adj_pathpattern": "adj/dna-%02d.png",
     "log_pathpattern": "log/t%02d",

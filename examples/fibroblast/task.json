@@ -6,7 +6,7 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "img_pathpattern": "~/Documents/phd/data/kalinin2017/im/%s.tif",
+    "img_pathpattern": "{ROOTDIR}/data/{DIRNAME}/%s.tif",
     "seg_pathpattern": "seg/%s.png",
     "adj_pathpattern": "adj/%s.png",
     "log_pathpattern": "log/%s",

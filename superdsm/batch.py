@@ -1,6 +1,6 @@
 from .pipeline import create_default_pipeline
 from .candidates import _process_candidates
-from ._aux import get_output, mkdir, Text, get_discarded_workload, is_subpath
+from ._aux import get_output, mkdir, Text, get_discarded_workload, is_subpath, copy_dict
 from .io import imread, imwrite
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
@@ -27,7 +27,10 @@ def _resolve_pathpattern(pathpattern, fileid):
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = get_output(out)
-        out.write(f'{_process_file.__name__}: {json.dumps(kwargs)}')
+        kwargs_serializable = copy_dict(kwargs)
+        if 'cfg' in kwargs_serializable:
+            kwargs_serializable['cfg'] = kwargs_serializable['cfg'].entries
+        out.write(f'{_process_file.__name__}: {json.dumps(kwargs_serializable)}')
         return None, {}
     else:
         return __process_file(*args, out=out, **kwargs)
@@ -132,6 +135,7 @@ DATA_DILL_GZ_FILENAME = 'data.dill.gz'
 
 
 class Task:
+
     def __init__(self, path, data, parent_task=None, rel_path=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
@@ -139,13 +143,10 @@ class Task:
         self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
         self.file_ids = sorted(frozenset(self.data.entries['file_ids'])) if 'file_ids' in self.data else None
-        self.img_pathpattern = os.path.expanduser(self.data.entries.get('img_pathpattern', None))
+        self.img_pathpattern = self.resolve_path(self.data.entries.get('img_pathpattern', None))
 
         if 'base_config_path' in self.data:
-            base_config_path = self.data['base_config_path']
-            base_config_path = pathlib.Path(base_config_path.replace('{DIRNAME}', path.name).replace('{ROOTDIR}', str(self.root_path)))
-            if not base_config_path.is_absolute():
-                base_config_path = path / base_config_path
+            base_config_path = self.resolve_path(self.data['base_config_path'])
             with base_config_path.open('r') as base_config_fin:
                 base_config = json.load(base_config_fin)
             parent_config = parent_task.data.get('config', {})
@@ -174,6 +175,13 @@ class Task:
             self.    merge_threshold = self.data.entries.get('merge_overlap_threshold', np.infty)
             self.         last_stage = self.data.entries.get('last_stage', None)
             self.            environ = self.data.entries.get('environ', {})
+
+    def resolve_path(self, path):
+        if path is None: return None
+        path = pathlib.Path(os.path.expanduser(str(path))
+            .replace('{DIRNAME}', self.path.name)
+            .replace('{ROOTDIR}', str(self.root_path)))
+        return path if path.is_absolute() else self.path / path
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
