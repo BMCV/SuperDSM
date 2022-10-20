@@ -81,15 +81,15 @@ def create_config(base_cfg, im):
     diameter = 2 * radius
 
     _create_config_entry(cfg, 'preprocess/sigma2', scale, 1.0)
-    _create_config_entry(cfg, 'generations/alpha', radius ** 2, 0.2)
+    _create_config_entry(cfg, 'generations/alpha', radius ** 2, 0.33)
     _create_config_entry(cfg, 'generations/max_seed_distance', diameter, np.inf)
     _create_config_entry(cfg, 'postprocess/min_obj_radius', radius, 0.0)
     _create_config_entry(cfg, 'postprocess/max_obj_radius', radius, np.inf)
     _create_config_entry(cfg, 'postprocess/min_glare_radius', radius, np.inf)
-    _create_config_entry(cfg, 'modelfit/rho', scale ** 2, 0.015 ** 2)
+    _create_config_entry(cfg, 'modelfit/rho', scale ** 2, 0.0005)
     _create_config_entry(cfg, 'modelfit/smooth_amount', scale, 0.2, type=int, _min=4)
     _create_config_entry(cfg, 'modelfit/smooth_subsample', scale, 0.4, type=int, _min=8)
-    _create_config_entry(cfg, 'top-down-segmentation/min_region_radius', radius, 0.25, type=int)
+    _create_config_entry(cfg, 'top-down-segmentation/min_region_radius', radius, 0.33, type=int)
     _create_config_entry(cfg, 'top-down-modelfit/min_background_margin', scale, 0.2, type=int)
 
     return cfg, scale

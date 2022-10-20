@@ -169,7 +169,7 @@ class Task:
             self.  timings_json_path = path / '.timings.json'
             self.        digest_path = path / '.digest'
             self.    digest_cfg_path = path / '.digest.cfg.json'
-            self.             config = self.data['config']
+            self.             config = self.data.get('config', {})
             self.         seg_border = self.data.entries.get('seg_border', None)
             self.             dilate = self.data.entries.get('dilate', 0)
             self.    merge_threshold = self.data.entries.get('merge_overlap_threshold', np.infty)

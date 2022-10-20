@@ -22,26 +22,26 @@ class Postprocessing(Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
-        max_energy_rate           = cfg.get(          'max_energy_rate',  np.inf)
-        discard_image_boundary    = cfg.get(   'discard_image_boundary',   False)
-        min_boundary_obj_radius   = cfg.get(  'min_boundary_obj_radius',       0)
-        min_obj_radius            = cfg.get(           'min_obj_radius',       0)
-        max_obj_radius            = cfg.get(           'max_obj_radius',  np.inf)
-        max_eccentricity          = cfg.get(         'max_eccentricity',       1)
-        max_boundary_eccentricity = cfg.get('max_boundary_eccentricity',  np.inf)
+        max_energy_rate           = cfg.get(          'max_energy_rate',    0.2)
+        discard_image_boundary    = cfg.get(   'discard_image_boundary',  False)
+        min_boundary_obj_radius   = cfg.get(  'min_boundary_obj_radius',      0)
+        min_obj_radius            = cfg.get(           'min_obj_radius',      0)
+        max_obj_radius            = cfg.get(           'max_obj_radius', np.inf)
+        max_eccentricity          = cfg.get(         'max_eccentricity',   0.99)
+        max_boundary_eccentricity = cfg.get('max_boundary_eccentricity', np.inf)
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
         get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
-        contrast_response_version = cfg.get('contrast_response_version',  2)
-        exterior_scale            = cfg.get(           'exterior_scale',  5)
-        exterior_offset           = cfg.get(          'exterior_offset',  5)
-        min_contrast_response     = cfg.get(    'min_contrast_response', -np.inf)
+        contrast_response_version = cfg.get('contrast_response_version',    2)
+        exterior_scale            = cfg.get(           'exterior_scale',    5)
+        exterior_offset           = cfg.get(          'exterior_offset',    5)
+        min_contrast_response     = cfg.get(    'min_contrast_response', 0.35)
         contrast_response_epsilon = cfg.get('contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
 
         # mask-based post-processing
         mask_stdamp          = cfg.get(         'mask_stdamp',    2)
-        mask_max_distance    = cfg.get(   'mask_max_distance',    0)
+        mask_max_distance    = cfg.get(   'mask_max_distance',    1)
         mask_smoothness      = cfg.get(     'mask_smoothness',    3)
         fill_holes           = cfg.get(          'fill_holes', True)
         mask_process_version = cfg.get('mask_process_version',    1)

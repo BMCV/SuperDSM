@@ -97,7 +97,7 @@ class TopDownSegmentation(Stage):
                                                   outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        seed_connectivity = cfg.get('seed_connectivity', 4)
+        seed_connectivity = cfg.get('seed_connectivity', 8)
         min_region_radius = cfg.get('min_region_radius', 15)
         max_atom_energy_rate = cfg.get('max_atom_energy_rate', 0.05)
         min_energy_rate_improvement = cfg.get('min_energy_rate_improvement', 0.1)

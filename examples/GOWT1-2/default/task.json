@@ -1,4 +1,3 @@
 {
-    "runnable": true,
-    "base_config_path": "{ROOTDIR}/../configs/{DIRNAME}.json"
+    "runnable": true
 }
