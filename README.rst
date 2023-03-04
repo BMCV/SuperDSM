@@ -12,7 +12,7 @@ Publications:
 
 ----
 
-Copyright (c) 2017-2022 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
+Copyright (c) 2017-2023 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
 
 This work is licensed under the terms of the MIT license.
 For a copy, see `LICENSE </LICENSE>`_.
