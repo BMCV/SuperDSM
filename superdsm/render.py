@@ -152,60 +152,6 @@ def render_regions_over_image(img, regions, background_label=None, color=(0,1,0)
 COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2], 'w': [0,1,2]}
 
 
-def render_model_shapes_over_image(data, candidates='postprocessed_candidates', normalize_img=True, interior_alpha=0, border=5, override_img=None, colors='g', labels=None):
-    is_legal = True        ## other values are currently not generated
-    override_xmaps = None  ## other values are currently not required
-
-    assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
-
-    if isinstance(candidates, str): candidates = data[candidates]
-    if is_legal == True: is_legal = lambda m: True
-
-    img = _fetch_rgb_image_from_data(data, normalize_img, override_img)
-    img_shape = img.shape[:2]
-    border_erode_selem, border_dilat_selem = morphology.disk(border / 2), morphology.disk(border - border / 2)
-    merged_candidates = set()
-    for candidate, foreground in zip(candidates, render_candidate_foregrounds(img.shape[:2], candidates)):
-        if candidate in merged_candidates: continue
-        merged_candidates |= {candidate}
-        model_shape = foreground
-        if labels is not None:
-            label = np.bincount(labels[model_shape]).argmax()
-            for candidate1, foreground1 in zip(candidates, render_candidate_foregrounds(img.shape[:2], candidates)):
-                if candidate1 in merged_candidates: continue
-                model1_shape = foreground1
-                label1 = np.bincount(labels[model1_shape]).argmax()
-                if label != label1: continue
-                merged_candidates |= {candidate1}
-                model_shape[model1_shape] = True
-        interior = morphology.binary_erosion (model_shape, border_erode_selem)
-        border   = morphology.binary_dilation(model_shape, border_dilat_selem) ^ interior
-        if isinstance(colors, dict):
-            if candidate not in colors: continue
-            colorchannels = COLORMAP[colors[candidate]]
-        else:
-            colorchannels = COLORMAP[colors]
-        for ch in range(3):
-            img[interior.astype(bool), ch] += interior_alpha * (+1 if ch in colorchannels else -1)
-            img[border  .astype(bool), ch]  = (1 if ch in colorchannels else 0)
-
-    return (255 * img).clip(0, 255).astype('uint8')
-
-
-def render_postprocessed_result(data, postprocessed_candidates='postprocessed_candidates', seg_border=5, color_accepted='g', color_discarded='r', normalize_img=True):
-    if isinstance(postprocessed_candidates, str): postprocessed_candidates = data[postprocessed_candidates]
-    candidates, colors = [], {}
-    for candidate in data['cover'].solution:
-        postprocessed_candidate = [c for c in postprocessed_candidates if c.original is candidate]
-        if len(postprocessed_candidate) > 0:
-            candidates.append(postprocessed_candidate[0])
-            colors[postprocessed_candidate[0]] = color_accepted
-        else:
-            candidates.append(candidate)
-            colors[candidate] = color_discarded
-    return render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors, normalize_img=normalize_img)
-
-
 class ContourPaint:
     def __init__(self, fg_mask, radius, where='center'):
         self.fg_mask = fg_mask
