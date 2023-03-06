@@ -23,7 +23,7 @@ The following hyperparameters can be set automatically based on the scale of obj
 
 * ``modelfit/rho`` Corresponds to :math:`\alpha` in the paper (Section 2.2 and Section 3.3). Defaults to ``AF_rho × scale^2`` (and ``AF_rho defaults`` to 5e-4).
 
-* ``modelfit/smooth_amount`` Corresponds to \sigma_G in the paper (Section 3.3). Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
+* ``modelfit/smooth_amount`` Corresponds to :math:`\sigma_G` in the paper (Section 3.3). Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
 * ``modelfit/smooth_subsample`` Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (Section 3.3). Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample defaults`` defaults to 0.4).
 
