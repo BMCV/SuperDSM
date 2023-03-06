@@ -31,7 +31,7 @@ Defaults to ``AF_beta × scale^2`` (and ``AF_beta`` defaults to 0.66).
 
 Stage: :py:class:`~superdsm.generations.GenerationStage`
 
-Maximum distance allowed between two seed points of atomic image regions which are grouped into a single set. This was neither used nor described in the paper.
+Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object. This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge.
 
 Defaults to ``AF_max_seed_distance × diameter`` (and ``AF_max_seed_distance`` defaults to infinity).
 
