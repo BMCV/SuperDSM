@@ -15,3 +15,8 @@ Contents
    :maxdepth: 2
    
    superdsm
+
+.. toctree::
+   :maxdepth: 2
+
+   hyperparameters
