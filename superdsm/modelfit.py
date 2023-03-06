@@ -161,11 +161,9 @@ def _create_subsample_grid(mask, subsample, mask_offset=(0,0)):
 
 
 def _create_masked_smooth_matrix(kernel, mask, subsample=1, lock=None):
-#    mask_offset = (np.where(mask.any(axis=1))[0][0], np.where(mask.any(axis=0))[0][0])
     mask = mask[np.where(mask.any(axis=1))[0], :]
     mask = mask[:, np.where(mask.any(axis=0))[0]]
     if (mask.shape <= np.asarray(kernel.shape) // 2).any(): return None
-#    subsample_grid = _create_subsample_grid(mask, subsample, mask_offset)
     subsample_grid = _create_subsample_grid(mask, subsample)
     col_mask = np.logical_and(mask, subsample_grid)
     print(f'{mask.sum()} rows, {col_mask.sum()} columns')

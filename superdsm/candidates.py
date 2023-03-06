@@ -208,16 +208,16 @@ class ModelfitError(Exception):
         return ', '.join(messages)
 
 
-def _compute_gocell_solution(J_gocell, CP_params):
+def _compute_elliptical_solution(J_elliptical, CP_params):
     solution_info  = None
     solution_array = None
     solution_value = np.inf
 
     # Pass 1: Try zeros initialization
     try:
-        solution_info  = CP(J_gocell, np.zeros(6), **CP_params).solve()
+        solution_info  = CP(J_elliptical, np.zeros(6), **CP_params).solve()
         solution_array = PolynomialModel(np.array(solution_info['x'])).array
-        solution_value = J_gocell(solution_array)
+        solution_value = J_elliptical(solution_array)
         print(f'solution: {solution_value}')
     except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
         traceback.print_exc()
@@ -226,16 +226,16 @@ def _compute_gocell_solution(J_gocell, CP_params):
     # Pass 2: Try data-specific initialization
     if solution_info is None or solution_info['status'] != 'optimal':
         print(f'-- retry --')
-        initialization = _estimate_initialization(J_gocell.roi)
-        initialization_value = J_gocell(initialization)
+        initialization = _estimate_initialization(J_elliptical.roi)
+        initialization_value = J_elliptical(initialization)
         print(f'initialization: {initialization_value}')
         if initialization_value > solution_value:
             print('initialization worse than previous solution - skipping retry')
         else:
             try:
-                solution_info  = CP(J_gocell, initialization.array, **CP_params).solve()
+                solution_info  = CP(J_elliptical, initialization.array, **CP_params).solve()
                 solution_array = PolynomialModel(np.array(solution_info['x'])).array
-                solution_value = J_gocell(solution_array)
+                solution_value = J_elliptical(solution_array)
                 print(f'solution: {solution_value}')
             except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
                 if solution_info is None:
@@ -258,20 +258,20 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
     if callable(init):
         params = init(J.smooth_mat.shape[1])
     else:
-        if init == 'gocell':
-            _print_heading('convex programming starting: GOCELL')
-            J_gocell = Energy(region, epsilon, rho, SmoothMatrixFactory.NULL_FACTORY)
-            params = _compute_gocell_solution(J_gocell, CP_params)
+        if init == 'elliptical':
+            _print_heading('convex programming starting: using elliptical models')
+            J_elliptical = Energy(region, epsilon, rho, SmoothMatrixFactory.NULL_FACTORY)
+            params = _compute_elliptical_solution(J_elliptical, CP_params)
         else:
             params = np.zeros(6)
         params = np.concatenate([params, np.zeros(J.smooth_mat.shape[1])])
     try:
-        _print_heading('convex programming starting: GODMOD')
+        _print_heading('convex programming starting: using deformable shape models (DSM)')
         solution_info = CP(J, params, **CP_params).solve()
         solution = np.array(solution_info['x'])
         _print_cvxopt_solution(solution_info)
         if solution_info['status'] == 'unknown' and J(solution) > J(params):
-            status = 'fallback' ## numerical difficulties lead to a very bad solution, thus fall back to the GOCELL solution
+            status = 'fallback' ## numerical difficulties lead to a very bad solution, thus fall back to the elliptical solution
         else:
             print(f'solution: {J(solution)}')
             status = 'optimal'
@@ -280,7 +280,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
         status = 'fallback'  ## at least something we can continue the work with
     assert status is not None
     if status == 'fallback':
-        _print_heading('GODMOD failed: falling back to GOCELL result')
+        _print_heading('DSM failed: falling back to elliptical result')
         solution = params
     _print_heading('finished')
     return J, PolynomialModel(solution), status

@@ -203,7 +203,7 @@ def render_postprocessed_result(data, postprocessed_candidates='postprocessed_ca
         else:
             candidates.append(candidate)
             colors[candidate] = color_discarded
-    return gocell.render.render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors, normalize_img=normalize_img)
+    return render_model_shapes_over_image(data, candidates=candidates, border=seg_border, colors=colors, normalize_img=normalize_img)
 
 
 class ContourPaint:

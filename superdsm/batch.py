@@ -460,7 +460,7 @@ if __name__ == '__main__':
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
-    parser.add_argument('--report', help='report current status to file', type=str, default='/tmp/godmod-status')
+    parser.add_argument('--report', help='report current status to file', type=str, default='/tmp/superdsm-status')
     args = parser.parse_args()
 
     if args.last_stage is not None and not args.oneshot:

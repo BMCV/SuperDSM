@@ -4,7 +4,7 @@ from .pipeline import Stage
 MODELFIT_KWARGS_DEFAULTS = {
     'cachesize': 1,
     'sparsity_tol': 0,
-    'init': 'gocell',
+    'init': 'elliptical',
     'smooth_amount': 10,
     'epsilon': 1.0,
     'rho': 0.5,
