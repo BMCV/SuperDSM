@@ -1,5 +1,5 @@
 segmetrics.generations
-===================
+======================
 
 .. automodule:: superdsm.generations
     :members:
