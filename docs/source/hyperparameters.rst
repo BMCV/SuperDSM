@@ -9,11 +9,21 @@ In addition, several hyperparameters can be set automatically based on the scale
 
 The following hyperparameters can be set automatically based on the scale of objects. In the formulas given below, ``scale`` corresponds to :math:`\sigma`, ``radius`` corresponds to :math:`\sqrt{2} \cdot \sigma`, and ``diameter`` corresponds to :math:`\sqrt{8} \cdot \sigma`.
 
-* ``preprocess/sigma2``
+``preprocess/sigma2``
+---------------------
 
-* ``generations/alpha`` Corresponds to :math:`\beta` in the paper (Section 2.3.2 and Section 3.3). Defaults to ``AF_beta × radius^2`` (and ``AF_beta`` defaults to 0.33). TODO: This should be changed to ``AF_beta × scale^2`` to be the same as in the paper (where ``AF_beta`` would default to 0.66 instead of 0.33).
+TBC
 
-* ``generations/max_seed_distance``
+
+``generations/alpha``
+---------------------
+
+Stage: :py:class:`~superdsm.generations.GenerationStage`
+
+Corresponds to :math:`\beta` in the paper (Section 2.3.2 and Section 3.3). Defaults to ``AF_beta × radius^2`` (and ``AF_beta`` defaults to 0.33). TODO: This should be changed to ``AF_beta × scale^2`` to be the same as in the paper (where ``AF_beta`` would default to 0.66 instead of 0.33).
+
+``generations/max_seed_distance``
+---------------------------------
 
 * ``postprocess/min_obj_radius`` Corresponds to "min_object_radius" in the paper. Defaults to ``AF_min_object_radius × radius`` (and ``AF_min_object_radius`` defaults to zero).
 
