@@ -1,5 +1,5 @@
-segmetrics.pipeline
-===================
+segmetrics.render
+=================
 
 .. automodule:: superdsm.render
     :members:
