@@ -22,13 +22,13 @@ To run SuperDSM from command line, use:
 
 .. code-block:: console
 
-   python -m 'gocell.batch'
+   python -m 'superdsm.batch'
 
 To export (intermediate) results, use:
 
 .. code-block:: console
 
-   python -m 'gocell.export'
+   python -m 'superdsm.export'
 
 Interactive
 ***********
