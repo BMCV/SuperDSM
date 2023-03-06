@@ -13,10 +13,10 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   
-   superdsm
+
+   hyperparameters
 
 .. toctree::
    :maxdepth: 2
-
-   hyperparameters
+   
+   superdsm

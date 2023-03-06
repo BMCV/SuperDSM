@@ -57,6 +57,7 @@ The obtained ``result_img`` object is an RGB image (represented by a ``numpy.nda
 
 Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the ``results`` dictionary.
 
+.. _references:
 References
 ----------
 
