@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 
-#import os
-#try:
-#    os.symlink(f'../../sparse_dot/sparse_dot_mkl/{filename}', f'superdsm/sparse_dot_mkl/{filename}')
-#except FileExistsError:
-#    pass
-
 from distutils.core import setup
 
-import superdsm
+# We avoid loading the superdsm module here because we don't want to load the dependencies when only building the documentation (libmkl_rt cannot be loaded by readthedocs).
+with open('superdsm/version.py', 'r') as fin:
+    version_locals = dict()
+    exec(fin.read(), None, version_locals)
+    locals().update(version_locals)
 
 
 setup(
     name = 'SuperDSM',
-    version = superdsm.__version__,
+    version = VERSION,
     description = 'SuperDSM is a globally optimal segmentation method based on superadditivity and deformable shape models for cell nuclei in fluorescence microscopy images and beyond.',
     author = 'Leonid Kostrykin',
     author_email = 'leonid.kostrykin@bioquant.uni-heidelberg.de',
