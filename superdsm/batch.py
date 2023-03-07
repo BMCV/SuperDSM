@@ -344,7 +344,7 @@ class Task:
 
     def find_first_stage_name(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
-        pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else None, None
+        pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else (None, None)
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('modelfit') + 1:
             return None, {}
         else:
