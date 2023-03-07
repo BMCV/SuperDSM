@@ -3,5 +3,5 @@ segmetrics API
 
 .. toctree::
     superdsm.pipeline
-    superdsm.generations
+    superdsm.globalenergymin
     superdsm.render
