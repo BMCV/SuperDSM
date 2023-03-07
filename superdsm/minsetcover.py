@@ -1,9 +1,9 @@
 from ._aux import get_output
 
 
-def _merge_minsetcover(candidates, accepted_candidates, alpha):
+def _merge_minsetcover(candidates, accepted_candidates, beta):
     replacements_count = 0
-    w = lambda c: c.energy + alpha
+    w = lambda c: c.energy + beta
     for c_new in sorted([c for c in candidates if c not in accepted_candidates], key=lambda c: w(c)):
         valid_replacement, blockers = True, set()
         for c in accepted_candidates:
@@ -21,13 +21,13 @@ def _merge_minsetcover(candidates, accepted_candidates, alpha):
     return accepted_candidates, replacements_count
 
 
-def _solve_minsetcover(candidates, alpha, merge=True, out=None):
+def _solve_minsetcover(candidates, beta, merge=True, out=None):
     accepted_candidates  = []  ## primal variable
     remaining_candidates = list(candidates)
     uncovered_atoms      = set.union(*[c.footprint for c in candidates])
 
     out = get_output(out)
-    w = lambda c: c.energy + alpha
+    w = lambda c: c.energy + beta
     while len(remaining_candidates) > 0:
 
         # compute prices of remaining candidates
@@ -44,28 +44,28 @@ def _solve_minsetcover(candidates, alpha, merge=True, out=None):
     out.write(f'MINSETCOVER - GREEDY accepted candidates: {len(accepted_candidates)}')
 
     if merge:
-        accepted_candidates, replacements_count = _merge_minsetcover(candidates, accepted_candidates, alpha)
+        accepted_candidates, replacements_count = _merge_minsetcover(candidates, accepted_candidates, beta)
         out.write(f'MINSETCOVER - MERGED candidates: {replacements_count}')
 
     return accepted_candidates
 
 
-DEFAULT_TRY_LOWER_ALPHA = 4
-DEFAULT_LOWER_ALPHA_MUL = 0.8
+DEFAULT_TRY_LOWER_BETA = 4
+DEFAULT_LOWER_BETA_MUL = 0.8
 
 
-def solve_minsetcover(candidates, alpha, merge=True, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL, merge_lower_alpha=False, out=None):
+def solve_minsetcover(candidates, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, merge_lower_beta=False, out=None):
     out = get_output(out)
-    solution1 = _solve_minsetcover(candidates, alpha, merge, out)
-    if try_lower_alpha > 0 and alpha > 0:
-        new_alpha = alpha * lower_alpha_mul
-        out.write(f'MINSETCOVER retry with lower alpha: {new_alpha:g}')
-        solution2 = solve_minsetcover(candidates, new_alpha, merge, try_lower_alpha - 1, lower_alpha_mul, False, out)
-        if merge_lower_alpha: solution2 = _merge_minsetcover(candidates, solution2, alpha)[0]
-        solution1_value = sum(c.energy for c in solution1) + alpha * len(solution1)
-        solution2_value = sum(c.energy for c in solution2) + alpha * len(solution2)
+    solution1 = _solve_minsetcover(candidates, beta, merge, out)
+    if try_lower_beta > 0 and beta > 0:
+        new_beta = beta * lower_beta_mul
+        out.write(f'MINSETCOVER retry with lower beta: {new_beta:g}')
+        solution2 = solve_minsetcover(candidates, new_beta, merge, try_lower_beta - 1, lower_beta_mul, False, out)
+        if merge_lower_beta: solution2 = _merge_minsetcover(candidates, solution2, beta)[0]
+        solution1_value = sum(c.energy for c in solution1) + beta * len(solution1)
+        solution2_value = sum(c.energy for c in solution2) + beta * len(solution2)
         if solution2_value < solution1_value:
-            out.write(f'MINSETCOVER solution for alpha={alpha:g} improved by {solution2_value - solution1_value:,g} (-{100 * (1 - solution2_value / solution1_value):.2f}%)')
+            out.write(f'MINSETCOVER solution for beta={beta:g} improved by {solution2_value - solution1_value:,g} (-{100 * (1 - solution2_value / solution1_value):.2f}%)')
             return solution2
     return solution1
 
@@ -77,12 +77,12 @@ def _get_atom_label(atom):
 
 class MinSetCover:
 
-    def __init__(self, atoms, alpha, adjacencies, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL):
+    def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
         self.atoms = {_get_atom_label(atom): atom for atom in atoms}
-        self.alpha = alpha
-        self.adjacencies     = adjacencies
-        self.try_lower_alpha = try_lower_alpha
-        self.lower_alpha_mul = lower_alpha_mul
+        self.beta  = beta
+        self.adjacencies    = adjacencies
+        self.try_lower_beta = try_lower_beta
+        self.lower_beta_mul = lower_beta_mul
         self.candidates_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
         self.  solution_by_cluster = {cluster: self.candidates_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
@@ -91,7 +91,7 @@ class MinSetCover:
 
     def _update_partial_solution(self, cluster_label, out):
         candidates = self.candidates_by_cluster[cluster_label]
-        partial_solution = solve_minsetcover(candidates, self.alpha, try_lower_alpha=self.try_lower_alpha, lower_alpha_mul=self.lower_alpha_mul, out=out)
+        partial_solution = solve_minsetcover(candidates, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
 
     def update(self, new_candidates, out=None):
@@ -105,7 +105,7 @@ class MinSetCover:
 
     def get_cluster_costs(self, cluster_label):
         partial_solution = self.solution_by_cluster[cluster_label]
-        return sum(c.energy for c in partial_solution) + self.alpha * len(partial_solution)
+        return sum(c.energy for c in partial_solution) + self.beta * len(partial_solution)
 
     @property
     def solution(self):
@@ -114,7 +114,7 @@ class MinSetCover:
     @property
     def costs(self):
         solution = self.solution
-        return sum(c.energy for c in solution) + self.alpha * len(solution)
+        return sum(c.energy for c in solution) + self.beta * len(solution)
 
 
 #class MinSetCoverCheck(pipeline.Stage):

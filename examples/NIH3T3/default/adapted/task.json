@@ -6,7 +6,7 @@
             "sigma2": 40
         },
         "generations": {
-            "alpha": 1200
+            "beta": 1200
         },
         "modelfit": {
             "rho": 0.6

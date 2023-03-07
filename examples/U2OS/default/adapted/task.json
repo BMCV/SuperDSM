@@ -3,7 +3,7 @@
 
     "config": {
         "generations": {
-            "AF_alpha": 0.3
+            "AF_beta": 0.3
         },
         "modelfit": {
             "AF_rho": 7.5e-5

@@ -1,7 +1,7 @@
 from .pipeline import Stage
 from ._aux import get_output, join_path, mkdir, Text, get_discarded_workload, copy_dict
 from .candidates import process_candidates, Candidate
-from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL, DEFAULT_TRY_LOWER_ALPHA, DEFAULT_LOWER_ALPHA_MUL
+from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL
 from .maxsetpack import solve_maxsetpack
 from .surface import Surface
 
@@ -33,17 +33,17 @@ class GenerationStage(Stage):
         g_atoms           = input_data['g_atoms']
         adjacencies       = input_data['adjacencies']
         conservative      = cfg.get(     'conservative', True)
-        alpha             = cfg.get(            'alpha', 0)
-        try_lower_alpha   = cfg.get(  'try_lower_alpha', DEFAULT_TRY_LOWER_ALPHA)
-        lower_alpha_mul   = cfg.get(  'lower_alpha_mul', DEFAULT_LOWER_ALPHA_MUL)
+        beta              = cfg.get(             'beta', 0)
+        try_lower_beta    = cfg.get(   'try_lower_beta', DEFAULT_TRY_LOWER_BETA)
+        lower_beta_mul    = cfg.get(   'lower_beta_mul', DEFAULT_LOWER_BETA_MUL)
         max_seed_distance = cfg.get('max_seed_distance', np.inf)
         max_work_amount   = cfg.get(  'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
 
-        assert 0 < lower_alpha_mul < 1
+        assert 0 < lower_beta_mul < 1
 
         mode  = 'conservative' if conservative else 'fast'
         mfcfg = copy_dict(input_data['mfcfg'])
-        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha, try_lower_alpha, lower_alpha_mul, max_seed_distance, max_work_amount, out)[2:]
+        cover, candidates, workload = compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, beta, try_lower_beta, lower_beta_mul, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_surface':  y_surface,
@@ -53,7 +53,7 @@ class GenerationStage(Stage):
         }
 
 
-def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, alpha=np.nan, try_lower_alpha=DEFAULT_TRY_LOWER_ALPHA, lower_alpha_mul=DEFAULT_LOWER_ALPHA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfcfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = get_output(out)
 
@@ -76,10 +76,10 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
         atoms_in_cluster = [atoms[atom_label - 1] for atom_label in adjacencies.get_atoms_in_cluster(cluster_label)]
         if not all(atom.is_optimal for atom in atoms_in_cluster): continue
         atom_energies_sum = sum(atom.energy for atom in atoms_in_cluster)
-        if universe.energy <= alpha + atom_energies_sum:
+        if universe.energy <= beta + atom_energies_sum:
             trivial_cluster_labels |= {cluster_label}
 
-    cover = MinSetCover(atoms, alpha, adjacencies, try_lower_alpha, lower_alpha_mul)
+    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta, lower_beta_mul)
     cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
@@ -194,9 +194,9 @@ def _process_generation(cover, candidates, previous_generation, y, g_atoms, adja
         remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_candidate_footprint
         min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
         if mode == 'conservative':
-            max_new_candidate_energy = current_cluster_costs - cover.alpha - min_remaining_atom_costs
+            max_new_candidate_energy = current_cluster_costs - cover.beta - min_remaining_atom_costs
         elif mode == 'fast':
-            max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.alpha
+            max_new_candidate_energy = candidate.energy + cover.get_atom(new_atom_label).energy + cover.beta
         else:
             raise ValueError(f'unknown mode "{mode}"')
         new_candidate_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in candidates if c.is_optimal and c.footprint.issubset(new_candidate.footprint)], out=out.derive(muted=True)))

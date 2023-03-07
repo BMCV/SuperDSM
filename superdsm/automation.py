@@ -81,7 +81,7 @@ def create_config(base_cfg, im):
     diameter = 2 * radius
 
     _create_config_entry(cfg, 'preprocess/sigma2', scale, 1.0)
-    _create_config_entry(cfg, 'generations/alpha', scale ** 2, 0.66)
+    _create_config_entry(cfg, 'generations/beta', scale ** 2, 0.66)
     _create_config_entry(cfg, 'generations/max_seed_distance', diameter, np.inf)
     _create_config_entry(cfg, 'postprocess/min_obj_radius', radius, 0.0)
     _create_config_entry(cfg, 'postprocess/max_obj_radius', radius, np.inf)
