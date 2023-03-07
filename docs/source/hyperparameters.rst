@@ -24,9 +24,7 @@ Stage: :py:class:`~superdsm.generations.GenerationStage`
 
 Corresponds to :math:`\beta` in the paper (Section 2.3.2 and Section 3.3).
 
-Defaults to ``AF_beta × scale^2`` (and ``AF_beta`` defaults to 0.66).
-
-Due to a transmission error, the values reported for ``AF_beta`` in :ref:`Kostrykin and Rohr, 2023 <references>` were misstated by a factor of 2.
+Defaults to ``AF_beta × scale^2`` (and ``AF_beta`` defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`) were misstated by a factor of 2.
 
 ``generations/max_seed_distance``
 ---------------------------------
