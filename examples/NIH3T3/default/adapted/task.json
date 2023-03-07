@@ -5,7 +5,7 @@
         "preprocess": {
             "sigma2": 40
         },
-        "generations": {
+        "global-energy-minimization": {
             "beta": 1200
         },
         "modelfit": {

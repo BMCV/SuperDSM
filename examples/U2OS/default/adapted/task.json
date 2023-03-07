@@ -2,7 +2,7 @@
     "runnable": true,
 
     "config": {
-        "generations": {
+        "global-energy-minimization": {
             "AF_beta": 0.3
         },
         "modelfit": {

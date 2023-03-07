@@ -19,14 +19,14 @@ def _get_generation_log_dir(log_root_dir, generation_number):
     return result
 
 
-class GenerationStage(Stage):
+class GlobalEnergyMinimization(Stage):
 
     ENABLED_BY_DEFAULT = True
 
     def __init__(self):
-        super(GenerationStage, self).__init__('generations',
-                                              inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies', 'mfcfg'],
-                                              outputs = ['y_surface', 'cover', 'candidates', 'workload'])
+        super(GlobalEnergyMinimization, self).__init__('global-energy-minimization',
+                                                       inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies', 'mfcfg'],
+                                                       outputs = ['y_surface', 'cover', 'candidates', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         y_surface         = Surface.create_from_image(input_data['y'], normalize=False, mask=input_data['y_mask'])
@@ -62,7 +62,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
         c = Candidate()
         c.footprint = {atom_label}
         atoms.append(c)
-    out.write(f'\nGeneration 1:')
+    out.write(f'\nIteration 1:')
     process_candidates(atoms, y_surface, g_atoms, mfcfg, _get_generation_log_dir(log_root_dir, 1), out=out)
 
     universes = []
@@ -97,7 +97,7 @@ def compute_generations(adjacencies, y_surface, g_atoms, log_root_dir, mode, mfc
 
         while True:
             generation_number = 1 + len(generations)
-            generation_label  = f'Generation {generation_number}'
+            generation_label  = f'Iteration {generation_number}'
             out.write('')
             out.intermediate(f'{generation_label}...')
 

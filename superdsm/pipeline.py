@@ -140,14 +140,14 @@ def create_default_pipeline():
     from .preprocessing import Preprocessing
     from .modelfit_config import ModelfitConfigStage
     from .topdownsegm import TopDownSegmentation
-    from .generations import GenerationStage
+    from .globalenergymin import GlobalEnergyMinimization
     from .postprocessing import Postprocessing
 
     stages = [
         Preprocessing(),
         ModelfitConfigStage(),
         TopDownSegmentation(),
-        GenerationStage(),
+        GlobalEnergyMinimization(),
         Postprocessing(),
     ]
 
