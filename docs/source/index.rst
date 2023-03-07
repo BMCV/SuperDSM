@@ -11,10 +11,7 @@ Contents
 
    usage
 
-.. toctree::
-   :maxdepth: 0
-
-   hyperparameters
+* `hyperparameters`_
 
 .. toctree::
    :maxdepth: 2
