@@ -238,7 +238,7 @@ class Task:
     def is_pending(self):
         return self.runnable and not (self.digest_path.exists() and self.digest_path.read_text() == self.config_digest)
 
-    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, debug=False, report=None, out=None):
+    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, debug=False, report=None, pickup=True, out=None):
         out = get_output(out)
         if not self.runnable: return
         _process_candidates._DEBUG = debug
@@ -254,7 +254,7 @@ class Task:
         pipeline = self._initialize()
         assert self.last_stage is None or self.last_stage == '' or not np.isinf(pipeline.find(self.last_stage)), f'unknown stage "{self.last_stage}"'
         try:
-            first_stage, data = self.find_first_stage_name(pipeline, dry, out=out2)
+            first_stage, data = self.find_first_stage_name(pipeline, dry, pickup, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             timings = self._load_timings()
             discarded_workloads = []
@@ -342,9 +342,9 @@ class Task:
         pickup_candidate_scores = [pipeline.find(first_stage) for task, first_stage in pickup_candidates]
         return pickup_candidates[np.argmax(pickup_candidate_scores)]
 
-    def find_first_stage_name(self, pipeline, dry=False, out=None):
+    def find_first_stage_name(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
-        pickup_task, stage_name = self.find_best_pickup_candidate(pipeline)
+        pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else None, None
         if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('modelfit') + 1:
             return None, {}
         else:
@@ -457,6 +457,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', help='do not skip tasks', action='store_true')
     parser.add_argument('--oneshot', help='do not save results or mark tasks as processed', action='store_true')
     parser.add_argument('--last-stage', help='override the "last_stage" setting', type=str, default=None)
+    parser.add_argument('--fresh', help='do not pick up previous results', action='store_true')
     parser.add_argument('--task', help='run only the given task', type=str, default=[], action='append')
     parser.add_argument('--task-dir', help='run only the given task and those from its sub-directories', type=str, default=[], action='append')
     parser.add_argument('--debug', help='do not use multiprocessing', action='store_true')
@@ -501,7 +502,7 @@ if __name__ == '__main__':
         newpid = os.fork()
         if newpid == 0:
             try:
-                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, args.debug, report, out)
+                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, args.debug, report, not args.fresh, out)
             except:
                 report.update(task, 'error')
                 raise
