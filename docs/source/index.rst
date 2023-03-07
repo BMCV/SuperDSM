@@ -10,8 +10,11 @@ Contents
    :maxdepth: 3
 
    usage
-
-* :ref:`hyperparameters`
+   
+.. toctree::
+   :maxdepth: 1
+   
+   hyperparameters
 
 .. toctree::
    :maxdepth: 2
