@@ -9,9 +9,9 @@ import time
 class Stage(object):
     """A pipeline stage.
 
-    Each stage must declare its required inputs and the outputs it produces. These are used to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
+    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
 
-    :param name: Human-readable representation of this stage.
+    :param name: Readable identifier of this stage.
     :param cfg_key: Hyperparameter namespace of this stage. Defaults to ``name`` if not specified.
     :param inputs: List of inputs required by this stage.
     :param outputs: List of outputs produced by this stage.
@@ -113,6 +113,10 @@ class Pipeline:
         return data
 
     def find(self, stage_name, not_found_dummy=np.inf):
+        """Returns the position of the stage identified by ``stage_name``.
+
+        Returns ``not_found_dummy`` if the stage is not found.
+        """
         try:
             return [stage.name for stage in self.stages].index(stage_name)
         except ValueError:
