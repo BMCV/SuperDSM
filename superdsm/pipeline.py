@@ -9,6 +9,13 @@ import time
 class Stage(object):
 
     def __init__(self, name, cfg_key=None, inputs=[], outputs=[]):
+        """Instantiates.
+
+        :param name: Human-readable representation of this stage.
+        :param cfg_key: Hyperparameter namespace of this stage. Defaults to ``name`` if not specified.
+        :param inputs: List of inputs required by this stage.
+        :param outputs: List of outputs produced by this stage.
+        """
         if cfg_key is None: cfg_key = name
         self.name    = name
         self.cfg_key = cfg_key
