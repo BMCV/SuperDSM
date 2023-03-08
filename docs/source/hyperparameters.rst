@@ -10,7 +10,7 @@ Automation
 
 In addition, several hyperparameters can be set automatically based on the scale :math:`\sigma` of objects in an image. The scale of the objects is estimated automatically as described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). The current implementation determines values corresponding to object radii between 20 and 200 pixels. If the hyperparameter ``AF_sigma`` is set, then the scale :math:`\sigma` is forced to its value and the automatic scale detection is skipped. The hyperparameter ``AF_sigma`` is not set by default.
 
-Hyperparameters are only set automatically based on the scale of objects, when the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`superdsm.pipeline.Pipeline.process_image` method of the :py:meth:`superdsm.pipeline.Pipeline` class is used directly.
+Hyperparameters are only set automatically based on the scale of objects, when the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`~superdsm.pipeline.Pipeline.process_image` method of the :py:class:`~superdsm.pipeline.Pipeline` class is used directly.
 
 The following hyperparameters can be set automatically based on the scale of objects. In the formulas given below, ``scale`` corresponds to :math:`\sigma`, ``radius`` corresponds to :math:`\sqrt{2} \cdot \sigma`, and ``diameter`` corresponds to :math:`\sqrt{8} \cdot \sigma`.
 
