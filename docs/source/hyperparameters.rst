@@ -67,7 +67,7 @@ Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius default
 
 Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3).
+Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
 
 Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
 
