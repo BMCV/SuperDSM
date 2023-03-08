@@ -58,7 +58,7 @@ Defaults to ``AF_max_obj_radius × radius`` (and ``AF_max_obj_radius`` defaults 
 
 Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
 
-Corresponds to minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
+Corresponds to the minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
 
 Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius defaults`` to infinity).
 
@@ -87,14 +87,14 @@ Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
 Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
-Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample defaults`` defaults to 0.4).
+Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
 ``c2f-region-analysis/min_region_radius``
 -----------------------------------------
 
 Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
-Corresponds to "min_region_radius" in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.2).
+No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius defaults`` to 0.33).
+Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
