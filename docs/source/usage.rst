@@ -15,6 +15,8 @@ To use SuperDSM, first install it using conda:
 Usage
 -----
 
+.. _usage_example_batch:
+
 Batch processing
 ****************
 
@@ -29,6 +31,8 @@ To export (intermediate) results, use:
 .. code-block:: console
 
    python -m 'superdsm.export'
+
+.. _usage_example_interactive:
 
 Interactive
 ***********
