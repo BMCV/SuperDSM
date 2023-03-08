@@ -24,7 +24,7 @@ Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
 
 Corresponds to the constant term :math:`\beta` of the extended set energy functions in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.3.2 and 3.3).
 
-Defaults to ``AF_beta × scale^2`` (and ``AF_beta`` defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
+Defaults to ``AF_beta × scale^2`` (where ``AF_beta`` corresponds to :math:`\beta_\text{factor}` in the paper and defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
 ``global-energy-minimization/max_seed_distance``
 ------------------------------------------------
@@ -69,7 +69,7 @@ Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
 Corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3).
 
-Defaults to ``AF_alpha × scale^2`` (and ``AF_alpha defaults`` to 5e-4).
+Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
 
 ``modelfit/smooth_amount``
 --------------------------
