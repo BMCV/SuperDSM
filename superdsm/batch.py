@@ -74,7 +74,7 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
             img  = render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             imwrite(adj_filepath, img)
 
-    atomic_stage = pipeline.stages[pipeline.find('top-down-segmentation')]
+    atomic_stage = pipeline.stages[pipeline.find('c2f-region-analysis')]
     atomic_stage.add_callback('end', write_adjacencies_image)
     result_data, _, _timings = pipeline.process_image(g_raw, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
     atomic_stage.remove_callback('end', write_adjacencies_image)

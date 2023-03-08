@@ -139,14 +139,14 @@ def create_pipeline(stages):
 def create_default_pipeline():
     from .preprocessing import Preprocessing
     from .modelfit_config import ModelfitConfigStage
-    from .topdownsegm import TopDownSegmentation
+    from .c2freganal import C2F_RegionAnalysis
     from .globalenergymin import GlobalEnergyMinimization
     from .postprocessing import Postprocessing
 
     stages = [
         Preprocessing(),
         ModelfitConfigStage(),
-        TopDownSegmentation(),
+        C2F_RegionAnalysis(),
         GlobalEnergyMinimization(),
         Postprocessing(),
     ]

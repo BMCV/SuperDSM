@@ -87,14 +87,14 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
     return compute_energy_rate
 
 
-class TopDownSegmentation(Stage):
+class C2F_RegionAnalysis(Stage):
 
     ENABLED_BY_DEFAULT = True
 
     def __init__(self):
-        super(TopDownSegmentation, self).__init__('top-down-segmentation',
-                                                  inputs  = ['y', 'mfcfg'],
-                                                  outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
+        super(C2F_RegionAnalysis, self).__init__('c2f-region-analysis',
+                                                 inputs  = ['y', 'mfcfg'],
+                                                 outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         seed_connectivity = cfg.get('seed_connectivity', 8)

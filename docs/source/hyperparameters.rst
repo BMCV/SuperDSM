@@ -89,10 +89,10 @@ Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tild
 
 Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample defaults`` defaults to 0.4).
 
-``top-down-segmentation/min_region_radius``
--------------------------------------------
+``c2f-region-analysis/min_region_radius``
+-----------------------------------------
 
-Stage: :py:class:`~superdsm.topdownsegm.TopDownSegmentation`
+Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
 Corresponds to "min_region_radius" in the paper (coarse-to-fine region analysis, Section 3.2).
 
@@ -101,7 +101,7 @@ Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius defau
 ``top-down-modelfit/min_background_margin``
 -------------------------------------------
 
-Stage: :py:class:`~superdsm.topdownsegm.TopDownSegmentation`
+Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
 TBC
 

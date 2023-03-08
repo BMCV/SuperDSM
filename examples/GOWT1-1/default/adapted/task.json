@@ -3,7 +3,7 @@
 
     "config": {
         "AF_scale": 42.42640687119284,
-        "top-down-segmentation": {
+        "c2f-region-analysis": {
             "min_energy_rate_improvement": -Infinity
         },
         "postprocess": {
