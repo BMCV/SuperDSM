@@ -19,9 +19,45 @@ The following hyperparameters can be set automatically based on the scale of obj
 
 Stage: :py:class:`~superdsm.preprocess.Preprocessing`
 
-Corresponds to the size of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
+Corresponds to the scale of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
 Defaults to ``AF_sigma2 × scale`` (where ``AF_sigma2`` defaults to 1).
+
+``modelfit/alpha``
+^^^^^^^^^^^^^^^^^^
+
+Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+
+Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
+
+Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
+
+``modelfit/smooth_amount``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+
+Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
+
+Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
+
+``modelfit/smooth_subsample``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+
+Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
+
+Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
+
+``c2f-region-analysis/min_region_radius``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
+
+No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
+
+Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
 ``global-energy-minimization/beta``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -67,40 +103,4 @@ Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 Corresponds to the minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
 
 Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius defaults`` to infinity).
-
-``modelfit/alpha``
-^^^^^^^^^^^^^^^^^^
-
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
-
-Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
-
-Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
-
-``modelfit/smooth_amount``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
-
-Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
-
-Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
-
-``modelfit/smooth_subsample``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
-
-Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
-
-Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
-
-``c2f-region-analysis/min_region_radius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
-
-No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
-
-Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
