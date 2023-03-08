@@ -67,7 +67,7 @@ Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius default
 
 Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Corresponds to :math:`\alpha` in the paper (Section 2.2 and Section 3.3).
+Corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3).
 
 Defaults to ``AF_alpha × scale^2`` (and ``AF_alpha defaults`` to 5e-4).
 
@@ -76,7 +76,7 @@ Defaults to ``AF_alpha × scale^2`` (and ``AF_alpha defaults`` to 5e-4).
 
 Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Corresponds to :math:`\sigma_G` in the paper (Section 3.3).
+Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
 Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
@@ -85,7 +85,7 @@ Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smo
 
 Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (Section 3.3).
+Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
 Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample defaults`` defaults to 0.4).
 
@@ -94,7 +94,7 @@ Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_
 
 Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
-Corresponds to "min_region_radius" in the paper (coarse-to-fine region analysis, Section 3.2).
+Corresponds to "min_region_radius" in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.2).
 
 Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius defaults`` to 0.33).
 
