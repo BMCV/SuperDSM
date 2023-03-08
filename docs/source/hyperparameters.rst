@@ -12,7 +12,7 @@ In addition, several hyperparameters can be set automatically based on the scale
 
 Hyperparameters are only set automatically based on the scale of objects, if the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`~superdsm.pipeline.Pipeline.process_image` method of the :py:class:`~superdsm.pipeline.Pipeline` class is used directly.
 
-The following hyperparameters can be set automatically based on the scale of objects. In the formulas given below, ``scale`` corresponds to :math:`\sigma`, ``radius`` corresponds to :math:`\sqrt{2} \cdot \sigma`, and ``diameter`` corresponds to :math:`\sqrt{8} \cdot \sigma`.
+The following hyperparameters can be set automatically based on the scale of objects. In the formulas given below, ``scale`` corresponds to :math:`\sigma`, ``radius`` corresponds to :math:`\sqrt{2} \cdot \sigma`, and ``diameter`` corresponds to :math:`\sqrt{8} \cdot \sigma`. Each hyperparameter is associated with another ``AF_``-prefixed hyperparameter, which is used as a factor and resides in the same namespace (e.g., ``AF_sigma2`` is resides in ``preprocess`` because ``sigma2`` resides in ``preprocess``).
 
 ``preprocess/sigma2``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -21,7 +21,7 @@ Stage: :py:class:`~superdsm.preprocess.Preprocessing`
 
 Corresponds to the scale of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-Defaults to ``AF_sigma2 × scale`` (where ``AF_sigma2`` defaults to 1).
+Defaults to ``AF_sigma2 × scale`` (and ``AF_sigma2`` defaults to 1).
 
 ``modelfit/alpha``
 ^^^^^^^^^^^^^^^^^^
