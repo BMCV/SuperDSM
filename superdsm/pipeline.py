@@ -140,6 +140,7 @@ def create_default_pipeline():
     """Creates and returns a new pre-configured :py:class:`.Pipeline` object.
 
     The pipeline consists of the following stages:
+
     * :py:class:`~.preprocess.Preprocessing`
     * :py:class:`~.modelfit_config.ModelfitConfigStage`
     * :py:class:`~.c2freganal.C2F_RegionAnalysis`
