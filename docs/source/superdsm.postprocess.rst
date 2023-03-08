@@ -1,5 +1,5 @@
 segmetrics.postprocess
-=====================
+======================
 
 .. automodule:: superdsm.postprocess
     :members:
