@@ -137,11 +137,11 @@ def create_pipeline(stages):
 
 
 def create_default_pipeline():
-    from .preprocessing import Preprocessing
+    from .preprocess import Preprocessing
     from .modelfit_config import ModelfitConfigStage
     from .c2freganal import C2F_RegionAnalysis
     from .globalenergymin import GlobalEnergyMinimization
-    from .postprocessing import Postprocessing
+    from .postprocess import Postprocessing
 
     stages = [
         Preprocessing(),
