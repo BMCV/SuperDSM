@@ -106,7 +106,7 @@ class Pipeline:
         :param g_raw: The image which is to be processed by the pipeline.
         :param cfg: The hyperparameters.
 
-        The image ``g_raw`` is added to the pipeline data. However, if ``cfg['histological'] == True`` (i.e. the hyperparameter ``histological`` is set to ``True``), then ``g_raw`` is converted to a brightness-inverse intensity image, and the original image is added as ``g_rgb`` to the pipeline data.
+        The image ``g_raw`` is made available as an input to the pipeline stages. However, if ``cfg['histological'] == True`` (i.e. the hyperparameter ``histological`` is set to ``True``), then ``g_raw`` is converted to a brightness-inverse intensity image, and the original image is provided as ``g_rgb`` to the stages of the pipeline.
 
         In addition, ``g_raw`` is normalized so that the intensities range from 0 to 1.
         """
