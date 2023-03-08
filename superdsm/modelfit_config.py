@@ -7,7 +7,7 @@ MODELFIT_KWARGS_DEFAULTS = {
     'init': 'elliptical',
     'smooth_amount': 10,
     'epsilon': 1.0,
-    'rho': 0.5,
+    'alpha': 0.5,
     'scale': 1000,
     'smooth_subsample': 20,
     'gaussian_shape_multiplier': 2,

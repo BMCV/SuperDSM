@@ -203,7 +203,7 @@ SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
 
 class Energy:
 
-    def __init__(self, roi, epsilon, rho, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
+    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
         self.roi = roi
         self.p   = None
 
@@ -216,8 +216,8 @@ class Energy:
         assert epsilon > 0, 'epsilon must be strictly positive'
         self.epsilon = epsilon
 
-        assert rho >= 0, 'rho must be positive'
-        self.rho = rho
+        assert alpha >= 0, 'alpha must be positive'
+        self.alpha = alpha
 
         assert sparsity_tol >= 0, 'sparsity_tol must be positive'
         self.sparsity_tol = sparsity_tol
@@ -259,8 +259,8 @@ class Energy:
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = np.inner(self.w.flat, phi.flat)
         if self.smooth_mat.shape[1] > 0:
-            objective2  = self.rho * self.term2.sum()
-            objective2 -= self.rho * sqrt(self.epsilon) * len(self.term2)
+            objective2  = self.alpha * self.term2.sum()
+            objective2 -= self.alpha * sqrt(self.epsilon) * len(self.term2)
             if objective2 < 0:
                 assert np.allclose(0, objective2)
                 objective2 = 0
@@ -280,7 +280,7 @@ class Energy:
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
             grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
-            grad2 += self.rho * (params.ξ / self.term2)
+            grad2 += self.alpha * (params.ξ / self.term2)
             grad   = np.concatenate([grad, grad2])
         return grad
     
@@ -298,7 +298,7 @@ class Energy:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
                 [fast_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
-            g = self.rho * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
+            g = self.alpha * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
             H += sparse_diag(np.concatenate([np.zeros(6), g]))

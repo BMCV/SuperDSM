@@ -248,10 +248,10 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
     return solution_array
 
 
-def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
+def _modelfit(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     _print_heading('initializing')
     smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
-    J = Energy(region, epsilon, rho, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
+    J = Energy(region, epsilon, alpha, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
     status = None
@@ -260,7 +260,7 @@ def _modelfit(region, scale, epsilon, rho, smooth_amount, smooth_subsample, gaus
     else:
         if init == 'elliptical':
             _print_heading('convex programming starting: using elliptical models')
-            J_elliptical = Energy(region, epsilon, rho, SmoothMatrixFactory.NULL_FACTORY)
+            J_elliptical = Energy(region, epsilon, alpha, SmoothMatrixFactory.NULL_FACTORY)
             params = _compute_elliptical_solution(J_elliptical, CP_params)
         else:
             params = np.zeros(6)

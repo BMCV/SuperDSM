@@ -62,14 +62,14 @@ Corresponds to minimum object radius required for an object to be possibly recog
 
 Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius defaults`` to infinity).
 
-``modelfit/rho``
-----------------
+``modelfit/alpha``
+------------------
 
 Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
 Corresponds to :math:`\alpha` in the paper (Section 2.2 and Section 3.3).
 
-Defaults to ``AF_rho × scale^2`` (and ``AF_rho defaults`` to 5e-4).
+Defaults to ``AF_alpha × scale^2`` (and ``AF_alpha defaults`` to 5e-4).
 
 ``modelfit/smooth_amount``
 --------------------------
