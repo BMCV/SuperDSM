@@ -98,10 +98,3 @@ Corresponds to "min_region_radius" in the paper (coarse-to-fine region analysis,
 
 Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius defaults`` to 0.33).
 
-``top-down-modelfit/min_background_margin``
--------------------------------------------
-
-Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
-
-TBC
-

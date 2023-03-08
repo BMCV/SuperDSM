@@ -90,7 +90,7 @@ def create_config(base_cfg, im):
     _create_config_entry(cfg, 'modelfit/smooth_amount', scale, 0.2, type=int, _min=4)
     _create_config_entry(cfg, 'modelfit/smooth_subsample', scale, 0.4, type=int, _min=8)
     _create_config_entry(cfg, 'c2f-region-analysis/min_region_radius', radius, 0.33, type=int)
-    _create_config_entry(cfg, 'top-down-modelfit/min_background_margin', scale, 0.2, type=int)
+    #_create_config_entry(cfg, 'top-down-modelfit/min_background_margin', scale, 0.2, type=int)
 
     return cfg, scale
 
