@@ -117,6 +117,8 @@ class Pipeline:
 
 
 def create_pipeline(stages):
+    """Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
+    """
     available_inputs = set(['g_raw'])
     remaining_stages = list(stages)
 
