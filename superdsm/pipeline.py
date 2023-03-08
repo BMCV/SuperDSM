@@ -101,6 +101,12 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
+        """Initializes the pipeline.
+
+        The image ``g_raw`` is added to the pipeline data. However, if ``cfg['histological'] == True`` (i.e. the hyperparameter ``histological`` is set to ``True``), then ``g_raw`` is converted to a brightness-inverse intensity image, and the original image is added as ``g_rgb`` to the pipeline data.
+
+        In addition, ``g_raw`` is normalized so that the intensities range from 0 to 1.
+        """
         if cfg.get('histological', False):
             g_rgb = g_raw
             g_raw = g_raw.mean(axis=2)
