@@ -3,7 +3,7 @@
 Hyperparameters
 ===============
 
-Each :py:class:`pipeline stage <superdsm.pipeline.Stage>` can be controlled by a separate set of hyperparameters. Refer to the documentation of the pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the pipeline stages, which the hyperparameters belong to.
+Each :ref:`pipeline stage <superdsm.pipeline.Stage>` can be controlled by a separate set of hyperparameters. Refer to the documentation of the pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the pipeline stages, which the hyperparameters belong to.
 
 Automation
 ----------
