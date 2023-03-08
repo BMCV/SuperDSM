@@ -17,7 +17,7 @@ The following hyperparameters can be set automatically based on the scale of obj
 ``preprocess/sigma2``
 ^^^^^^^^^^^^^^^^^^^^^
 
-Stage: :py:class:`~superdsm.preprocessing.Preprocessing`
+Stage: :py:class:`~superdsm.preprocess.Preprocessing`
 
 Corresponds to the size of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
@@ -44,7 +44,7 @@ Defaults to ``AF_max_seed_distance × diameter`` (and ``AF_max_seed_distance`` d
 ``postprocess/min_object_radius``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
+Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
 Objects smaller than a circle of this radius are discarded.
 
@@ -53,7 +53,7 @@ Defaults to ``AF_min_object_radius × radius`` (and ``AF_min_object_radius`` def
 ``postprocess/max_object_radius``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
+Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
 Objects larger than a circle of this radius are discarded.
 
@@ -62,7 +62,7 @@ Defaults to ``AF_max_object_radius × radius`` (and ``AF_max_object_radius`` def
 ``postprocess/min_glare_radius``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
+Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
 Corresponds to the minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
 
