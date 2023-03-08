@@ -25,8 +25,8 @@ class Postprocessing(Stage):
         max_energy_rate           = cfg.get(          'max_energy_rate',    0.2)
         discard_image_boundary    = cfg.get(   'discard_image_boundary',  False)
         min_boundary_obj_radius   = cfg.get(  'min_boundary_obj_radius',      0)
-        min_obj_radius            = cfg.get(           'min_obj_radius',      0)
-        max_obj_radius            = cfg.get(           'max_obj_radius', np.inf)
+        min_obj_radius            = cfg.get(        'min_object_radius',      0)
+        max_obj_radius            = cfg.get(        'max_object_radius', np.inf)
         max_eccentricity          = cfg.get(         'max_eccentricity',   0.99)
         max_boundary_eccentricity = cfg.get('max_boundary_eccentricity', np.inf)
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity

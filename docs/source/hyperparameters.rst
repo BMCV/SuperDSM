@@ -35,23 +35,23 @@ Maximum distance allowed between two seed points of atomic image regions which a
 
 Defaults to ``AF_max_seed_distance × diameter`` (and ``AF_max_seed_distance`` defaults to infinity).
 
-``postprocess/min_obj_radius``
-------------------------------
+``postprocess/min_object_radius``
+---------------------------------
 
 Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
 
-Corresponds to ``min_object_radius`` in the paper.
+Objects smaller than a circle of this radius are discarded.
 
 Defaults to ``AF_min_object_radius × radius`` (and ``AF_min_object_radius`` defaults to zero).
 
-``postprocess/max_obj_radius``
-------------------------------
+``postprocess/max_object_radius``
+---------------------------------
 
 Stage: :py:class:`~superdsm.postprocessing.Postprocessing`
 
 Objects larger than a circle of this radius are discarded.
 
-Defaults to ``AF_max_obj_radius × radius`` (and ``AF_max_obj_radius`` defaults to infinity).
+Defaults to ``AF_max_object_radius × radius`` (and ``AF_max_object_radius`` defaults to infinity).
 
 ``postprocess/min_glare_radius``
 --------------------------------
