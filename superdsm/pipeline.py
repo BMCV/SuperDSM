@@ -101,7 +101,7 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
-        """Initializes the pipeline.
+        """Initializes the pipeline for processing the image ``g_raw``. Called by :py:meth:`.process_image`.
 
         :param g_raw: The image which is to be processed by the pipeline.
         :param cfg: The hyperparameters.
