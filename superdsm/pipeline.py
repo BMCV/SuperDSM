@@ -83,7 +83,19 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
-        assert 'preprocess1' not in cfg, 'config version is deprecated'
+        """Performs segmentation of an image.
+
+        First, the image is provided to the stages of the pipeline using the :py:meth:`.init` method. Then, the :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
+
+        :param g_raw: The image to be processed.
+        :param cfg: The hyperparameters.
+        :param first_stage: The name of the first stage to be executed.
+        :param last_stage: The name of the last stage to be executed.
+        :param data: The results of a previous execution.
+        :param out:
+        :param log_root_dir:
+        :return: Tuple ``(data, cfg, timings)``, where ``data`` contains all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
+        """
         cfg = cfg.copy()
         if log_root_dir is not None: mkdir(log_root_dir)
         if first_stage == self.stages[0].name and data is None: first_stage = None
@@ -101,7 +113,7 @@ class Pipeline:
         return data, cfg, timings
 
     def init(self, g_raw, cfg):
-        """Initializes the pipeline for processing the image ``g_raw``. Called by :py:meth:`.process_image`.
+        """Initializes the pipeline for processing the image ``g_raw``.
 
         :param g_raw: The image which is to be processed by the pipeline.
         :param cfg: The hyperparameters.
