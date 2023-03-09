@@ -65,7 +65,7 @@ class Output:
 
     @property
     def muted(self):
-        """Tells whether the output has been muted.
+        """``True`` if the output has been muted and ``False`` otherwise.
         """
         return self._muted or (self.parent is not None and self.parent.muted)
     
@@ -169,10 +169,6 @@ class ConsoleOutput(Output):
     def __init__(self, muted=False, parent=None, margin=0):
         super(JupyterOutput, self).__init__(parent, muted, margin)
         self._intermediate_line_length = 0
-    
-    @staticmethod
-    def get(out):
-        return ConsoleOutput() if out is None else out
 
     def intermediate(self, line):
         if not self.muted:
