@@ -11,3 +11,4 @@ SuperDSM API
     superdsm.globalenergymin
     superdsm.postprocess
     superdsm.render
+    superdsm.output
