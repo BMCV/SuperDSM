@@ -43,10 +43,10 @@ To use SuperDSM interactively, i.e. programatically, as opposed to batch process
 
     import superdsm.automation
     pipeline = superdsm.pipeline.create_default_pipeline()
-    config = superdsm.config.Config()
-    results, _, _ = superdsm.automation.process_image(pipeline, config, img)
+    cfg = superdsm.config.Config()
+    results, _, _ = superdsm.automation.process_image(pipeline, cfg, img)
 
-In this example, the default set of hyperparameters will be used. The parameters can be changed using the ``config`` object (see :py:class:`~superdsm.config.Config` and :ref:`hyperparameters`).
+In this example, the default set of hyperparameters will be used. The parameters can be changed using the ``cfg`` object (see the :py:class:`~superdsm.config.Config` class API and :ref:`hyperparameters`).
 
 The variable ``img`` must be a two-dimensional ``numpy.ndarray`` object which represents the raw image intensities. Images can be loaded from file using :py:meth:`~superdsm.io.imread`.
 
