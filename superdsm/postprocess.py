@@ -15,12 +15,12 @@ class Postprocessing(Stage):
     """Implements the post-processing as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
     Hyperparameters
-    ===============
+    ---------------
 
     The following hyperparameters can be used to control this pipeline stage.
 
     Simple post-processing
-    ----------------------
+    ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/min_glare_radius``
         tbd.
@@ -46,50 +46,53 @@ class Postprocessing(Stage):
     ``postprocess/max_boundary_eccentricity``
         tbd.
 
-    * Contrast-based post-processing:
+    Contrast-based post-processing
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        ``postprocess/exterior_scale``
-            tbd.
+    ``postprocess/exterior_scale``
+        tbd.
 
-        ``postprocess/exterior_offset``
-            tbd.
+    ``postprocess/exterior_offset``
+        tbd.
 
-        ``postprocess/min_contrast_response``
-            tbd.
+    ``postprocess/min_contrast_response``
+        tbd.
 
-        ``postprocess/contrast_response_epsilon``
-            tbd.
+    ``postprocess/contrast_response_epsilon``
+        tbd.
 
-    * Mask-based post-processing:
+    Mask-based post-processing
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        ``postprocess/mask_stdamp``
-            tbd.
+    ``postprocess/mask_stdamp``
+        tbd.
 
-        ``postprocess/mask_max_distance``
-            tbd.
+    ``postprocess/mask_max_distance``
+        tbd.
 
-        ``postprocess/mask_smoothness``
-            tbd.
+    ``postprocess/mask_smoothness``
+        tbd.
 
-        ``postprocess/fill_holes``
-            tbd.
+    ``postprocess/fill_holes``
+        tbd.
 
-    * Autofluorescence glare removal:
+    Autofluorescence glare removal
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        ``postprocess/glare_detection_smoothness``
-            tbd.
+    ``postprocess/glare_detection_smoothness``
+        tbd.
 
-        ``postprocess/glare_detection_num_layers``
-            tbd.
+    ``postprocess/glare_detection_num_layers``
+        tbd.
 
-        ``postprocess/glare_detection_min_layer``
-            tbd.
+    ``postprocess/glare_detection_min_layer``
+        tbd.
 
-        ``postprocess/min_glare_radius``
-            tbd.
+    ``postprocess/min_glare_radius``
+        tbd.
 
-        ``postprocess/min_boundary_glare_radius``
-            tbd.
+    ``postprocess/min_boundary_glare_radius``
+        tbd.
     """
 
     ENABLED_BY_DEFAULT = True
