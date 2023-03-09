@@ -1,6 +1,6 @@
 from .render import colorize_labels, normalize_image, render_ymap, render_result_over_image, render_atoms, render_adjacencies
 from .batch import Task, _resolve_timings_key
-from ._aux import get_output
+from .output import get_output
 from .io import imread, imwrite
 
 import numpy as np

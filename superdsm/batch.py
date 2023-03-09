@@ -1,6 +1,7 @@
 from .pipeline import create_default_pipeline
 from .candidates import _process_candidates
-from ._aux import get_output, mkdir, Text, get_discarded_workload, is_subpath, copy_dict
+from ._aux import mkdir, get_discarded_workload, is_subpath, copy_dict
+from .output import get_output, Text
 from .io import imread, imwrite
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config

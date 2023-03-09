@@ -1,4 +1,4 @@
-from ._aux import get_output
+from .output import get_output
 
 import numpy as np
 import skimage.morphology as morph

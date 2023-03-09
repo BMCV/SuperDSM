@@ -1,4 +1,4 @@
-from ._aux import get_output
+from .output import get_output
 
 
 def _merge_minsetcover(candidates, accepted_candidates, beta):
@@ -115,65 +115,3 @@ class MinSetCover:
     def costs(self):
         solution = self.solution
         return sum(c.energy for c in solution) + self.beta * len(solution)
-
-
-#class MinSetCoverCheck(pipeline.Stage):
-#
-#    def __init__(self):
-#        super(MinSetCoverCheck, self).__init__('min_setcover_check',
-#                                               inputs  = ['g_superpixels', 'processed_candidates', 'accepted_candidates', 'min_setcover_weights'],
-#                                               outputs = ['min_setcover_min_accuracy'])
-#
-#    def process(self, input_data, cfg, out, log_root_dir):
-#        accepted_candidates  = input_data[ 'accepted_candidates']
-#        min_setcover_weights = input_data['min_setcover_weights']
-#
-#        apx_primal = sum(min_setcover_weights[c] for c in accepted_candidates)
-#        try:
-#            opt_dual = MinSetCoverCheck.solve_dual_lp_relaxation(input_data)
-#
-#            assert apx_primal >= opt_dual or abs(apx_primal - opt_dual) < 1e-4 * opt_dual
-#            apx_primal = max((apx_primal, opt_dual))
-#
-#            min_accuracy = opt_dual / apx_primal if apx_primal > 0 else 0.
-#            out.write('Minimum accuracy of MINSETCOVER solution: %5.2f %%' % (100 * min_accuracy))
-#
-#        except Exception as err:
-#            out.write('Minimum accuracy of MINSETCOVER -- Failure: %s' % repr(err))
-#            min_accuracy = 0
-#
-#        return {
-#            'min_setcover_min_accuracy': min_accuracy
-#        }
-#
-#    @staticmethod
-#    def solve_dual_lp_relaxation(input_data):
-#        superpixels = list(set(input_data['g_superpixels'].flatten()) - {0})
-#        min_setcover_weights = input_data['min_setcover_weights']
-#        max_weight = float(max(min_setcover_weights.values()))
-#        if max_weight == 0: max_weight = 1
-#
-#        # non-negativity constraints:
-#        G = [ -np.eye(len(superpixels))]
-#        h = [np.zeros(len(superpixels))]
-#
-#        # packing constraints:
-#        for c in input_data['processed_candidates']:
-#            G_row = np.zeros((1, len(superpixels)))
-#            for s in c.superpixels:
-#                i = superpixels.index(s)
-#                G_row[0, i] = 1
-#            G.append(G_row)
-#            h.append(np.array([min_setcover_weights[c] / max_weight]))
-#
-#        assert all(G_row.sum() >= 1 for G_row in np.array(G)[len(superpixels):]), 'failed to build LP'
-#        G = cvxopt.matrix(np.concatenate(G, axis=0))
-#        h = cvxopt.matrix(np.concatenate(h, axis=0))
-#        with aux.CvxoptFrame() as batch:
-#            batch['show_progress'] = False
-#            batch['abstol'] = min((1e-7, 1 / max_weight))
-#            batch['reltol'] = min((1e-6, 1 / max_weight))
-#            solution = cvxopt.solvers.lp(cvxopt.matrix(-np.ones(len(superpixels))), G, h)
-#        assert solution['status'] == 'optimal', 'failed to find optimal LP solution'
-#        return solution['primal objective'] * (-1) * max_weight
-

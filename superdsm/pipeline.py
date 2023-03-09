@@ -1,4 +1,5 @@
-from ._aux import get_output, copy_dict, mkdir
+from ._aux import copy_dict, mkdir
+from .output import get_output
 from .surface import Surface
 
 import math

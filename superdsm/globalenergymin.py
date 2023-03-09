@@ -1,5 +1,6 @@
 from .pipeline import Stage
-from ._aux import get_output, join_path, mkdir, Text, get_discarded_workload, copy_dict
+from ._aux import join_path, mkdir, get_discarded_workload, copy_dict
+from .output import get_output, Text
 from .candidates import process_candidates, Candidate
 from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL
 from .maxsetpack import solve_maxsetpack

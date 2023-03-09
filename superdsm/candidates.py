@@ -1,4 +1,5 @@
-from ._aux import copy_dict, uplift_smooth_matrix, join_path, get_output, SystemSemaphore, get_ray_1by1
+from ._aux import copy_dict, uplift_smooth_matrix, join_path, SystemSemaphore, get_ray_1by1
+from .output import get_output
 from .modelfit import PolynomialModel, CP, SmoothMatrixFactory, Energy
 
 import ray
