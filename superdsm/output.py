@@ -138,7 +138,7 @@ class JupyterOutput(Output):
 
         Older lines of text are dropped, so that
 
-        .. math:: \text{number of retained lines} + \text{offset} \leq \text{maximum number of lines allowed}.
+        .. math:: \\text{number of retained lines} + \\text{offset} \\leq \\text{maximum number of lines allowed}.
         """
         if len(self.lines) + offset > self.maxlen:
             self.lines = self.lines[len(self.lines) + offset - self.maxlen:]
