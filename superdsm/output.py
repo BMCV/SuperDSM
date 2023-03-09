@@ -17,7 +17,7 @@ def is_jupyter_notebook():
 
 
 def get_output(out=None):
-    """Returns a suitable output.
+    """Returns a suitable :py:class:`~.Output` implementation.
 
     :param out: This will be returned if it is not ``None``.
     :return: A :py:class:`~.JupyterOutput` object if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise.
@@ -48,21 +48,68 @@ class Text:
         return f'{style}{text}{Text.END}'
 
 
-class JupyterOutput:
+class Output:
+    """Abstract base class of :py:class:`~.JupyterOutput` and :py:class:`~.ConsoleOutput`.
 
-    def __init__(self, parent=None, maxlen=np.inf, muted=False, margin=0):
-        assert margin >= 0
-        self.lines     = []
-        self.current   = None
-        self.parent    = parent
-        self.maxlen    = maxlen
-        self.truncated = 0
-        self._muted    = muted
-        self.margin    = margin
+    Outputs are organized hierarchically, in the sense that each output has one or none *parent* ouput. To indicate this relationship, we say that an output is *derived* from its parent. If an output is muted, all its direct and indirect derivations will be muted too. To create a muted output, pass ``muted=True`` to the constructor of the output, or its :py:meth:`~.Output.derive` method.
+
+    :param parent: The parent output (or ``None``).
+    :param muted: ``True`` if this output should be muted and ``False`` otherwise.
+    :param margin: The left indentation of this derived output (in number of whitespaces, with respect to the indentation of the parent output).
+    """
+
+    def __init__(self, parent=None, muted=False, margin=0):
+        self._muted = muted
+        self.parent = parent
+        self.margin = margin
 
     @property
     def muted(self):
+        """Tells whether the output has been muted.
+        """
         return self._muted or (self.parent is not None and self.parent.muted)
+    
+    def derive(self, muted=False, maxlen=np.inf, margin=0):
+        """Derives an output.
+
+        :param muted: ``True`` if the derived output should be muted and ``False`` otherwise.
+        :param maxlen: Maximum number of lines of the derived output.
+        :param margin: The left indentation of the derived output (in number of whitespaces, with respect to the indentation of this output).
+        :return: The derived output.
+        """
+        raise NotImplementedError()
+    
+    def intermediate(self, line, flush=True):
+        """Display an intermediate line of text.
+
+        Intermediate output is overwritten by the next invocation of the :py:meth:`~.intermediate` and :py:meth:`~.write` methods.
+
+        :param line: Line of text to be displayed.
+        :param flush: ``True`` if the output should be displayed immediately and ``False`` otherwise.
+        """
+        raise NotImplementedError()
+    
+    def write(self, line):
+        """Outputs a line of text permantently (as opposed to intermediate output).
+
+        Previous intermiedate output is overwritten.
+
+        :param line: Line of text to be displayed.
+        """
+        raise NotImplementedError()
+
+
+class JupyterOutput(Output):
+    """Implements the :py:class:`~.Output` class for Jupyter-based applications.
+    """
+
+    def __init__(self, parent=None, maxlen=np.inf, muted=False, margin=0):
+        super(JupyterOutput, self).__init__(parent, muted, margin)
+        assert margin >= 0
+        self.lines     = []
+        self.current   = None
+        self.maxlen    = maxlen
+        self.truncated = 0
     
     def derive(self, muted=False, maxlen=np.inf, margin=0):
         child = JupyterOutput(parent=self, maxlen=maxlen, muted=muted, margin=margin)
@@ -102,11 +149,12 @@ class JupyterOutput:
         self.clear()
 
 
-class ConsoleOutput:
+class ConsoleOutput(Output):
+    """Implements the :py:class:`~.Output` class for terminal-based applications.
+    """
+
     def __init__(self, muted=False, parent=None, margin=0):
-        self.parent = parent
-        self._muted = muted
-        self.margin = margin
+        super(JupyterOutput, self).__init__(parent, muted, margin)
         self._intermediate_line_length = 0
     
     @staticmethod
@@ -131,10 +179,6 @@ class ConsoleOutput:
                 print(' ' * self.margin + line)
             else:
                 for line in lines: self.write(line)
-
-    @property
-    def muted(self):
-        return self._muted or (self.parent is not None and self.parent.muted)
     
     def derive(self, muted=False, margin=0):
         assert margin >= 0
