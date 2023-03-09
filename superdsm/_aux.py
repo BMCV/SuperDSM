@@ -264,45 +264,6 @@ class SystemMutex:
         self.fp.close()
 
 
-def find_candidate_by_footprint(candidates, atom_labels, cmp='=='):
-    result = []
-    atom_labels = frozenset(atom_labels)
-    for c in candidates:
-        match = False
-
-        if isinstance(cmp, str) and len(atom_labels & c.footprint) > 0 and eval(f'atom_labels {cmp} c.footprint'):
-            match = True
-
-        elif callable(cmp) and cmp(atom_labels, c.footprint):
-            match = True
-
-        if match:
-            result.append(c)
-            if cmp == '==': break
-    return result
-
-
-def find_candidate_by_position(candidates, x, y):
-    result = []
-    for candidate in candidates:
-        r = y - candidate.fg_offset[0]
-        c = x - candidate.fg_offset[1]
-        if 0 <= r < candidate.fg_fragment.shape[0] and 0 <= c < candidate.fg_fragment.shape[1] and candidate.fg_fragment[r, c]:
-            result.append(candidate)
-    return result
-
-
-def retain_intersections(superset_mask, subset_mask, copy=False):
-    """Retains all connected components in `superset_mask` which intersect `subset_mask`
-    """
-    result = superset_mask.copy() if copy else superset_mask
-    supersets = ndi.label(superset_mask)[0]
-    for l in frozenset(supersets.reshape(-1)) - {0}:
-        cc = (supersets == l)
-        if not subset_mask[cc].any(): result[cc] = False
-    return result
-
-
 def get_discarded_workload(*args):
     if len(args) == 1:
         data = args[0]
@@ -316,27 +277,3 @@ def get_discarded_workload(*args):
     if np.isnan(total_workload): return np.nan
     assert computed_candidates_num <= total_workload, f'{computed_candidates_num} <= {total_workload}'
     return 1 - (computed_candidates_num / total_workload if total_workload > 0 else 1)
-
-
-def get_file_size(file_path):
-    return os.path.getsize(str(file_path))
-
-
-def get_directory_size(start_path):
-    total_size = 0
-    for dirpath, dirnames, filenames in os.walk(start_path):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            # skip if it is symbolic link
-            if not os.path.islink(fp):
-                total_size += get_file_size(fp)
-    return total_size
-
-
-def sizeof_fmt(num, suffix='B'):
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-        if abs(num) < 1024.0:
-            return '%3.1f %s%s' % (num, unit, suffix)
-        num /= 1024.0
-    return '%.1f %s%s' % (num, 'Yi', suffix)
-
