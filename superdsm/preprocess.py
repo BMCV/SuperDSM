@@ -17,7 +17,7 @@ class Preprocessing(Stage):
         The scale of the Gaussian filter used for denoising. Defaults to :math:`\\sqrt{2}`.
 
     ``preprocess/sigma2``
-        The scale of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\\tau_x`. Defaults to :math:`40`.
+        The scale of the Gaussian filter :math:`\mathcal G_\sigma`, which is used to determine the intensity offsets :math:`\\tau_x` and described in Supplemental Material 1. Defaults to :math:`40`.
 
     ``preprocess/threshold_clip``
         Corresponds to :math:`\\tau_\\text{max}` in Supplemental Material 1. Defaults to :math:`3`.

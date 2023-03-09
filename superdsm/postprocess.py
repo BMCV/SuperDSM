@@ -12,6 +12,81 @@ import numpy as np
 
 
 class Postprocessing(Stage):
+    """Implements the post-processing as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
+
+    The following hyperparameters can be used to control this pipeline stage:
+
+    * Simple post-processing:
+
+        ``postprocess/min_glare_radius``
+            tbd.
+
+        ``postprocess/max_energy_rate``
+            tbd.
+
+        ``postprocess/discard_image_boundary``
+            tbd.
+
+        ``postprocess/min_boundary_obj_radius``
+            tbd.
+
+        ``postprocess/min_object_radius``
+            tbd.
+
+        ``postprocess/max_object_radius``
+            tbd.
+
+        ``postprocess/max_eccentricity``
+            tbd.
+
+        ``postprocess/max_boundary_eccentricity``
+            tbd.
+
+    * Contrast-based post-processing:
+
+        ``postprocess/exterior_scale``
+            tbd.
+
+        ``postprocess/exterior_offset``
+            tbd.
+
+        ``postprocess/min_contrast_response``
+            tbd.
+
+        ``postprocess/contrast_response_epsilon``
+            tbd.
+
+    * Mask-based post-processing:
+
+        ``postprocess/mask_stdamp``
+            tbd.
+
+        ``postprocess/mask_max_distance``
+            tbd.
+
+        ``postprocess/mask_smoothness``
+            tbd.
+
+        ``postprocess/fill_holes``
+            tbd.
+
+    * Autofluorescence glare removal:
+
+        ``postprocess/glare_detection_smoothness``
+            tbd.
+
+        ``postprocess/glare_detection_num_layers``
+            tbd.
+
+        ``postprocess/glare_detection_min_layer``
+            tbd.
+
+        ``postprocess/min_glare_radius``
+            tbd.
+
+        ``postprocess/min_boundary_glare_radius``
+            tbd.
+    """
 
     ENABLED_BY_DEFAULT = True
 
@@ -32,19 +107,16 @@ class Postprocessing(Stage):
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
-        get_default_contrast_response_epsilon = lambda version: {1: 0, 2: 1e-4}[version]
-        contrast_response_version = cfg.get('contrast_response_version',    2)
         exterior_scale            = cfg.get(           'exterior_scale',    5)
         exterior_offset           = cfg.get(          'exterior_offset',    5)
         min_contrast_response     = cfg.get(    'min_contrast_response', 0.35)
-        contrast_response_epsilon = cfg.get('contrast_response_epsilon',  get_default_contrast_response_epsilon(contrast_response_version))
+        contrast_response_epsilon = cfg.get('contrast_response_epsilon', 1e-4)
 
         # mask-based post-processing
-        mask_stdamp          = cfg.get(         'mask_stdamp',    2)
-        mask_max_distance    = cfg.get(   'mask_max_distance',    1)
-        mask_smoothness      = cfg.get(     'mask_smoothness',    3)
-        fill_holes           = cfg.get(          'fill_holes', True)
-        mask_process_version = cfg.get('mask_process_version',    1)
+        mask_stdamp          = cfg.get(      'mask_stdamp',    2)
+        mask_max_distance    = cfg.get('mask_max_distance',    1)
+        mask_smoothness      = cfg.get(  'mask_smoothness',    3)
+        fill_holes           = cfg.get(       'fill_holes', True)
 
         # autofluorescence glare removal
         glare_detection_smoothness = cfg.get('glare_detection_smoothness',      3)
@@ -65,14 +137,12 @@ class Postprocessing(Stage):
             'g_atoms':                    input_data['g_atoms'],
             'g_mask_processing':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
             'g_glare_detection':          ndi.gaussian_filter(input_data['g_raw'], glare_detection_smoothness),
-            'contrast_response_version':  contrast_response_version,
             'background_mask':            background_mask,
             'exterior_scale':             exterior_scale,
             'exterior_offset':            exterior_offset,
             'contrast_response_epsilon':  contrast_response_epsilon,
             'mask_stdamp':                mask_stdamp,
             'mask_max_distance':          mask_max_distance,
-            'mask_process_version':       mask_process_version,
             'fill_holes':                 fill_holes,
             'min_glare_radius':           min_glare_radius,
             'min_boundary_glare_radius':  min_boundary_glare_radius,
@@ -149,26 +219,19 @@ class PostprocessedCandidate(BaseCandidate):
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon, background_mask, version):
-    assert version in [1,2]
+def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon, background_mask):
     g = g / g.std()
     mask = np.zeros(g.shape, bool)
     candidate.fill_foreground(mask)
     interior_mean = g[mask].mean()
     exterior_distance_map = (ndi.distance_transform_edt(~mask) - exterior_offset).clip(0, np.inf) / exterior_scale
     exterior_mask = np.logical_xor(mask, exterior_distance_map <= 5)
-    if version == 1:
-        exterior_mask = np.logical_and(exterior_mask, g < interior_mean)
-    elif version == 2:
-        exterior_mask = np.logical_and(exterior_mask, background_mask)
+    exterior_mask = np.logical_and(exterior_mask, background_mask)
     exterior_weights = np.zeros(g.shape)
     exterior_weights[exterior_mask] = np.exp(-exterior_distance_map[exterior_mask])
     exterior_weights /= exterior_weights.sum()
     exterior_mean = (g * exterior_weights).sum()
-    if version == 1:
-        return interior_mean / (exterior_mean + epsilon) - 1
-    elif version == 2:
-        return (interior_mean + epsilon) / (exterior_mean + epsilon) - 1
+    return (interior_mean + epsilon) / (exterior_mean + epsilon) - 1
 
 
 def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
@@ -203,8 +266,8 @@ def _process_candidate(cidx, candidate, params):
     if params['min_boundary_glare_radius' if candidate.on_boundary else 'min_glare_radius'] < obj_radius:
         is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
     energy_rate  = _compute_energy_rate(candidate, params['y'], params['g_atoms'])
-    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'], params['contrast_response_version'])
-    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'], params['mask_process_version'])
+    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
+    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(candidate)
 
     return cidx, {
@@ -218,8 +281,7 @@ def _process_candidate(cidx, candidate, params):
     }
 
 
-def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False, version=1):
-    assert version in (1,2)
+def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
     if stdamp <= 0 or max_distance <= 0:
         if fill_holes:
             return candidate.fg_offset, ndi.morphology.binary_fill_holes(candidate.fg_fragment)
@@ -235,13 +297,6 @@ def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False, version=
     extra_bg  = np.logical_not(extra_fg)
     extra_fg  = np.logical_and(extra_mask_superset, extra_fg)
     extra_bg  = np.logical_and(extra_mask_superset, extra_bg)
-    
-    if version >= 2:
-        extra_fg_labels = ndi.label(extra_fg)[0]
-        for label in np.unique(extra_fg_labels):
-            if label == 0: continue
-            extra_fg_cc = (extra_fg_labels == label)
-            if not mask[extra_fg_cc].any(): extra_fg[extra_fg_cc] = False
         
     mask[extra_fg] = True
     mask[extra_bg] = False
