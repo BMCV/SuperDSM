@@ -1,5 +1,5 @@
-segmetrics.c2freganal
-=====================
+superdsm.c2freganal
+===================
 
 .. automodule:: superdsm.c2freganal
     :members:

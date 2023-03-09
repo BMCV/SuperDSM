@@ -1,5 +1,5 @@
-segmetrics.pipeline
-===================
+superdsm.pipeline
+=================
 
 .. automodule:: superdsm.pipeline
     :members:

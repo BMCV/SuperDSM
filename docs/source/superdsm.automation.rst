@@ -1,5 +1,5 @@
-segmetrics.automation
-=====================
+superdsm.automation
+===================
 
 .. automodule:: superdsm.automation
     :members:

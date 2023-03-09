@@ -1,5 +1,5 @@
-segmetrics API
-==============
+SuperDSM API
+============
 
 .. toctree::
     superdsm.pipeline

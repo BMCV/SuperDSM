@@ -1,5 +1,5 @@
-segmetrics.render
-=================
+superdsm.render
+===============
 
 .. automodule:: superdsm.render
     :members:

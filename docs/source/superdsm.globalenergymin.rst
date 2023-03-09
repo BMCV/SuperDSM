@@ -1,5 +1,5 @@
-segmetrics.globalenergymin
-==========================
+superdsm.globalenergymin
+========================
 
 .. automodule:: superdsm.globalenergymin
     :members:

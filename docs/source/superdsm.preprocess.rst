@@ -1,5 +1,5 @@
-segmetrics.preprocess
-=====================
+superdsm.preprocess
+===================
 
 .. automodule:: superdsm.preprocess
     :members:

@@ -1,5 +1,5 @@
-segmetrics.modelfit_config
-==========================
+superdsm.modelfit_config
+========================
 
 .. automodule:: superdsm.modelfit_config
     :members:

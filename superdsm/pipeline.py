@@ -83,7 +83,7 @@ class Pipeline:
         self.stages = []
 
     def process_image(self, g_raw, cfg, first_stage=None, last_stage=None, data=None, out=None, log_root_dir=None):
-        """Performs segmentation of an image.
+        """Performs the segmentation of an image.
 
         First, the image is provided to the stages of the pipeline using the :py:meth:`.init` method. Then, the :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
@@ -92,9 +92,11 @@ class Pipeline:
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
-        :param out:
-        :param log_root_dir:
+        :param out: An output object obtained via :py:meth:`~superdsm._aux.get_output`.
+        :param log_root_dir: Path to a directory where log files should be written to.
         :return: Tuple ``(data, cfg, timings)``, where ``data`` contains all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
+
+        The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
         """
         cfg = cfg.copy()
         if log_root_dir is not None: mkdir(log_root_dir)
