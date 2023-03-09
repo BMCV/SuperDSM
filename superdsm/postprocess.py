@@ -76,10 +76,10 @@ class Postprocessing(Stage):
     Autofluorescence glare removal
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask :math:`M`. The object is identified as an autofluorescence artifiact and discarded, if *(i)* the radius of a circle of size :math:`#M` is either smaller than 22 pixels, or *(ii)* larger than 50 pixels and the top 50% of the Gaussian-smoothed intensity profile of the object mask :math:`M` is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected, see below).
+    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask :math:`M`. The object is identified as an autofluorescence artifiact and discarded, if *(i)* the radius of a circle of size :math:`\\#M` is either smaller than 22 pixels, or *(ii)* larger than 50 pixels and the top 50% of the Gaussian-smoothed intensity profile of the object mask :math:`M` is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected, see below).
 
     .. figure:: glare_detection.png
-       :scale: 100%
+       :width: 100%
 
        Autofluorescence artifact detection method. (a) Original image section (NIH3T3 cells, contrast-enhanced). (b) Ground truth segmentation. (c) Segmentation result of cell nuclei (green contour) and the autofluorescence artifact (red contour). (d) Smoothed image intensities (Gaussian filter) and the corresponding intensity profiles (solid contours) of the detected objects (dashed contours).
 
