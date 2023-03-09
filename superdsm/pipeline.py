@@ -87,8 +87,8 @@ class Pipeline:
 
         First, the image is provided to the stages of the pipeline using the :py:meth:`.init` method. Then, the :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
-        :param g_raw: The image to be processed.
-        :param cfg: The hyperparameters.
+        :param g_raw: A ``numpy.ndarray`` object corresponding to the image which is to be processed.
+        :param cfg: A :py:class:`~superdsm.config.Config` object which represents the :ref:`hyperparameters`.
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.

@@ -7,6 +7,8 @@ def _cleanup_value(value):
 
 
 class Config:
+    """Represents a set of hyperparameters.
+    """
 
     def __init__(self, other=None):
         if isinstance(other, dict):
