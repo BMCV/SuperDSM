@@ -14,33 +14,37 @@ import numpy as np
 class Postprocessing(Stage):
     """Implements the post-processing as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    The following hyperparameters can be used to control this pipeline stage:
+    Hyperparameters
+    ===============
 
-    * Simple post-processing:
+    The following hyperparameters can be used to control this pipeline stage.
 
-        ``postprocess/min_glare_radius``
-            tbd.
+    Simple post-processing
+    ----------------------
 
-        ``postprocess/max_energy_rate``
-            tbd.
+    ``postprocess/min_glare_radius``
+        tbd.
 
-        ``postprocess/discard_image_boundary``
-            tbd.
+    ``postprocess/max_energy_rate``
+        tbd.
 
-        ``postprocess/min_boundary_obj_radius``
-            tbd.
+    ``postprocess/discard_image_boundary``
+        tbd.
 
-        ``postprocess/min_object_radius``
-            tbd.
+    ``postprocess/min_boundary_obj_radius``
+        tbd.
 
-        ``postprocess/max_object_radius``
-            tbd.
+    ``postprocess/min_object_radius``
+        tbd.
 
-        ``postprocess/max_eccentricity``
-            tbd.
+    ``postprocess/max_object_radius``
+        tbd.
 
-        ``postprocess/max_boundary_eccentricity``
-            tbd.
+    ``postprocess/max_eccentricity``
+        tbd.
+
+    ``postprocess/max_boundary_eccentricity``
+        tbd.
 
     * Contrast-based post-processing:
 
