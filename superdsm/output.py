@@ -101,6 +101,11 @@ class Output:
 
 class JupyterOutput(Output):
     """Implements the :py:class:`~.Output` class for Jupyter-based applications.
+
+    :param parent: The parent output (or ``None``).
+    :param maxlen: Maximum number of allowed lines (older lines of text will be dropped if this number is exceeded).
+    :param muted: ``True`` if this output should be muted and ``False`` otherwise.
+    :param margin: The left indentation of this derived output (in number of whitespaces, with respect to the indentation of the parent output).
     """
 
     def __init__(self, parent=None, maxlen=np.inf, muted=False, margin=0):
@@ -117,6 +122,8 @@ class JupyterOutput(Output):
         return child
     
     def clear(self, flush=False):
+        """Removes all intermediate output.
+        """
         clear_output(not flush)
         p_list = [self]
         while p_list[-1].parent is not None:
@@ -127,6 +134,12 @@ class JupyterOutput(Output):
         self.current = None
 
     def truncate(self, offset=0):
+        """Truncates output so that maximum number of lines is respected.
+
+        Older lines of text are dropped, so that
+
+        .. math:: \text{number of retained lines} + \text{offset} \leq \text{maximum number of lines allowed}.
+        """
         if len(self.lines) + offset > self.maxlen:
             self.lines = self.lines[len(self.lines) + offset - self.maxlen:]
             self.truncated += 1
