@@ -105,7 +105,7 @@ class Config:
         :return: ``True`` if the hyperparameter ``key`` is set and ``False`` otherwise.
         """
         try:
-            self[key]
+            self.__getitem__(key)
             return True
         except KeyError:
             return False
