@@ -33,7 +33,7 @@ class Config:
 
         :param key: The hyperparameter to be removed.
         :param default: Returned if the hyperparameter ``key`` is not set.
-        :return: The value of the hyperparameter ``key`` or ``default`` if ``key``is not set.
+        :return: The value of the hyperparameter ``key`` or ``default`` if ``key`` is not set.
         """
         if '/' in key:
             keys = key.split('/')
@@ -68,7 +68,7 @@ class Config:
 
         :param key: The hyperparameter to be queried.
         :param default: Returned if the hyperparameter ``key`` is not set.
-        :return: The value of the hyperparameter ``key`` or ``default`` if ``key``is not set.
+        :return: The value of the hyperparameter ``key`` or ``default`` if ``key`` is not set.
         """
         if '/' in key:
             keys = key.split('/')
