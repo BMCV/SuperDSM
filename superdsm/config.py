@@ -7,7 +7,15 @@ def _cleanup_value(value):
 
 
 class Config:
-    """Represents a set of hyperparameters.
+    """Represents a set of :ref:`hyperparameters`.
+
+    Hyperparameters can be worked with as follows:
+
+    .. code-block:: python
+    
+       cfg = superdsm.config.Config()
+       cfg['global-energy-minimization/beta'] = 1000
+       cfg['global-energy-minimization/try_lower_beta'] = False
     """
 
     def __init__(self, other=None):
