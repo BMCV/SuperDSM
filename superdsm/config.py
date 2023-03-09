@@ -27,6 +27,8 @@ class Config:
             raise ValueError(f'Unknown argument: ' + other)
 
     def pop(self, key, default):
+        """Removes entry from this configuration.
+        """
         if '/' in key:
             keys = key.split('/')
             config = self
