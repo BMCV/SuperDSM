@@ -5,6 +5,10 @@ from IPython.display import clear_output
 
 
 def is_jupyter_notebook():
+    """Checks whether code is being executed in a Jupyter notebook.
+
+    :return: ``True`` if code is being executed in a Jupyter notebook and ``False`` otherwise.
+    """
     try:
         if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
             return True
@@ -13,6 +17,11 @@ def is_jupyter_notebook():
 
 
 def get_output(out=None):
+    """Returns a suitable output.
+
+    :param out: This will be returned if it is not ``None``.
+    :return: A :py:class:`~.JupyterOutput` object if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise.
+    """
     if out is not None:
         return out
     if is_jupyter_notebook():
