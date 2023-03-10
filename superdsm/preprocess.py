@@ -9,7 +9,7 @@ import numpy as np
 class Preprocessing(Stage):
     """Implements the computation of the intensity offsets (see Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``g_raw`` for input (the input image) and produces ``y`` for output (the offset image intensities).
+    This stage requires ``g_raw`` for input (the input image) and produces ``y`` for output (the offset image intensities). Refer to :ref:`_pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     The following hyperparameters can be used to control this pipeline stage:
 

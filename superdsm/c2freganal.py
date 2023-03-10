@@ -90,7 +90,7 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
 class C2F_RegionAnalysis(Stage):
     """Implements the coarse-to-fine region analysis scheme (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``y`` and ``dsm_cfg`` for input and produces ``y_mask``, ``g_atoms``, ``adjacencies``, ``seeds``, ``clusters`` for output.
+    This stage requires ``y`` and ``dsm_cfg`` for input and produces ``y_mask``, ``g_atoms``, ``adjacencies``, ``seeds``, ``clusters`` for output. Refer to :ref:`_pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     The following hyperparameters can be used to control this pipeline stage:
 
