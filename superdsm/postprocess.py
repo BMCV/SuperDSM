@@ -23,10 +23,10 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_energy_rate``
-        Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
+        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
 
     ``postprocess/discard_image_boundary``
-        If set to ``True``, objects located directly on the image border are discarded.
+        Objects located directly on the image border are discarded if this is set to ``True``.
 
     ``postprocess/min_object_radius``
         Objects smaller than a circle of this radius are discarded. Defaults to 0.
