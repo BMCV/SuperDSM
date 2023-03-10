@@ -290,7 +290,7 @@ class Task:
             
             skip_writing_results_conditions = [
                 one_shot,
-                self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('modelfit') and not self.result_path.exists(),
+                self.last_stage is not None and pipeline.find(self.last_stage) <= pipeline.find('dsm') and not self.result_path.exists(),
                 first_stage is not None and pipeline.find(first_stage) >= pipeline.find('postprocess')
             ]
             if any(skip_writing_results_conditions):
@@ -346,7 +346,7 @@ class Task:
     def find_first_stage_name(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else (None, None)
-        if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('modelfit') + 1:
+        if pickup_task is None or pipeline.find(stage_name) <= pipeline.find('dsm') + 1:
             return None, {}
         else:
             out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "load"})')

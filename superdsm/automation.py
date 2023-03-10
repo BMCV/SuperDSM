@@ -86,9 +86,9 @@ def create_config(base_cfg, im):
     _create_config_entry(cfg, 'postprocess/min_object_radius', radius, 0.0)
     _create_config_entry(cfg, 'postprocess/max_object_radius', radius, np.inf)
     _create_config_entry(cfg, 'postprocess/min_glare_radius', radius, np.inf)
-    _create_config_entry(cfg, 'modelfit/alpha', scale ** 2, 0.0005)
-    _create_config_entry(cfg, 'modelfit/smooth_amount', scale, 0.2, type=int, _min=4)
-    _create_config_entry(cfg, 'modelfit/smooth_subsample', scale, 0.4, type=int, _min=8)
+    _create_config_entry(cfg, 'dsm/alpha', scale ** 2, 0.0005)
+    _create_config_entry(cfg, 'dsm/smooth_amount', scale, 0.2, type=int, _min=4)
+    _create_config_entry(cfg, 'dsm/smooth_subsample', scale, 0.4, type=int, _min=8)
     _create_config_entry(cfg, 'c2f-region-analysis/min_region_radius', radius, 0.33, type=int)
 
     return cfg, scale

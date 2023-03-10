@@ -21,22 +21,22 @@ The following hyperparameters can be set automatically based on the scale of obj
 
     Defaults to ``AF_sigma2 × scale`` (and ``AF_sigma2`` defaults to 1).
 
-``modelfit/alpha``
-    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+``dsm/alpha``
+    Stage: :py:class:`~superdsm.dsmcfg.DSM_ConfigStage`
 
     Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
 
     Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
 
-``modelfit/smooth_amount``
-    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+``dsm/smooth_amount``
+    Stage: :py:class:`~superdsm.dsmcfg.DSM_ConfigStage`
 
     Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
     Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
-``modelfit/smooth_subsample``
-    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+``dsm/smooth_subsample``
+    Stage: :py:class:`~superdsm.dsmcfg.DSM_ConfigStage`
 
     Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 

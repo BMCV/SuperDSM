@@ -80,7 +80,7 @@ def _compute_object(y, g_atoms, x_map, object, cvxprog_kwargs, smooth_mat_alloca
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
     min_background_margin = max((cvxprog_kwargs.pop('min_background_margin'), cvxprog_kwargs['smooth_subsample']))
     region = object.get_cvxprog_region(y, g_atoms, min_background_margin)
-    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
+    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
     # Skip regions whose foreground is only a single pixel (this is just noise)
@@ -158,17 +158,17 @@ def compute_objects(objects, y, g_atoms, cvxprog_kwargs, log_root_dir, status_li
     out.write(f'{status_line[1]}: {len(objects)} ({fallbacks}x fallback)')
 
 
-def _compute_objects(objects, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):
+def _compute_objects(objects, y, g_atoms, x_map, lock, cvxprog_kwargs, log_root_dir):
     if _compute_objects._DEBUG: ## run serially
         for cidx, c in enumerate(objects):
-            yield _compute_object_logged(log_root_dir, cidx, y, g_atoms, x_map, c, modelfit_kwargs, lock)
+            yield _compute_object_logged(log_root_dir, cidx, y, g_atoms, x_map, c, cvxprog_kwargs, lock)
     else: ## run in parallel
         y_id         = ray.put(y)
         g_atoms_id   = ray.put(g_atoms)
         x_map_id     = ray.put(x_map)
-        mf_kwargs_id = ray.put(modelfit_kwargs)
+        cp_kwargs_id = ray.put(cvxprog_kwargs)
         lock_id      = ray.put(lock)
-        futures      = [_ray_compute_object_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(objects)]
+        futures      = [_ray_compute_object_logged.remote(log_root_dir, obj_idx, y_id, g_atoms_id, x_map_id, obj, cp_kwargs_id, lock_id) for obj_idx, obj in enumerate(objects)]
         for ret in get_ray_1by1(futures): yield ret
 
 
