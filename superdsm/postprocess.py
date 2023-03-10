@@ -46,6 +46,8 @@ class Postprocessing(Stage):
     Contrast-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+    A segmented object is discarded, if the *contrast response* is too low, which is the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the mean image intensity within its neighborhood.
+
     ``postprocess/exterior_scale``
         tbd.
 
@@ -53,10 +55,10 @@ class Postprocessing(Stage):
         tbd.
 
     ``postprocess/min_contrast_response``
-        tbd.
+        A segmented object is discarded, if the contrast response as defined above is below this threshold. Defaults to 0.35.
 
     ``postprocess/contrast_response_epsilon``
-        tbd.
+        This constant is added to both the nominator and the denominator of the fraction which defines the contrast response (see above). Defaults to 1e-4.
 
     Mask-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
