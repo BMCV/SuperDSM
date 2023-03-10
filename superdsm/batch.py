@@ -1,5 +1,5 @@
 from .pipeline import create_default_pipeline
-from .candidates import _process_candidates
+from .objects import _compute_objects
 from ._aux import mkdir, get_discarded_workload, is_subpath, copy_dict
 from .output import get_output, Text
 from .io import imread, imwrite
@@ -242,7 +242,7 @@ class Task:
     def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, debug=False, report=None, pickup=True, out=None):
         out = get_output(out)
         if not self.runnable: return
-        _process_candidates._DEBUG = debug
+        _compute_objects._DEBUG = debug
         if not force and not self.is_pending:
             out.write(f'\nSkipping task: {self._fmt_path(self.path)} {"" if task_info is None else f"({task_info})"}')
             return
@@ -280,7 +280,7 @@ class Task:
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
-                if not dry and 'candidates' in data[file_id]:
+                if not dry and 'objects' in data[file_id]:
                     discarded_workload = get_discarded_workload(data[file_id])
                     if not np.isnan(discarded_workload): discarded_workloads.append(discarded_workload)
             out2.write('')

@@ -1,5 +1,5 @@
 from .pipeline import Stage
-from .candidates import BaseCandidate, extract_foreground_fragment
+from .objects import BaseObject, extract_foreground_fragment
 from ._aux import get_ray_1by1, join_path
 
 import scipy.ndimage      as ndi
@@ -112,7 +112,7 @@ class Postprocessing(Stage):
     def __init__(self):
         super(Postprocessing, self).__init__('postprocess',
                                              inputs  = ['cover', 'y_surface', 'g_atoms', 'g_raw'],
-                                             outputs = ['postprocessed_candidates'])
+                                             outputs = ['postprocessed_objects'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
@@ -169,52 +169,52 @@ class Postprocessing(Stage):
             'glare_detection_num_layers': glare_detection_num_layers
         }
 
-        candidates = [c for c in input_data['cover'].solution if c.fg_fragment.any()]
+        objects    = [obj for obj in input_data['cover'].solution if c.fg_fragment.any()]
         params_id  = ray.put(params)
-        futures    = [_process_candidate.remote(cidx, c, params_id) for cidx, c in enumerate(candidates)]
+        futures    = [_process_object.remote(obj_idx, obj, params_id) for obj_idx, obj in enumerate(objects)]
 
-        postprocessed_candidates = []
+        postprocessed_objects = []
         log_entries = []
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
-            candidate, candidate_results = candidates[ret[0]], ret[1]
-            candidate = PostprocessedCandidate(candidate)
+            object, object_results = objects[ret[0]], ret[1]
+            object = PostprocessedObject(object)
 
-            if candidate_results['fg_fragment'] is not None and candidate_results['fg_offset'] is not None:
-                candidate.fg_fragment = candidate_results['fg_fragment'].copy()
-                candidate.fg_offset   = candidate_results['fg_offset'  ].copy()
-                if not candidate.fg_fragment.any():
-                    log_entries.append((candidate, f'empty foreground'))
+            if object_results['fg_fragment'] is not None and object_results['fg_offset'] is not None:
+                object.fg_fragment = object_results['fg_fragment'].copy()
+                object.fg_offset   = object_results['fg_offset'  ].copy()
+                if not object.fg_fragment.any():
+                    log_entries.append((object, f'empty foreground'))
                     continue
 
-            if candidate_results['is_glare']:
-                log_entries.append((candidate, f'glare removed (radius: {candidate_results["obj_radius"]})'))
+            if object_results['is_glare']:
+                log_entries.append((object, f'glare removed (radius: {object_results["obj_radius"]})'))
                 continue
-            if candidate_results['energy_rate'] > max_energy_rate:
-                log_entries.append((candidate, f'energy rate too high ({candidate_results["energy_rate"]})'))
+            if object_results['energy_rate'] > max_energy_rate:
+                log_entries.append((object, f'energy rate too high ({object_results["energy_rate"]})'))
                 continue
-            if candidate_results['contrast_response'] < min_contrast_response:
-                log_entries.append((candidate, f'contrast response too low ({candidate_results["contrast_response"]})'))
+            if object_results['contrast_response'] < min_contrast_response:
+                log_entries.append((object, f'contrast response too low ({object_results["contrast_response"]})'))
                 continue
-            if candidate.original.on_boundary:
-                if candidate_results['eccentricity'] > max_boundary_eccentricity:
-                    log_entries.append((candidate, f'boundary object eccentricity too high ({candidate_results["eccentricity"]})'))
+            if object.original.on_boundary:
+                if object_results['eccentricity'] > max_boundary_eccentricity:
+                    log_entries.append((object, f'boundary object eccentricity too high ({object_results["eccentricity"]})'))
                     continue
                 if discard_image_boundary:
-                    log_entries.append((candidate, f'boundary object discarded'))
+                    log_entries.append((object, f'boundary object discarded'))
                     continue
-                if not(min_boundary_obj_radius <= candidate_results['obj_radius'] <= max_obj_radius):
-                    log_entries.append((candidate, f'boundary object and/or too small/large (radius: {candidate_results["obj_radius"]})'))
+                if not(min_boundary_obj_radius <= object_results['obj_radius'] <= max_obj_radius):
+                    log_entries.append((object, f'boundary object and/or too small/large (radius: {object_results["obj_radius"]})'))
                     continue
             else:
-                if candidate_results['eccentricity'] > max_eccentricity:
-                    log_entries.append((candidate, f'eccentricity too high ({candidate_results["eccentricity"]})'))
+                if object_results['eccentricity'] > max_eccentricity:
+                    log_entries.append((object, f'eccentricity too high ({object_results["eccentricity"]})'))
                     continue
-                if not min_obj_radius <= candidate_results['obj_radius'] <= max_obj_radius:
-                    log_entries.append((candidate, f'object too small/large (radius: {candidate_results["obj_radius"]})'))
+                if not min_obj_radius <= object_results['obj_radius'] <= max_obj_radius:
+                    log_entries.append((object, f'object too small/large (radius: {object_results["obj_radius"]})'))
                     continue
 
-            postprocessed_candidates.append(candidate)
-            out.intermediate(f'Post-processing candidates... {ret_idx + 1} / {len(futures)}')
+            postprocessed_objects.append(object)
+            out.intermediate(f'Post-processing objects... {ret_idx + 1} / {len(futures)}')
 
         if log_root_dir is not None:
             log_filename = join_path(log_root_dir, 'postprocessing.txt')
@@ -224,24 +224,24 @@ class Postprocessing(Stage):
                     log_line = f'object at x={location[1]}, y={location[0]}: {comment}'
                     log_file.write(f'{log_line}{os.linesep}')
 
-        out.write(f'Remaining candidates: {len(postprocessed_candidates)} of {len(candidates)}')
+        out.write(f'Remaining objects: {len(postprocessed_objects)} of {len(objects)}')
 
         return {
-            'postprocessed_candidates': postprocessed_candidates
+            'postprocessed_objects': postprocessed_objects
         }
 
 
-class PostprocessedCandidate(BaseCandidate):
+class PostprocessedObject(BaseObject):
     def __init__(self, original):
         self.original    = original
         self.fg_offset   = original.fg_offset
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, epsilon, background_mask):
+def _compute_contrast_response(object, g, exterior_scale, exterior_offset, epsilon, background_mask):
     g = g / g.std()
     mask = np.zeros(g.shape, bool)
-    candidate.fill_foreground(mask)
+    object.fill_foreground(mask)
     interior_mean = g[mask].mean()
     exterior_distance_map = (ndi.distance_transform_edt(~mask) - exterior_offset).clip(0, np.inf) / exterior_scale
     exterior_mask = np.logical_xor(mask, exterior_distance_map <= 5)
@@ -253,10 +253,10 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, ep
     return (interior_mean + epsilon) / (exterior_mean + epsilon)
 
 
-def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
-    g_sect = g[candidate.fg_offset[0] : candidate.fg_offset[0] + candidate.fg_fragment.shape[0],
-               candidate.fg_offset[1] : candidate.fg_offset[1] + candidate.fg_fragment.shape[1]]
-    mask = morph.binary_erosion(candidate.fg_fragment, morph.disk(2))
+def _is_glare(object, g, min_layer=0.5, num_layers=5):
+    g_sect = g[object.fg_offset[0] : object.fg_offset[0] + object.fg_fragment.shape[0],
+               object.fg_offset[1] : object.fg_offset[1] + object.fg_fragment.shape[1]]
+    mask = morph.binary_erosion(object.fg_fragment, morph.disk(2))
     g_sect_data = g_sect[mask]
     get_layer   = lambda prop: np.logical_and(mask, g_sect > (g_sect_data.max() - g_sect_data.min()) * prop + g_sect_data.min())
     count_cc    = lambda mask: ndi.label(mask)[0].max()
@@ -273,21 +273,21 @@ def _is_glare(candidate, g, min_layer=0.5, num_layers=5):
     return is_glare
 
 
-def _compute_energy_rate(candidate, y, g_atoms):
-    region = candidate.get_modelfit_region(y, g_atoms)
-    return candidate.energy / region.mask.sum()
+def _compute_energy_rate(object, y, g_atoms):
+    region = object.get_cvxprog_region(y, g_atoms)
+    return object.energy / region.mask.sum()
 
 
 @ray.remote
-def _process_candidate(cidx, candidate, params):
-    obj_radius = math.sqrt(candidate.fg_fragment.sum() / math.pi)
+def _process_object(cidx, object, params):
+    obj_radius = math.sqrt(object.fg_fragment.sum() / math.pi)
     is_glare   = False
-    if params['min_boundary_glare_radius' if candidate.on_boundary else 'min_glare_radius'] < obj_radius:
-        is_glare = _is_glare(candidate, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
-    energy_rate  = _compute_energy_rate(candidate, params['y'], params['g_atoms'])
-    contrast_response = _compute_contrast_response(candidate, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
-    fg_offset, fg_fragment = _process_mask(candidate, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
-    eccentricity = _compute_eccentricity(candidate)
+    if params['min_boundary_glare_radius' if object.on_boundary else 'min_glare_radius'] < obj_radius:
+        is_glare = _is_glare(object, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
+    energy_rate  = _compute_energy_rate(object, params['y'], params['g_atoms'])
+    contrast_response = _compute_contrast_response(object, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
+    fg_offset, fg_fragment = _process_mask(object, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
+    eccentricity = _compute_eccentricity(object)
 
     return cidx, {
         'energy_rate':       energy_rate,
@@ -300,14 +300,14 @@ def _process_candidate(cidx, candidate, params):
     }
 
 
-def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
+def _process_mask(object, g, max_distance, stdamp, fill_holes=False):
     if stdamp <= 0 or max_distance <= 0:
         if fill_holes:
-            return candidate.fg_offset, ndi.morphology.binary_fill_holes(candidate.fg_fragment)
+            return object.fg_offset, ndi.morphology.binary_fill_holes(object.fg_fragment)
         else:
             return None, None
     mask = np.zeros(g.shape, bool)
-    candidate.fill_foreground(mask)
+    object.fill_foreground(mask)
     extra_mask_superset = np.logical_xor(morph.binary_dilation(mask, morph.disk(max_distance)), morph.binary_erosion(mask, morph.disk(max_distance)))
     g_fg_data = g[mask]
     fg_mean   = g_fg_data.mean()
@@ -324,9 +324,9 @@ def _process_mask(candidate, g, max_distance, stdamp, fill_holes=False):
     return fg_offset, fg_fragment
 
 
-def _compute_eccentricity(candidate):
-    if candidate.fg_fragment.any():
-        return skimage.measure.regionprops(candidate.fg_fragment.astype('uint8'), coordinates='rc')[0].eccentricity
+def _compute_eccentricity(object):
+    if object.fg_fragment.any():
+        return skimage.measure.regionprops(object.fg_fragment.astype('uint8'), coordinates='rc')[0].eccentricity
     else:
         return 0
 

@@ -1,4 +1,4 @@
-from ._aux import render_candidate_foregrounds
+from ._aux import render_objects_foregrounds
 
 import numpy as np
 import warnings, math
@@ -175,14 +175,14 @@ class ContourPaint:
         return contour
 
 
-def render_result_over_image(data, candidates='postprocessed_candidates', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+def render_result_over_image(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
     assert border_width % 2 == 0
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
     assert gt_color in COLORMAP.keys()
 
     im_seg  = _fetch_rgb_image_from_data(data, normalize_img, override_img)
     im_seg /= im_seg.max()
-    seg_objects = rasterize_labels(data, candidates=candidates, merge_overlap_threshold=merge_overlap_threshold)
+    seg_objects = rasterize_labels(data, objects=objects, merge_overlap_threshold=merge_overlap_threshold)
     cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
     for l in set(seg_objects.flatten()) - {0}:
         seg_bnd = cp.get_contour_mask(seg_objects == l)
@@ -202,23 +202,23 @@ def render_result_over_image(data, candidates='postprocessed_candidates', merge_
     return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
 
-def rasterize_objects(data, candidates, dilate=0):
-    if isinstance(candidates, str): candidates = [c for c in data[candidates]]
+def rasterize_objects(data, objects, dilate=0):
+    if isinstance(objects, str): objects = [c for c in data[objects]]
 
     if dilate == 0:
         dlation, erosion = None, None
     else:
         dilation, erosion = (morphology.binary_dilation, morphology.binary_erosion)
 
-    for foreground in render_candidate_foregrounds(data['g_raw'].shape, candidates):
+    for foreground in render_objects_foregrounds(data['g_raw'].shape, objects):
         if dilate > 0:   foreground = dilation(foreground, morphology.disk( dilate))
         elif dilate < 0: foreground =  erosion(foreground, morphology.disk(-dilate))
         if foreground.any(): yield foreground.copy()
 
 
-def rasterize_labels(data, candidates='postprocessed_candidates', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
+def rasterize_labels(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
     assert background_label <= 0
-    objects = [obj for obj in rasterize_objects(data, candidates, dilate)]
+    objects = [obj for obj in rasterize_objects(data, objects, dilate)]
 
     # First, we determine which objects overlap sufficiently
     merge_list = []

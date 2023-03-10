@@ -5,8 +5,10 @@ SuperDSM API
     superdsm.pipeline
     superdsm.config
     superdsm.automation
+    superdsm.dsm
+    superdsm.dsmcfg
+    superdsm.objects
     superdsm.preprocess
-    superdsm.modelfit_config
     superdsm.c2freganal
     superdsm.globalenergymin
     superdsm.postprocess

@@ -2,7 +2,7 @@
     "runnable": true,
 
     "config": {
-        "modelfit": {
+        "dsm": {
             "alpha": 0.1
         },
         "postprocess": {

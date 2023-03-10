@@ -20,7 +20,7 @@ def fast_dot(A, B):
 class PolynomialModelType:
     
     def get_model(self, params):
-        model = params if isinstance(params, PolynomialModel) else PolynomialModel(params)
+        model = params if isinstance(params, DeformableShapeModel) else DeformableShapeModel(params)
         assert not np.isnan(model.array).any()
         return model
     
@@ -35,7 +35,7 @@ class PolynomialModelType:
         return derivatives
 
 
-class PolynomialModel:
+class DeformableShapeModel:
     
     TYPE = PolynomialModelType()
     
@@ -57,7 +57,7 @@ class PolynomialModel:
             raise ValueError('Initialization failed')
 
     def copy(self):
-        return PolynomialModel(self.array.copy())
+        return DeformableShapeModel(self.array.copy())
     
     @property
     def A(self):
@@ -76,7 +76,7 @@ class PolynomialModel:
         A  = U.dot(np.diag((ev(halfaxis1_len), ev(halfaxis2_len)))).dot(U.T)
         b  = A.dot(center)
         c  = np.inner(center, b) - 1
-        return PolynomialModel(ξ, -A, b, -c)
+        return DeformableShapeModel(ξ, -A, b, -c)
 
     def is_measurable(self):
         return (np.linalg.eigvalsh(self.A) < 0).all()
@@ -102,7 +102,7 @@ class PolynomialModel:
         A = G.dot(self.A).dot(G)
         b = G.dot(self.A.dot(v) + self.b)
         c = np.inner(v, self.A.dot(v)) + 2 * np.inner(self.b, v) + self.c
-        return PolynomialModel(self.ξ, A, b, c)
+        return DeformableShapeModel(self.ξ, A, b, c)
 
 
 def diagquad(A, X):
@@ -203,7 +203,7 @@ SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
 
 class Energy:
 
-    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=PolynomialModel.TYPE):
+    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=DeformableShapeModel.TYPE):
         self.roi = roi
         self.p   = None
 

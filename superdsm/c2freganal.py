@@ -1,8 +1,8 @@
 from .pipeline import Stage
 from ._aux import get_ray_1by1, copy_dict
-from .candidates import _modelfit, Candidate
+from .objects import cvxprog, Object
 from .atoms import AtomAdjacencyGraph
-from .surface import Surface
+from .image import Image
 
 import ray
 import scipy.ndimage as ndi
@@ -58,31 +58,31 @@ def _hash_mask(mask):
 def get_cached_energy_rate_computer(y, cluster, version=1):
     cache = dict()
     if version >= 2:
-        mf_buffer = Surface(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
-    def compute_energy_rate(candidate, region, atoms_map, mfcfg):
-        _mf_kwargs = copy_dict(mfcfg)
-        bg_margin  = _mf_kwargs.pop('min_background_margin')
-        mf_region  = candidate.get_modelfit_region(region, atoms_map, min_background_margin=bg_margin)
-        mf_region_hash = _hash_mask(mf_region.mask)
-        cache_hit  = cache.get(mf_region_hash, None)
+        cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
+    def compute_energy_rate(obj, region, atoms_map, dsm_cfg):
+        cp_kwargs = copy_dict(dsm_cfg)
+        bg_margin  = cp_kwargs.pop('min_background_margin')
+        cp_region  = obj.get_cvxprog_region(region, atoms_map, min_background_margin=bg_margin)
+        cp_region_hash = _hash_mask(cp_region.mask)
+        cache_hit  = cache.get(cp_region_hash, None)
         if cache_hit is None:
-            if (mf_region.model[mf_region.mask] > 0).all() or (mf_region.model[mf_region.mask] < 0).all():
+            if (cp_region.model[cp_region.mask] > 0).all() or (cp_region.model[cp_region.mask] < 0).all():
                 energy = None if version >= 1 else 0.0
             else:
                 if version == 1:
-                    mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
+                    cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
                     with contextlib.redirect_stdout(None):
-                        J, model, status = _modelfit(mf_region, smooth_mat_allocation_lock=None, **_mf_kwargs)
+                        J, model, status = cvxprog(cp_region, smooth_mat_allocation_lock=None, **cp_kwargs)
                 elif version >= 2:
-                    mf_buffer.mask[cluster.full_mask] = mf_region.mask[cluster.mask]
+                    cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
                     with contextlib.redirect_stdout(None):
-                        J, model, status = _modelfit(mf_buffer, smooth_mat_allocation_lock=None, **_mf_kwargs)
-                    mf_buffer.mask[cluster.full_mask].fill(False)
+                        J, model, status = cvxprog(cp_buffer, smooth_mat_allocation_lock=None, **cp_kwargs)
+                    cp_buffer.mask[cluster.full_mask].fill(False)
                 else:
                     raise ValueError(f'unknown version: {version}')
                 energy = J(model)
-            cache_hit = energy / mf_region.mask.sum()
-            cache[mf_region_hash] = cache_hit
+            cache_hit = energy / cp_region.mask.sum()
+            cache[cp_region_hash] = cache_hit
         return cache_hit
     return compute_energy_rate
 
@@ -93,7 +93,7 @@ class C2F_RegionAnalysis(Stage):
 
     def __init__(self):
         super(C2F_RegionAnalysis, self).__init__('c2f-region-analysis',
-                                                 inputs  = ['y', 'mfcfg'],
+                                                 inputs  = ['y', 'dsm_cfg'],
                                                  outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
@@ -104,11 +104,11 @@ class C2F_RegionAnalysis(Stage):
         max_cluster_marker_irregularity = cfg.get('max_cluster_marker_irregularity', 0.2)
         version = cfg.get('version', 3)
 
-        mfcfg = copy_dict(input_data['mfcfg'])
-        mfcfg['smooth_amount'] = np.inf
+        dsm_cfg = copy_dict(input_data['dsm_cfg'])
+        dsm_cfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')
-        y = Surface.create_from_image(input_data['y'], normalize=False)
+        y = Image.create_from_array(input_data['y'], normalize=False)
         fg_mask = (y.model > 0)
         fg_bd   = np.logical_xor(fg_mask, morph.binary_erosion(fg_mask, morph.disk(1)))
         y_mask  = np.ones(y.model.shape, bool)
@@ -128,10 +128,10 @@ class C2F_RegionAnalysis(Stage):
         atom_candidate_by_label = {}
         
         y_id = ray.put(y)
-        mfcfg_id = ray.put(mfcfg)
+        dsm_cfg_id = ray.put(dsm_cfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg_id, seed_connectivity, version) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg_id, seed_connectivity, version) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         max_energy_rate = -np.inf
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
@@ -167,14 +167,14 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, mfcfg, seed_connectivity, version):
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg, seed_connectivity, version):
     if version < 3:
         min_region_size = 2 * math.pi * (min_region_radius ** 2)
     else:
         min_region_size = math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
-    root_candidate = Candidate()
+    root_candidate = Object()
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
@@ -182,7 +182,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
 
     leaf_candidates = []
     split_queue = queue.Queue()
-    root_candidate.energy_rate = compute_energy_rate(root_candidate, masked_cluster, atoms_map, mfcfg)
+    root_candidate.energy_rate = compute_energy_rate(root_candidate, masked_cluster, atoms_map, dsm_cfg)
     if root_candidate.energy_rate > max_atom_energy_rate:
         split_queue.put(root_candidate)
     else:
@@ -197,8 +197,8 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
             leaf_candidates.append(c0) ## the region is too small to be split
             continue
 
-        c1 = Candidate()
-        c2 = Candidate()
+        c1 = Object()
+        c2 = Object()
         c1.seed = c0.seed
         c2.seed = get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
         assert not np.logical_and(c1.seed, c2.seed).any()
@@ -235,7 +235,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
 
         for c in (c1, c2):
             try:
-                c.energy_rate = compute_energy_rate(c, masked_cluster, atoms_map, mfcfg)
+                c.energy_rate = compute_energy_rate(c, masked_cluster, atoms_map, dsm_cfg)
             except:
                 c.energy_rate = None
                 

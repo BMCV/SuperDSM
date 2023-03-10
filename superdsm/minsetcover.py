@@ -1,12 +1,12 @@
 from .output import get_output
 
 
-def _merge_minsetcover(candidates, accepted_candidates, beta):
+def _merge_minsetcover(objects, accepted_objects, beta):
     replacements_count = 0
     w = lambda c: c.energy + beta
-    for c_new in sorted([c for c in candidates if c not in accepted_candidates], key=lambda c: w(c)):
+    for c_new in sorted([c for c in objects if c not in accepted_objects], key=lambda c: w(c)):
         valid_replacement, blockers = True, set()
-        for c in accepted_candidates:
+        for c in accepted_objects:
             overlap = len(c.footprint & c_new.footprint)
             if overlap == 0: continue
             if overlap < len(c.footprint):
@@ -17,51 +17,51 @@ def _merge_minsetcover(candidates, accepted_candidates, beta):
         if not valid_replacement: continue
         if w(c_new) < sum(w(c) for c in blockers):
             replacements_count += len(blockers)
-            accepted_candidates = [c for c in accepted_candidates if c not in blockers] + [c_new]
-    return accepted_candidates, replacements_count
+            accepted_objects = [c for c in accepted_objects if c not in blockers] + [c_new]
+    return accepted_objects, replacements_count
 
 
-def _solve_minsetcover(candidates, beta, merge=True, out=None):
-    accepted_candidates  = []  ## primal variable
-    remaining_candidates = list(candidates)
-    uncovered_atoms      = set.union(*[c.footprint for c in candidates])
+def _solve_minsetcover(objects, beta, merge=True, out=None):
+    accepted_objects  = []  ## primal variable
+    remaining_objects = list(objects)
+    uncovered_atoms      = set.union(*[c.footprint for c in objects])
 
     out = get_output(out)
     w = lambda c: c.energy + beta
-    while len(remaining_candidates) > 0:
+    while len(remaining_objects) > 0:
 
-        # compute prices of remaining candidates
-        prices = dict((c, w(c) / len(c.footprint & uncovered_atoms)) for c in remaining_candidates)
+        # compute prices of remaining objects
+        prices = dict((c, w(c) / len(c.footprint & uncovered_atoms)) for c in remaining_objects)
         
-        # choose the best remaining candidate
-        best_candidate = min(prices, key=prices.get)
-        accepted_candidates.append(best_candidate)
+        # choose the best remaining object
+        best_object = min(prices, key=prices.get)
+        accepted_objects.append(best_object)
 
-        # discard conflicting candidates
-        uncovered_atoms -= best_candidate.footprint
-        remaining_candidates = [c for c in remaining_candidates if len(c.footprint & uncovered_atoms) > 0]
+        # discard conflicting objects
+        uncovered_atoms -= best_object.footprint
+        remaining_objects = [c for c in remaining_objects if len(c.footprint & uncovered_atoms) > 0]
 
-    out.write(f'MINSETCOVER - GREEDY accepted candidates: {len(accepted_candidates)}')
+    out.write(f'MINSETCOVER - GREEDY accepted objects: {len(accepted_objects)}')
 
     if merge:
-        accepted_candidates, replacements_count = _merge_minsetcover(candidates, accepted_candidates, beta)
-        out.write(f'MINSETCOVER - MERGED candidates: {replacements_count}')
+        accepted_objects, replacements_count = _merge_minsetcover(objects, accepted_objects, beta)
+        out.write(f'MINSETCOVER - MERGED objects: {replacements_count}')
 
-    return accepted_candidates
+    return accepted_objects
 
 
 DEFAULT_TRY_LOWER_BETA = 4
 DEFAULT_LOWER_BETA_MUL = 0.8
 
 
-def solve_minsetcover(candidates, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, merge_lower_beta=False, out=None):
+def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, merge_lower_beta=False, out=None):
     out = get_output(out)
-    solution1 = _solve_minsetcover(candidates, beta, merge, out)
+    solution1 = _solve_minsetcover(objects, beta, merge, out)
     if try_lower_beta > 0 and beta > 0:
         new_beta = beta * lower_beta_mul
         out.write(f'MINSETCOVER retry with lower beta: {new_beta:g}')
-        solution2 = solve_minsetcover(candidates, new_beta, merge, try_lower_beta - 1, lower_beta_mul, False, out)
-        if merge_lower_beta: solution2 = _merge_minsetcover(candidates, solution2, beta)[0]
+        solution2 = solve_minsetcover(objects, new_beta, merge, try_lower_beta - 1, lower_beta_mul, False, out)
+        if merge_lower_beta: solution2 = _merge_minsetcover(objects, solution2, beta)[0]
         solution1_value = sum(c.energy for c in solution1) + beta * len(solution1)
         solution2_value = sum(c.energy for c in solution2) + beta * len(solution2)
         if solution2_value < solution1_value:
@@ -83,23 +83,23 @@ class MinSetCover:
         self.adjacencies    = adjacencies
         self.try_lower_beta = try_lower_beta
         self.lower_beta_mul = lower_beta_mul
-        self.candidates_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
-        self.  solution_by_cluster = {cluster: self.candidates_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
+        self. objects_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
+        self.solution_by_cluster = {cluster: self.objects_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
     def get_atom(self, atom_label):
         return self.atoms[atom_label]
 
     def _update_partial_solution(self, cluster_label, out):
-        candidates = self.candidates_by_cluster[cluster_label]
-        partial_solution = solve_minsetcover(candidates, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
+        objects = self.objects_by_cluster[cluster_label]
+        partial_solution = solve_minsetcover(objects, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
 
-    def update(self, new_candidates, out=None):
+    def update(self, new_objects, out=None):
         invalidated_clusters = []
-        for new_candidate in new_candidates:
-            cluster_label = self.adjacencies.get_cluster_label(list(new_candidate.footprint)[0])
+        for new_object in new_objects:
+            cluster_label = self.adjacencies.get_cluster_label(list(new_object.footprint)[0])
             invalidated_clusters.append(cluster_label)
-            self.candidates_by_cluster[cluster_label].append(new_candidate)
+            self.objects_by_cluster[cluster_label].append(new_object)
         for cluster_label in frozenset(invalidated_clusters):
             self._update_partial_solution(cluster_label, out)
 

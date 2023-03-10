@@ -50,10 +50,10 @@ def get_ray_1by1(obj_ids):
         yield ray.get(done[0])
 
 
-def render_candidate_foregrounds(shape, candidates):
+def render_objects_foregrounds(shape, objects):
     foreground = np.zeros(shape, bool)
-    for candidate in candidates:
-        sel = candidate.fill_foreground(foreground)
+    for obj in objects:
+        sel = obj.fill_foreground(foreground)
         yield foreground
         foreground[sel].fill(False)
 
@@ -110,13 +110,13 @@ class SystemMutex:
 def get_discarded_workload(*args):
     if len(args) == 1:
         data = args[0]
-        computed_candidates_num = len(data['candidates'])
+        computed_objects_num = len(data['objects'])
         total_workload = data['workload']
     elif len(args) == 2:
-        computed_candidates_num = args[0]
+        computed_objects_num = args[0]
         total_workload = args[1]
     else:
         raise ValueError('unknown arguments')
     if np.isnan(total_workload): return np.nan
-    assert computed_candidates_num <= total_workload, f'{computed_candidates_num} <= {total_workload}'
-    return 1 - (computed_candidates_num / total_workload if total_workload > 0 else 1)
+    assert computed_objects_num <= total_workload, f'{computed_objects_num} <= {total_workload}'
+    return 1 - (computed_objects_num / total_workload if total_workload > 0 else 1)

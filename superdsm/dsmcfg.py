@@ -1,7 +1,7 @@
 from .pipeline import Stage
 
 
-MODELFIT_KWARGS_DEFAULTS = {
+DSM_CONFIG_DEFAULTS = {
     'cachesize': 1,
     'sparsity_tol': 0,
     'init': 'elliptical',
@@ -17,19 +17,19 @@ MODELFIT_KWARGS_DEFAULTS = {
 }
 
 
-class ModelfitConfigStage(Stage):
+class DSM_ConfigStage(Stage):
 
     ENABLED_BY_DEFAULT = True
 
     def __init__(self):
-        super(ModelfitConfigStage, self).__init__('modelfit', inputs=[], outputs=['mfcfg'])
+        super(DSM_ConfigStage, self).__init__('dsm', inputs=[], outputs=['dsm_cfg'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        mfcfg = {
-            key: cfg.get(key, MODELFIT_KWARGS_DEFAULTS[key]) for key in MODELFIT_KWARGS_DEFAULTS.keys()
+        dsm_cfg = {
+            key: cfg.get(key, DSM_CONFIG_DEFAULTS[key]) for key in DSM_CONFIG_DEFAULTS.keys()
         }
         
         return {
-            'mfcfg': mfcfg
+            'dsm_cfg': dsm_cfg
         }
 

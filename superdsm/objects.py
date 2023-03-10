@@ -1,6 +1,6 @@
 from ._aux import copy_dict, uplift_smooth_matrix, join_path, SystemSemaphore, get_ray_1by1
 from .output import get_output
-from .modelfit import PolynomialModel, CP, SmoothMatrixFactory, Energy
+from .dsm import DeformableShapeModel, CP, SmoothMatrixFactory, Energy
 
 import ray
 import sys, io, contextlib, traceback, time
@@ -9,7 +9,7 @@ import numpy as np
 import skimage.morphology as morph
 
 
-class BaseCandidate:
+class BaseObject:
     def __init__(self):
         self.fg_offset   = None
         self.fg_fragment = None
@@ -20,7 +20,7 @@ class BaseCandidate:
         return sel
 
 
-class Candidate(BaseCandidate):
+class Object(BaseObject):
     def __init__(self):
         self.footprint       = set()
         self.energy          = np.nan
@@ -42,7 +42,7 @@ class Candidate(BaseCandidate):
     def get_mask(self, g_atoms):
         return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
 
-    def get_modelfit_region(self, y, g_atoms, min_background_margin=None):
+    def get_cvxprog_region(self, y, g_atoms, min_background_margin=None):
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
         region = y.get_region(self.get_mask(g_atoms))
         region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
@@ -60,7 +60,7 @@ class Candidate(BaseCandidate):
         return self
 
     def copy(self):
-        return Candidate().set(self)
+        return Object().set(self)
 
 
 def extract_foreground_fragment(fg_mask):
@@ -76,27 +76,27 @@ def extract_foreground_fragment(fg_mask):
         return np.zeros(2, int), np.zeros((1, 1), bool)
 
 
-def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat_allocation_lock):
-    modelfit_kwargs = copy_dict(modelfit_kwargs)
-    min_background_margin = max((modelfit_kwargs.pop('min_background_margin'), modelfit_kwargs['smooth_subsample']))
-    region = candidate.get_modelfit_region(y, g_atoms, min_background_margin)
+def _compute_object(y, g_atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
+    cvxprog_kwargs = copy_dict(cvxprog_kwargs)
+    min_background_margin = max((cvxprog_kwargs.pop('min_background_margin'), cvxprog_kwargs['smooth_subsample']))
+    region = object.get_cvxprog_region(y, g_atoms, min_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'modelfit_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
     # Skip regions whose foreground is only a single pixel (this is just noise)
     if (region.model[region.mask] > 0).sum() == 1:
-        candidate.fg_offset   = np.zeros(2, int)
-        candidate.fg_fragment = np.zeros((1, 1), bool)
-        candidate.energy      = 0.
-        candidate.on_boundary = False
-        candidate.is_optimal  = False
-        candidate.processing_time = 0
-        return candidate, False
+        object.fg_offset   = np.zeros(2, int)
+        object.fg_fragment = np.zeros((1, 1), bool)
+        object.energy      = 0.
+        object.on_boundary = False
+        object.is_optimal  = False
+        object.processing_time = 0
+        return object, False
 
     # Otherwise, perform model fitting
     else:
         t0 = time.time()
-        J, result, status = _modelfit(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **modelfit_kwargs)
+        J, result, status = cvxprog(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **cvxprog_kwargs)
         dt = time.time() - t0
         padded_mask = np.pad(region.mask, 1)
         smooth_mat  = uplift_smooth_matrix(J.smooth_mat, padded_mask)
@@ -104,75 +104,75 @@ def _process_candidate(y, g_atoms, x_map, candidate, modelfit_kwargs, smooth_mat
         foreground = padded_foreground[1:-1, 1:-1]
         if foreground.any():
             foreground = np.logical_and(region.mask, foreground)
-            candidate.fg_offset, candidate.fg_fragment = extract_foreground_fragment(foreground)
+            object.fg_offset, object.fg_fragment = extract_foreground_fragment(foreground)
         else:
-            candidate.fg_offset   = np.zeros(2, int)
-            candidate.fg_fragment = np.zeros((1, 1), bool)
-        candidate.energy      = J(result)
-        candidate.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
-        candidate.is_optimal  = (status == 'optimal')
-        candidate.processing_time = dt
-        return candidate, (status == 'fallback')
+            object.fg_offset   = np.zeros(2, int)
+            object.fg_fragment = np.zeros((1, 1), bool)
+        object.energy      = J(result)
+        object.on_boundary = padded_foreground[0].any() or padded_foreground[-1].any() or padded_foreground[:, 0].any() or padded_foreground[:, -1].any()
+        object.is_optimal  = (status == 'optimal')
+        object.processing_time = dt
+        return object, (status == 'fallback')
 
 
 @ray.remote
-def _ray_process_candidate_logged(*args, **kwargs):
-    return _process_candidate_logged(*args, **kwargs)
+def _ray_compute_object_logged(*args, **kwargs):
+    return _compute_object_logged(*args, **kwargs)
 
 
-def _process_candidate_logged(log_root_dir, cidx, *args, **kwargs):
+def _compute_object_logged(log_root_dir, cidx, *args, **kwargs):
     try:
         if log_root_dir is not None:
             log_filename = join_path(log_root_dir, f'{cidx}.txt')
             with io.TextIOWrapper(open(log_filename, 'wb', 0), write_through=True) as log_file:
                 with contextlib.redirect_stdout(log_file):
                     try:
-                        result = _process_candidate(*args, **kwargs)
+                        result = _compute_object(*args, **kwargs)
                     except:
                         traceback.print_exc(file=log_file)
                         raise
         else:
             with contextlib.redirect_stdout(None):
-                result = _process_candidate(*args, **kwargs)
-    except ModelfitError as error:
+                result = _compute_object(*args, **kwargs)
+    except CvxprogError as error:
         error.cidx = cidx
         raise
     return (cidx, *result)
 
 
-DEFAULT_PROCESSING_STATUS_LINE = ('Processing candidates', 'Processed candidates')
+DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 
 
-def process_candidates(candidates, y, g_atoms, modelfit_kwargs, log_root_dir, status_line=DEFAULT_PROCESSING_STATUS_LINE, out=None):
+def compute_objects(objects, y, g_atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     out = get_output(out)
-    modelfit_kwargs = copy_dict(modelfit_kwargs)
-    smooth_mat_max_allocations = modelfit_kwargs.pop('smooth_mat_max_allocations', np.inf)
+    cvxprog_kwargs = copy_dict(cvxprog_kwargs)
+    smooth_mat_max_allocations = cvxprog_kwargs.pop('smooth_mat_max_allocations', np.inf)
     with SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
-        candidates = list(candidates)
+        objects = list(objects)
         fallbacks  = 0
         x_map      = y.get_map(normalized=False, pad=1)
-        for ret_idx, ret in enumerate(_process_candidates(candidates, y, g_atoms, x_map, smooth_mat_allocation_lock, modelfit_kwargs, log_root_dir)):
-            candidates[ret[0]].set(ret[1])
-            out.intermediate(f'{status_line[0]}... {ret_idx + 1} / {len(candidates)} ({fallbacks}x fallback)')
+        for ret_idx, ret in enumerate(_compute_objects(objects, y, g_atoms, x_map, smooth_mat_allocation_lock, cvxprog_kwargs, log_root_dir)):
+            objects[ret[0]].set(ret[1])
+            out.intermediate(f'{status_line[0]}... {ret_idx + 1} / {len(objects)} ({fallbacks}x fallback)')
             if ret[2]: fallbacks += 1
-    out.write(f'{status_line[1]}: {len(candidates)} ({fallbacks}x fallback)')
+    out.write(f'{status_line[1]}: {len(objects)} ({fallbacks}x fallback)')
 
 
-def _process_candidates(candidates, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):
-    if _process_candidates._DEBUG: ## run serially
-        for cidx, c in enumerate(candidates):
-            yield _process_candidate_logged(log_root_dir, cidx, y, g_atoms, x_map, c, modelfit_kwargs, lock)
+def _compute_objects(objects, y, g_atoms, x_map, lock, modelfit_kwargs, log_root_dir):
+    if _compute_objects._DEBUG: ## run serially
+        for cidx, c in enumerate(objects):
+            yield _compute_object_logged(log_root_dir, cidx, y, g_atoms, x_map, c, modelfit_kwargs, lock)
     else: ## run in parallel
         y_id         = ray.put(y)
         g_atoms_id   = ray.put(g_atoms)
         x_map_id     = ray.put(x_map)
         mf_kwargs_id = ray.put(modelfit_kwargs)
         lock_id      = ray.put(lock)
-        futures      = [_ray_process_candidate_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(candidates)]
+        futures      = [_ray_compute_object_logged.remote(log_root_dir, cidx, y_id, g_atoms_id, x_map_id, c, mf_kwargs_id, lock_id) for cidx, c in enumerate(objects)]
         for ret in get_ray_1by1(futures): yield ret
 
 
-_process_candidates._DEBUG = False
+_compute_objects._DEBUG = False
 
 
 def _estimate_initialization(region):
@@ -184,7 +184,7 @@ def _estimate_initialization(region):
     fg_center = roi_xmap[:, fg_center[0], fg_center[1]]
     halfaxes_lengths = (roi_xmap[:, fg] - fg_center[:, None]).std(axis=1)
     halfaxes_lengths = np.max([halfaxes_lengths, np.full(halfaxes_lengths.shape, 1e-8)], axis=0)
-    return PolynomialModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
+    return DeformableShapeModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
 
 
 def _print_cvxopt_solution(solution):
@@ -197,7 +197,7 @@ def _fmt_timestamp(): return time.strftime('%X')
 def _print_heading(line): print(f'-- {_fmt_timestamp()} -- {line} --')
 
 
-class ModelfitError(Exception):
+class CvxprogError(Exception):
     def __init__(self, *args, cidx=None, cause=None):
         super().__init__(*args)
         self.cidx = cidx
@@ -217,7 +217,7 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
     # Pass 1: Try zeros initialization
     try:
         solution_info  = CP(J_elliptical, np.zeros(6), **CP_params).solve()
-        solution_array = PolynomialModel(np.array(solution_info['x'])).array
+        solution_array = DeformableShapeModel(np.array(solution_info['x'])).array
         solution_value = J_elliptical(solution_array)
         print(f'solution: {solution_value}')
     except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
@@ -235,13 +235,13 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
         else:
             try:
                 solution_info  = CP(J_elliptical, initialization.array, **CP_params).solve()
-                solution_array = PolynomialModel(np.array(solution_info['x'])).array
+                solution_array = DeformableShapeModel(np.array(solution_info['x'])).array
                 solution_value = J_elliptical(solution_array)
                 print(f'solution: {solution_value}')
             except: ## e.g., fetch `Rank(A) < p or Rank([H(x); A; Df(x); G]) < n` error which happens rarely
                 if solution_info is None:
                     cause = sys.exc_info()[1]
-                    raise ModelfitError(cause)
+                    raise CvxprogError(cause)
                 else:
                     pass ## continue with previous solution (Pass 1)
 
@@ -249,7 +249,7 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
     return solution_array
 
 
-def _modelfit(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
+def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     _print_heading('initializing')
     smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
     J = Energy(region, epsilon, alpha, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
@@ -284,5 +284,5 @@ def _modelfit(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, ga
         _print_heading('DSM failed: falling back to elliptical result')
         solution = params
     _print_heading('finished')
-    return J, PolynomialModel(solution), status
+    return J, DeformableShapeModel(solution), status
 

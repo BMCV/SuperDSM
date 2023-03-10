@@ -1,6 +1,6 @@
 from ._aux import copy_dict, mkdir
 from .output import get_output
-from .surface import Surface
+from .image import Image
 
 import math
 import numpy as np
@@ -131,7 +131,7 @@ class Pipeline:
             g_raw = g_raw.max() - g_raw
         else:
             g_rgb = None
-        data = dict(g_raw = Surface.create_from_image(g_raw).model) ## does some normalization
+        data = dict(g_raw = Image.normalize_image(g_raw))
         if g_rgb is not None:
             data['g_rgb'] = g_rgb
         return data
@@ -183,20 +183,20 @@ def create_default_pipeline():
     The pipeline consists of the following stages:
 
     #. :py:class:`~.preprocess.Preprocessing`
-    #. :py:class:`~.modelfit_config.ModelfitConfigStage`
+    #. :py:class:`~.dsmcfg.DSM_ConfigStage`
     #. :py:class:`~.c2freganal.C2F_RegionAnalysis`
     #. :py:class:`~.globalenergymin.GlobalEnergyMinimization`
     #. :py:class:`~.postprocess.Postprocessing`
     """
     from .preprocess import Preprocessing
-    from .modelfit_config import ModelfitConfigStage
+    from .dsmcfg import DSM_ConfigStage
     from .c2freganal import C2F_RegionAnalysis
     from .globalenergymin import GlobalEnergyMinimization
     from .postprocess import Postprocessing
 
     stages = [
         Preprocessing(),
-        ModelfitConfigStage(),
+        DSM_ConfigStage(),
         C2F_RegionAnalysis(),
         GlobalEnergyMinimization(),
         Postprocessing(),

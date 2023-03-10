@@ -17,7 +17,12 @@ def bbox(mask, include_end=True):
     return ret, np.s_[ret[0][0] : ret[0][1], ret[1][0] : ret[1][1]]
 
 
-class Surface:
+def normalize_image(img):
+    img_diff = img.max() - img.min()
+    if img_diff == 0: img_diff = 1
+    return (img - img.min()).astype(float) / img_diff
+
+class Image:
 
     def __init__(self, model=None, mask=None, full_mask=None, offset=(0,0)):
         self.model     = model
@@ -33,18 +38,15 @@ class Surface:
         mask = np.logical_and(self.mask, mask)
         if shrink:
             _bbox = bbox(mask)
-            return Surface(self.model[_bbox[1]], mask[_bbox[1]], full_mask=mask, offset=tuple(_bbox[0][:,0]))
+            return Image(self.model[_bbox[1]], mask[_bbox[1]], full_mask=mask, offset=tuple(_bbox[0][:,0]))
         else:
-            return Surface(self.model, mask)
+            return Image(self.model, mask)
     
     @staticmethod
-    def create_from_image(img, mask=None, normalize=True):
+    def create_from_array(img, mask=None, normalize=True):
         assert mask is None or (isinstance(mask, np.ndarray) and mask.dtype == bool)
-        if normalize:
-            img_diff = img.max() - img.min()
-            if img_diff == 0: img_diff = 1
-            img = (img - img.min()).astype(float) / img_diff
-        return Surface(model=img, mask=mask)
+        if normalize: img = normalize_image(img)
+        return Image(model=img, mask=mask)
 
     def get_map(self, normalized=True, pad=0):
         assert pad >= 0 and isinstance(pad, int)
