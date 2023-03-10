@@ -20,7 +20,7 @@ DSM_CONFIG_DEFAULTS = {
 class DSM_ConfigStage(Stage):
     """Fetches the hyperparameters from the ``dsm`` namespace and provides them as an output.
 
-    The purpose of this stage is to provide the hyperparameters from the ``dsm`` namespace as the output ``dsm_cfg``, which can be used by any other stage. This concept enables any stage, like :py:class:`~.c2freganal.C2F_RegionAnalysis` and :py:class:`~.globalenergymin.GlobalEnergyMinimization`, to access the DSM-related hyperparameters without having to access the ``dsm`` hyperparameter namespace. Refer to :ref:`_pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    The purpose of this stage is to provide the hyperparameters from the ``dsm`` namespace as the output ``dsm_cfg``, which can be used by any other stage. This concept enables any stage, like :py:class:`~.c2freganal.C2F_RegionAnalysis` and :py:class:`~.globalenergymin.GlobalEnergyMinimization`, to access the DSM-related hyperparameters without having to access the ``dsm`` hyperparameter namespace. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     Hyperparameters
     ---------------

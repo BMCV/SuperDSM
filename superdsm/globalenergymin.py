@@ -23,7 +23,7 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization described in Sections 2.3 and 3.3 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``y``, ``y_mask``, ``g_atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`_pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage requires ``y``, ``y_mask``, ``g_atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     Hyperparameters
     ---------------
