@@ -26,22 +26,22 @@ class Postprocessing(Stage):
         tbd.
 
     ``postprocess/discard_image_boundary``
-        tbd.
-
-    ``postprocess/min_boundary_obj_radius``
-        tbd.
+        If set to ``True``, objects located directly on the image border are discarded.
 
     ``postprocess/min_object_radius``
-        tbd.
+        Objects smaller than a circle of this radius are discarded. Defaults to 0.
 
     ``postprocess/max_object_radius``
-        tbd.
+        Objects larger than a circle of this radius are discarded. Defaults to 0.
+
+    ``postprocess/min_boundary_obj_radius``
+        Overrides ``postprocess/min_object_radius`` for objects located directly on the image border. Defaults to the value of the ``postprocess/min_object_radius`` hyperparameter.
 
     ``postprocess/max_eccentricity``
-        tbd.
+        Objects with an eccentricity higher than this value are discarded. Defaults to 0.99.
 
     ``postprocess/max_boundary_eccentricity``
-        tbd.
+        Overrides ``postprocess/max_boundary_eccentricity`` for objects located directly on the image border. Defaults to the value of the ``postprocess/max_boundary_eccentricity`` hyperparameter.
 
     Contrast-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -76,7 +76,7 @@ class Postprocessing(Stage):
     Autofluorescence glare removal
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask :math:`M`. The object is identified as an autofluorescence artifiact and discarded, if it is sufficiently large and, by default, the top 50% of the Gaussian-smoothed intensity profile of the object mask :math:`M` is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected). This is illustrated in the figure below, where the intensity-superlevel sets are shown for 5 different intensity values:
+    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask. The object is identified as an autofluorescence artifiact and discarded, if it is sufficiently large and, by default, the top 50% of the Gaussian-smoothed intensity profile of the object mask is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected). This is illustrated in the figure below, where the intensity-superlevel sets are shown for 5 different intensity values:
 
     .. figure:: glare_detection.png
        :width: 100%
@@ -84,13 +84,13 @@ class Postprocessing(Stage):
        Autofluorescence artifact detection method. (a) Original image section (NIH3T3 cells, contrast-enhanced). (b) Ground truth segmentation. (c) Segmentation result of cell nuclei (green contour) and the autofluorescence artifact (red contour). (d) Smoothed image intensities (Gaussian filter) and the corresponding intensity profiles (solid contours) of the detected objects (dashed contours).
 
     ``postprocess/glare_detection_smoothness``
-        The standard deviation of the Gaussian function used for smoothing the image intensities of the segmented object. Defaults to :math:`3`.
+        The standard deviation of the Gaussian function used for smoothing the image intensities of the segmented object. Defaults to 3.
 
     ``postprocess/glare_detection_num_layers``
-        The number of intensity values, for which the connectivity of the intensity-superlevel sets is investigated. Defaults to :math:`5`.
+        The number of intensity values, for which the connectivity of the intensity-superlevel sets is investigated. Defaults to 5.
 
     ``postprocess/glare_detection_min_layer``
-        The top fraction of the Gaussian-smoothed intensity profile investigated for connectivity. Defaults to :math:`0.5`.
+        The top fraction of the Gaussian-smoothed intensity profile investigated for connectivity. Defaults to 0.5, i.e. the top 50% of the Gaussian-smoothed intensity profile is investigated.
 
     ``postprocess/min_glare_radius``
         The size of a segmented object must correspond to a circle at least of this radius in order for the object to be possibly recognized as an autofluorescence artifact. Defaults to infinity.

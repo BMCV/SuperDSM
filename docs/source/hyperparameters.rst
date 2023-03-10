@@ -15,92 +15,72 @@ Hyperparameters are only set automatically based on the scale of objects, if the
 The following hyperparameters can be set automatically based on the scale of objects. In the formulas given below, ``scale`` corresponds to :math:`\sigma`, ``radius`` corresponds to :math:`\sqrt{2} \cdot \sigma`, and ``diameter`` corresponds to :math:`\sqrt{8} \cdot \sigma`. Each hyperparameter is associated with another ``AF_``-prefixed hyperparameter, which is used as a factor and resides in the same namespace (e.g., ``AF_sigma2`` is resides in ``preprocess`` because ``sigma2`` resides in ``preprocess``).
 
 ``preprocess/sigma2``
-^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.preprocess.Preprocessing`
 
-Stage: :py:class:`~superdsm.preprocess.Preprocessing`
+    Corresponds to the scale of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-Corresponds to the scale of the Gaussian filter :math:`\mathcal G_\sigma` used to determine the intensity offsets :math:`\tau_x` (see Section 2.2 and Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
-
-Defaults to ``AF_sigma2 × scale`` (and ``AF_sigma2`` defaults to 1).
+    Defaults to ``AF_sigma2 × scale`` (and ``AF_sigma2`` defaults to 1).
 
 ``modelfit/alpha``
-^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+    Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
 
-Governs the regularization of the deformations and corresponds to :math:`\alpha` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.2 and 3.3). Increasing this value leads to a smoother segmentation result.
-
-Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
+    Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
 
 ``modelfit/smooth_amount``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+    Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
-Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
-
-Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
+    Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
 ``modelfit/smooth_subsample``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
 
-Stage: :py:class:`~superdsm.modelfit_config.ModelfitConfigStage`
+    Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
 
-Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
-
-Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
+    Defaults to ``AF_smooth_subsample × scale`` (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
 ``c2f-region-analysis/min_region_radius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
-Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
+    No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
-
-Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
+    Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
 ``global-energy-minimization/beta``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
 
-Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
+    Corresponds to the constant term :math:`\beta` of the extended set energy functions in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.3.2 and 3.3).
 
-Corresponds to the constant term :math:`\beta` of the extended set energy functions in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.3.2 and 3.3).
-
-Defaults to ``AF_beta × scale^2`` (where ``AF_beta`` corresponds to :math:`\beta_\text{factor}` in the paper and defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
+    Defaults to ``AF_beta × scale^2`` (where ``AF_beta`` corresponds to :math:`\beta_\text{factor}` in the paper and defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
 ``global-energy-minimization/max_seed_distance``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
 
-Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
+    Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object. This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge.
 
-Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object. This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge.
-
-Defaults to ``AF_max_seed_distance × diameter`` (and ``AF_max_seed_distance`` defaults to infinity).
+    Defaults to ``AF_max_seed_distance × diameter`` (and ``AF_max_seed_distance`` defaults to infinity).
 
 ``postprocess/min_object_radius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
-Stage: :py:class:`~superdsm.postprocess.Postprocessing`
+    Objects smaller than a circle of this radius are discarded.
 
-Objects smaller than a circle of this radius are discarded.
-
-Defaults to ``AF_min_object_radius × radius`` (and ``AF_min_object_radius`` defaults to zero).
+    Defaults to ``AF_min_object_radius × radius`` (and ``AF_min_object_radius`` defaults to zero).
 
 ``postprocess/max_object_radius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
-Stage: :py:class:`~superdsm.postprocess.Postprocessing`
+    Objects larger than a circle of this radius are discarded.
 
-Objects larger than a circle of this radius are discarded.
-
-Defaults to ``AF_max_object_radius × radius`` (and ``AF_max_object_radius`` defaults to infinity).
+    Defaults to ``AF_max_object_radius × radius`` (and ``AF_max_object_radius`` defaults to infinity).
 
 ``postprocess/min_glare_radius``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Stage: :py:class:`~superdsm.postprocess.Postprocessing`
 
-Stage: :py:class:`~superdsm.postprocess.Postprocessing`
+    Corresponds to the minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
 
-Corresponds to the minimum object radius required for an object to be possibly recognized as an autofluorescence artifact.
-
-Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius defaults`` to infinity).
+    Defaults to ``AF_min_glare_radius × radius`` (and ``AF_min_glare_radius defaults`` to infinity).
 
