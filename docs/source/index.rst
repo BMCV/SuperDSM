@@ -12,12 +12,12 @@ Contents
    usage
    
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    
    pipeline
    
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    
    hyperparameters
 
