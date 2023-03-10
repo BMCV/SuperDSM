@@ -59,7 +59,7 @@ class Postprocessing(Stage):
         Corresponds to the thickness of the *inner* margin of image points within the exterior neighborhood which are weighted by 1. Increasing this value increases the importance of image points closest to the segmentation mask. Defaults to 5.
 
     ``postprocess/min_contrast_response``
-        A segmented object is discarded, if the contrast response as defined above is below this threshold. Defaults to 1.35.
+        A segmented object is discarded, if the contrast response as defined above is below this threshold. Corresponds to ``min_contrast`` in the paper (Supplemental Material 7 and 8). Defaults to 1.35.
 
     ``postprocess/contrast_response_epsilon``
         This constant is added to both the nominator and the denominator of the fraction which defines the contrast response (see above). Defaults to 1e-4.
