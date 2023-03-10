@@ -23,7 +23,7 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_energy_rate``
-        Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also referred to as ``min_norm_energy2`` in Supplemental Material 7 incorrectly due to a typo).
+        Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
 
     ``postprocess/discard_image_boundary``
         If set to ``True``, objects located directly on the image border are discarded.
@@ -61,11 +61,17 @@ class Postprocessing(Stage):
     Mask-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+    The segmentation masks are refined individually (independently of each other).
+
     ``postprocess/mask_stdamp``
-        tbd.
+        An image point :math:`x`, which is adjacent to the boundary of the original segmentation mask :math:`M`, is added to the segmentation mask, if
+
+        .. math:: -\\gamma \\cdot \\operatorname*{std}_{x' \\in M} g_{x'} \\leq g_x - \\operatorname*{mean}_{x' \\in M} g_{x'} \\leq +\\gamma \\cdot \\operatorname*{std}_{x' \\in M} g_{x'},
+
+        and removed otherwise, where $\\operatorname{mean}_{x' \\in M} g_{x'}$ and $\\operatorname{std}_{x' \\in M} g_{x'}$ denote the arithmetic average and the standard deviation of $g_{x'}$ for $x' \\in M$, where $g_x$ and $g_{x'}$ are the intensity values of the Gaussian-filtered image at image points $x$ and $x'$, respectively. Defaults to 2.
 
     ``postprocess/mask_max_distance``
-        tbd.
+        Image points with this maximum distance of the boundary of the original segmentation mask are subject to refinement. Defaults to 1.
 
     ``postprocess/mask_smoothness``
         tbd.
