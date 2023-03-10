@@ -38,7 +38,7 @@ Pipeline stages require different inputs and produce different outputs. Below is
     A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
 
 ``y_mask``
-    Binary image corresponding to a mask of "empty" image regions discarded from consideration (``False``) and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``g_atoms``
     tbd.
