@@ -1,6 +1,6 @@
 from ._aux import copy_dict, mkdir
 from .output import get_output
-from .image import Image
+from .image import normalize_image
 
 import math
 import numpy as np
@@ -131,7 +131,7 @@ class Pipeline:
             g_raw = g_raw.max() - g_raw
         else:
             g_rgb = None
-        data = dict(g_raw = Image.normalize_image(g_raw))
+        data = dict(g_raw = normalize_image(g_raw))
         if g_rgb is not None:
             data['g_rgb'] = g_rgb
         return data
