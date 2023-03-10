@@ -32,13 +32,13 @@ Pipeline stages require different inputs and produce different outputs. Below is
     This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~superdsm.pipeline.Pipeline.init` method.
 
 ``y``
-    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, see Eq. (5) in Section 2.2). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
+    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, see Eq. (5) in Section 2.2). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
-    An object of type :py:class:`~superdsm.config.Config` corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
+    A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
 
 ``y_mask``
-    tbd.
+    Binary image corresponding to a mask of image regions discarded from consideration due to strong noise and a large P/A ratio (``False``) and those which are considered for segmentation (``True``). This is described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``g_atoms``
     tbd.
