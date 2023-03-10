@@ -55,7 +55,7 @@ class Postprocessing(Stage):
         tbd.
 
     ``postprocess/min_contrast_response``
-        A segmented object is discarded, if the contrast response as defined above is below this threshold. Defaults to 0.35.
+        A segmented object is discarded, if the contrast response as defined above is below this threshold. Defaults to 1.35.
 
     ``postprocess/contrast_response_epsilon``
         This constant is added to both the nominator and the denominator of the fraction which defines the contrast response (see above). Defaults to 1e-4.
@@ -124,7 +124,7 @@ class Postprocessing(Stage):
         # contrast-based post-processing
         exterior_scale            = cfg.get(           'exterior_scale',    5)
         exterior_offset           = cfg.get(          'exterior_offset',    5)
-        min_contrast_response     = cfg.get(    'min_contrast_response', 0.35)
+        min_contrast_response     = cfg.get(    'min_contrast_response', 1.35)
         contrast_response_epsilon = cfg.get('contrast_response_epsilon', 1e-4)
 
         # mask-based post-processing
@@ -246,7 +246,7 @@ def _compute_contrast_response(candidate, g, exterior_scale, exterior_offset, ep
     exterior_weights[exterior_mask] = np.exp(-exterior_distance_map[exterior_mask])
     exterior_weights /= exterior_weights.sum()
     exterior_mean = (g * exterior_weights).sum()
-    return (interior_mean + epsilon) / (exterior_mean + epsilon) - 1
+    return (interior_mean + epsilon) / (exterior_mean + epsilon)
 
 
 def _is_glare(candidate, g, min_layer=0.5, num_layers=5):

@@ -4,7 +4,7 @@
     "config": {
         "AF_scale": 80,
         "postprocess": {
-            "min_contrast_response": 0.8
+            "min_contrast_response": 1.8
         }
     }
 }
