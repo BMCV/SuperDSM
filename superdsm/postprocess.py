@@ -41,7 +41,7 @@ class Postprocessing(Stage):
         Objects with an eccentricity higher than this value are discarded. Defaults to 0.99.
 
     ``postprocess/max_boundary_eccentricity``
-        Overrides ``postprocess/max_boundary_eccentricity`` for objects located directly on the image border. Defaults to the value of the ``postprocess/max_boundary_eccentricity`` hyperparameter.
+        Overrides ``postprocess/max_boundary_eccentricity`` for objects located directly on the image border. Defaults to the value set for ``postprocess/max_boundary_eccentricity``.
 
     Contrast-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
