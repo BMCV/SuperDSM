@@ -167,7 +167,7 @@ class ConsoleOutput(Output):
     """
 
     def __init__(self, muted=False, parent=None, margin=0):
-        super(JupyterOutput, self).__init__(parent, muted, margin)
+        super(ConsoleOutput, self).__init__(parent, muted, margin)
         self._intermediate_line_length = 0
 
     def intermediate(self, line):
