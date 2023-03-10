@@ -187,6 +187,8 @@ def create_default_pipeline():
     #. :py:class:`~.c2freganal.C2F_RegionAnalysis`
     #. :py:class:`~.globalenergymin.GlobalEnergyMinimization`
     #. :py:class:`~.postprocess.Postprocessing`
+
+    Refer to :ref:`pipeline` for a more detailed documentation of the pipeline.
     """
     from .preprocess import Preprocessing
     from .dsmcfg import DSM_ConfigStage
