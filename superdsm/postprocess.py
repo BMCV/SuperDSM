@@ -64,13 +64,13 @@ class Postprocessing(Stage):
     The segmentation masks are refined individually (independently of each other).
 
     ``postprocess/mask_stdamp``
-        An image point adjacent to the boundary of the original segmentation mask is added to the segmentation mask, if its Gaussian-smoothed intensity is sufficiently similar to the mean intensity of the mask, and removed otherwise. The lower the value set for ``postprocess/mask_stdamp``, the stricter the similarity must be. Defaults to 2.
+        An image point adjacent to the boundary of the original segmentation mask is added to the segmentation mask, if its Gaussian-smoothed intensity is sufficiently similar to the mean intensity of the mask. The image point is removed otherwise. The lower the value set for ``postprocess/mask_stdamp``, the stricter the similarity must be. Defaults to 2.
 
     ``postprocess/mask_max_distance``
-        Image points with this maximum distance of the boundary of the original segmentation mask are subject to refinement. Defaults to 1.
+        Image points within this maximum distance of the boundary of the original segmentation mask are subject to refinement. Image points further away from the boundary of the original segmentation mask are neither added to nor removed from the segmentation mask. Defaults to 1.
 
     ``postprocess/mask_smoothness``
-        Corresponds to the scale of the Gaussian filter used to smooth the image intensities when it comes to image points being added to or removed from the segmentation mask. Defaults to 3.
+        Corresponds to the scale of the Gaussian filter used to smooth the image intensities for refinement of the segmentation mask. Defaults to 3.
 
     ``postprocess/fill_holes``
         Morphological holes in the segmentation mask are filled if set to ``True``. Defaults to ``True``.
