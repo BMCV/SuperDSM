@@ -46,17 +46,17 @@ class Postprocessing(Stage):
     Contrast-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    A segmented object is discarded, if the *contrast response* is too low, which is the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the average image intensity within its neighborhood. The average image intensity within the neighborhood is determined using a weighted mean of the image intensities, where the weight
+    A segmented object is discarded, if the *contrast response* is too low, which is the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the average image intensity within its exterior neighborhood. The average image intensity within the exterior neighborhood is determined using a weighted mean of the image intensities, where the weight
 
     .. math:: \\exp(-\\max\\{0, \\operatorname{dist}_M(x) - \\text{exterior_offset}\\} / \\text{exterior_scale})
         
     of an image point :math:`x` decays exponentially with the Euclidean distance :math:`\\operatorname{dist}_M(x)` of that point to the mask :math:`M` of the segmented object. Image points corresponding to segmentation masks of segmented objects are weighted by zero.
 
     ``postprocess/exterior_scale``
-        tbd.
+        Scales the thickness of the soft margin of the exterior neighborhood (this is the *outer* margin, corresponding to image points associated with weights smaller than 1). Increasing this value increases the importance of image points further away of the segmentation mask. Defaults to 5.
 
     ``postprocess/exterior_offset``
-        tbd.
+        Corresponds to the thickness of the *inner* margin of image points within the exterior neighborhood which are weighted by 1. Increasing this value increases the importance of image points closest to the segmentation mask. Defaults to 5.
 
     ``postprocess/min_contrast_response``
         A segmented object is discarded, if the contrast response as defined above is below this threshold. Defaults to 1.35.
