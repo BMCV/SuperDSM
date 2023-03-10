@@ -32,7 +32,7 @@ class Postprocessing(Stage):
         Objects smaller than a circle of this radius are discarded. Defaults to 0.
 
     ``postprocess/max_object_radius``
-        Objects larger than a circle of this radius are discarded. Defaults to 0.
+        Objects larger than a circle of this radius are discarded. Defaults to infinity.
 
     ``postprocess/min_boundary_obj_radius``
         Overrides ``postprocess/min_object_radius`` for objects located directly on the image border. Defaults to the value of the ``postprocess/min_object_radius`` hyperparameter.
