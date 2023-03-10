@@ -76,7 +76,7 @@ class Postprocessing(Stage):
     Autofluorescence glare removal
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask :math:`M`. The object is identified as an autofluorescence artifiact and discarded, if *(i)* the radius of a circle of size :math:`\\#M` is either smaller than 22 pixels, or *(ii)* larger than 50 pixels and the top 50% of the Gaussian-smoothed intensity profile of the object mask :math:`M` is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected, see below).
+    To decide whether a segmented object is an autofluorescence artifact, we considere its segmentation mask :math:`M`. The object is identified as an autofluorescence artifiact and discarded, if it is sufficiently large and, by default, the top 50% of the Gaussian-smoothed intensity profile of the object mask :math:`M` is approximately pyramid-shaped (i.e. the top 50% intensity-superlevel sets of the object are connected). This is illustrated in the figure below, where the intensity-superlevel sets are shown for 5 different intensity values:
 
     .. figure:: glare_detection.png
        :width: 100%
@@ -84,19 +84,19 @@ class Postprocessing(Stage):
        Autofluorescence artifact detection method. (a) Original image section (NIH3T3 cells, contrast-enhanced). (b) Ground truth segmentation. (c) Segmentation result of cell nuclei (green contour) and the autofluorescence artifact (red contour). (d) Smoothed image intensities (Gaussian filter) and the corresponding intensity profiles (solid contours) of the detected objects (dashed contours).
 
     ``postprocess/glare_detection_smoothness``
-        tbd.
+        The standard deviation of the Gaussian function used for smoothing the image intensities of the segmented object. Defaults to :math:`3`.
 
     ``postprocess/glare_detection_num_layers``
-        tbd.
+        The number of intensity values, for which the connectivity of the intensity-superlevel sets is investigated. Defaults to :math:`5`.
 
     ``postprocess/glare_detection_min_layer``
-        tbd.
+        The top fraction of the Gaussian-smoothed intensity profile investigated for connectivity. Defaults to :math:`0.5`.
 
     ``postprocess/min_glare_radius``
-        tbd.
+        The size of a segmented object must correspond to a circle at least of this radius in order for the object to be possibly recognized as an autofluorescence artifact. Defaults to infinity.
 
     ``postprocess/min_boundary_glare_radius``
-        tbd.
+        Overrides ``postprocess/min_glare_radius`` for objects located directly on the image border. Defaults to the value of the ``postprocess/min_glare_radius`` hyperparameter.
     """
 
     ENABLED_BY_DEFAULT = True
