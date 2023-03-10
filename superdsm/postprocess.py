@@ -23,7 +23,7 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_energy_rate``
-        tbd.
+        Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also referred to as ``min_norm_energy2`` in Supplemental Material 7 incorrectly due to a typo).
 
     ``postprocess/discard_image_boundary``
         If set to ``True``, objects located directly on the image border are discarded.
