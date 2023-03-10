@@ -14,6 +14,8 @@ import numpy as np
 class Postprocessing(Stage):
     """Implements the post-processing as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
+    This stage requires ``g_raw``, ``cover``, ``y_img`, ``g_atoms`` for input and produces ``postprocessed_objects`` for output.
+
     Hyperparameters
     ---------------
 
@@ -111,7 +113,7 @@ class Postprocessing(Stage):
 
     def __init__(self):
         super(Postprocessing, self).__init__('postprocess',
-                                             inputs  = ['cover', 'y_surface', 'g_atoms', 'g_raw'],
+                                             inputs  = ['cover', 'y_img', 'g_atoms', 'g_raw'],
                                              outputs = ['postprocessed_objects'])
 
     def process(self, input_data, cfg, out, log_root_dir):
@@ -151,7 +153,7 @@ class Postprocessing(Stage):
         background_mask = morph.binary_erosion(~background_mask, morph.disk(exterior_offset))
 
         params = {
-            'y':                          input_data['y_surface'],
+            'y':                          input_data['y_img'],
             'g':                          input_data['g_raw'],
             'g_atoms':                    input_data['g_atoms'],
             'g_mask_processing':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),

@@ -18,11 +18,19 @@ def bbox(mask, include_end=True):
 
 
 def normalize_image(img):
+    """Normalizes the image intensities to the range from 0 to 1.
+
+    The original image ``img`` is not modified.
+
+    :return: The normalized image.
+    """
     img_diff = img.max() - img.min()
     if img_diff == 0: img_diff = 1
     return (img - img.min()).astype(float) / img_diff
 
 class Image:
+    """This class is used internally in SuperDSM to ease the work with images and image regions.
+    """
 
     def __init__(self, model=None, mask=None, full_mask=None, offset=(0,0)):
         self.model     = model
