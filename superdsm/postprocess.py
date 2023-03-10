@@ -64,20 +64,16 @@ class Postprocessing(Stage):
     The segmentation masks are refined individually (independently of each other).
 
     ``postprocess/mask_stdamp``
-        An image point :math:`x`, which is adjacent to the boundary of the original segmentation mask :math:`M`, is added to the segmentation mask, if
-
-        .. math:: -\\gamma \\cdot \\operatorname*{std}_{x' \\in M} g_{x'} \\leq g_x - \\operatorname*{mean}_{x' \\in M} g_{x'} \\leq +\\gamma \\cdot \\operatorname*{std}_{x' \\in M} g_{x'},
-
-        and removed otherwise, where $\\operatorname{mean}_{x' \\in M} g_{x'}$ and $\\operatorname{std}_{x' \\in M} g_{x'}$ denote the arithmetic average and the standard deviation of $g_{x'}$ for $x' \\in M$, where $g_x$ and $g_{x'}$ are the intensity values of the Gaussian-filtered image at image points $x$ and $x'$, respectively. Defaults to 2.
+        An image point adjacent to the boundary of the original segmentation mask is added to the segmentation mask, if its Gaussian-smoothed intensity is sufficiently similar to the mean intensity of the mask, and removed otherwise. The lower the value set for ``postprocess/mask_stdamp``, the stricter the similarity must be. Defaults to 2.
 
     ``postprocess/mask_max_distance``
         Image points with this maximum distance of the boundary of the original segmentation mask are subject to refinement. Defaults to 1.
 
     ``postprocess/mask_smoothness``
-        tbd.
+        Corresponds to the scale of the Gaussian filter used to smooth the image intensities when it comes to image points being added to or removed from the segmentation mask. Defaults to 3.
 
     ``postprocess/fill_holes``
-        tbd.
+        Morphological holes in the segmentation mask are filled if set to ``True``. Defaults to ``True``.
 
     Autofluorescence glare removal
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
