@@ -12,7 +12,7 @@ import numpy as np
 
 
 class Postprocessing(Stage):
-    """Implements the post-processing as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
+    """Discards spurious objects and refines the segmentation masks as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
     This stage requires ``g_raw``, ``cover``, ``y_img`, ``g_atoms`` for input and produces ``postprocessed_objects`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
