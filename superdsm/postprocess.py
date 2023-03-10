@@ -48,9 +48,9 @@ class Postprocessing(Stage):
 
     A segmented object is discarded, if the *contrast response* is too low, which is the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the average image intensity within its neighborhood. The average image intensity within the neighborhood is determined using a weighted mean of the image intensities, where the weight
 
-    .. math:: \\exp(-\\max\\{0, \\operatorname{dist}_M(x) - \\text{exterior\_offset}\\} / \\text{exterior\_scale})
+    .. math:: \\exp(-\\max\\{0, \\operatorname{dist}_M(x) - \\text{exterior_offset}\\} / \\text{exterior_scale})
         
-    of an image point :math:`x` decays exponentially with the Euclidean distance :math:`\\operatorname{dist}_M(x)` of that point to the mask :math:`M` of the segmented object.
+    of an image point :math:`x` decays exponentially with the Euclidean distance :math:`\\operatorname{dist}_M(x)` of that point to the mask :math:`M` of the segmented object. Image points corresponding to segmentation masks of segmented objects are weighted by zero.
 
     ``postprocess/exterior_scale``
         tbd.
