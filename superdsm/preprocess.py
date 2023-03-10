@@ -19,7 +19,7 @@ class Preprocessing(Stage):
     ``preprocess/sigma2``
         The scale of the Gaussian filter :math:`\mathcal G_\sigma`, which is used to determine the intensity offsets :math:`\\tau_x` and described in Supplemental Material 1. Defaults to :math:`40`.
 
-    ``preprocess/threshold_clip``
+    ``preprocess/offset_clip``
         Corresponds to :math:`\\tau_\\text{max}` in Supplemental Material 1. Defaults to :math:`3`.
 
     ``preprocess/lower_clip_mean``
@@ -38,27 +38,27 @@ class Preprocessing(Stage):
 
         sigma1 = cfg.get('sigma1', math.sqrt(2))
         sigma2 = cfg.get('sigma2', 40)
-        threshold_clip  = cfg.get('threshold_clip', 3)
+        offset_clip  = cfg.get('offset_clip', 3)
         lower_clip_mean = cfg.get('lower_clip_mean', False)
 
-        threshold_original = ndi.gaussian_filter(g_raw, sigma2)
-        if np.isinf(threshold_clip):
-            threshold_combined = threshold_original
+        offset_original = ndi.gaussian_filter(g_raw, sigma2)
+        if np.isinf(offset_clip):
+            offset_combined = offset_original
 
         else:
-            threshold_clip_abs = threshold_clip * g_raw.std()
-            threshold_clipped  = ndi.gaussian_filter(g_raw.clip(0, threshold_clip_abs), sigma2)
+            offset_clip_abs = offset_clip * g_raw.std()
+            offset_clipped  = ndi.gaussian_filter(g_raw.clip(0, offset_clip_abs), sigma2)
 
-            clip_area = (g_raw > threshold_clip_abs)
+            clip_area = (g_raw > offset_clip_abs)
             _tmp1 = ndi.distance_transform_edt(~clip_area)
             _tmp1 = (sigma2 - _tmp1).clip(0, np.inf)
             _tmp1 = (_tmp1 / _tmp1.max()) ** 2
-            threshold_combined = (1 - _tmp1) * threshold_clipped + _tmp1 * threshold_original
+            offset_combined = (1 - _tmp1) * offset_clipped + _tmp1 * offset_original
             
         if lower_clip_mean:
-            threshold_combined = np.max([threshold_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
+            offset_combined = np.max([offset_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
-        y = ndi.gaussian_filter(g_raw, sigma1) - threshold_combined
+        y = ndi.gaussian_filter(g_raw, sigma1) - offset_combined
         
         return {
             'y': y
