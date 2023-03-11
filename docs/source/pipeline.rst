@@ -35,7 +35,7 @@ Pipeline stages require different inputs and produce different outputs. Below is
     The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (see :ref:`Eq. (5) in Section 2.2 <references>`). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
-    A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
+    A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.DSM_ConfigStage` stage.
 
 ``y_mask``
     Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in :ref:`Section 3.1 of the paper <references>`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
