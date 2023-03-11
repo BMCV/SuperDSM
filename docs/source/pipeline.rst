@@ -7,10 +7,41 @@ Refer to the :py:mod:`.pipeline` module for a general overview of the pipeline c
 
 .. _pipeline_theory:
 
-Theory
-------
+Theory in a nutshell
+--------------------
 
-.. math:: Y_\Omega^\top = \begin{bmatrix} g_{x^{(1)}} - \tau_{x^{(1)}} & \dots & g_{x^{(\#\Omega)}} - \tau_{x^{(\#\Omega)}} \end{bmatrix}
+Deformable shape models
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Let :math:`\omega \subseteq \Omega` be any image region, that is a non-empty subset of the image points :math:`\Omega` in an arbitrary but fixed order :math:`\omega = \left\{ x_1, \dots, x_{\#\omega} \right\}`. Then, a
+*deformable shape model* within this image region is defined as the zero-level set of the deformable surface
+
+.. math:: S_\omega(x; \theta, \xi) = F_\omega^\top \theta + G_\omega \xi,
+
+where
+
+.. math:: F_\omega = \begin{bmatrix} f_{x^{(1)}} & \dots & f_{x^{(\#\omega)}} \end{bmatrix},
+
+:math:`f_x` is a second-order polynomial basis function expansion of the image point :math:`x`, and :math:`G_\omega` is a block Toeplitz matrix where each row corresponds to a Gaussian function with standard deviation :math:`\sigma_G` centered at the image points :math:`x_1, \dots, x_{\#\omega}`. The vectors :math:`\theta` and :math:`\xi` are the polynomial parameters and the deformation parameters, respectively. See Section 2.1 of the paper for more details.
+
+Convex energy minimization
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Model fitting within any image region :math:`\omega` is performed by minimization of the *convex* energy function,
+
+.. math:: \psi_\omega(\theta, \xi) = \ell(\theta, \xi) + \alpha \cdot \|\xi\|_1
+
+where :math:`\ell(\theta, \xi)` is a *convex* loss function defined by
+
+.. math:: \ell(\theta, \xi) = \mathbb 1^\top_{\#\omega} \ln(1 + \exp(-Y_\omega \cdot S_\omega(\theta, \xi))).
+
+See Section 2.2 of the paper for more details.
+
+The vector :math:`Y_\omega` is a vector of the image intensities, offset by the intensity offsets :math:`\tau_{x^{(1)}}, \dots, \tau_{x^{(\#\omega)}}`. These intensity offsets are chosen so that they *roughly* separate image foreground and image background, in the sense that image foreground *rather* corresponds to positive components of the vector
+
+.. math:: Y_\omega^\top = \begin{bmatrix} g_{x^{(1)}} - \tau_{x^{(1)}} & \dots & g_{x^{(\#\omega)}} - \tau_{x^{(\#\omega)}} \end{bmatrix},
+
+whereas image background *rather* corresponds to negative components. See Supplemental Material 1 of the paper for more details.
 
 .. _pipeline_stages:
 
