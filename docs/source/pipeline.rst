@@ -59,7 +59,7 @@ Pipeline stages require different inputs and produce different outputs. Below is
     An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})` in the paper (see :ref:`Section 2.3.3 <references>`). The solution is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``objects``
-    List of all computed objects, each represented by the :py:class:`.objects.Object` class. Corresponds to :math:`\mathscr U_{\# U}` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    List of all computed objects, each represented by the :py:class:`~.objects.Object` class. Corresponds to :math:`\mathscr U_{\# U}` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``workload``
     The cardinality of the set of all possible objects. Corresponds to the cardinality of :math:`\mathbb P(U)` in the paper (see :ref:`Eq. (9) in Section 2.3.1 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
