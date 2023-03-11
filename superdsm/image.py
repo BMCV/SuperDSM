@@ -29,7 +29,7 @@ def normalize_image(img):
     return (img - img.min()).astype(float) / img_diff
 
 class Image:
-    """This class is used internally in SuperDSM to ease the work with images and image regions.
+    """This class is used internally in SuperDSM to ease the work with images, image masks, and image regions.
     """
 
     def __init__(self, model=None, mask=None, full_mask=None, offset=(0,0)):

@@ -5,8 +5,10 @@ SuperDSM API
     superdsm.pipeline
     superdsm.config
     superdsm.automation
+    superdsm.image
     superdsm.dsm
     superdsm.dsmcfg
+    superdsm.atoms
     superdsm.objects
     superdsm.preprocess
     superdsm.c2freganal

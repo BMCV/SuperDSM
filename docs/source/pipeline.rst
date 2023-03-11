@@ -3,14 +3,14 @@
 Default pipeline
 ================
 
-Refer to the :py:mod:`superdsm.pipeline` module for a general overview of the pipeline concept (involving different stages, inputs, and outputs).
+Refer to the :py:mod:`.pipeline` module for a general overview of the pipeline concept (involving different stages, inputs, and outputs).
 
 .. _pipeline_stages:
 
 Pipeline stages
 ---------------
 
-The function :py:meth:`superdsm.pipeline.create_default_pipeline` employs the following stages:
+The function :py:meth:`.pipeline.create_default_pipeline` employs the following stages:
 
 #. :py:class:`~.preprocess.Preprocessing` — Implements the computation of the intensity offsets.
 #. :py:class:`~.dsmcfg.DSM_ConfigStage` — Provides the hyperparameters from the ``dsm`` namespace as an output.
@@ -26,37 +26,37 @@ Inputs and outputs
 Pipeline stages require different inputs and produce different outputs. Below is an overview over all inputs and outputs available within the default pipeline:
 
 ``g_raw``
-    The raw image intensities. This is the normalized original image, unless histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Provided by the pipeline via the :py:meth:`~superdsm.pipeline.Pipeline.init` method.
+    The raw image intensities. This is the normalized original image, unless histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method.
 
 ``g_rgb``
-    This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~superdsm.pipeline.Pipeline.init` method.
+    This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method.
 
 ``y``
-    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, see Eq. (5) in Section 2.2). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
+    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, see Eq. (5) in Section 2.2). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
     A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
 
 ``y_mask``
-    Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in :ref:`Section 3.1 of the paper <references>`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``g_atoms``
-    tbd.
+    Integer-valued image representing the universe of atomic image regions (see :ref:`Section 2.3 of the paper <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``adjacencies``
-    tbd.
+    The adjacencies of the atomic image regions, represented as an object of the type :py:class:`~.atoms.AtomAdjacencyGraph`. This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`Definition 1 in the paper <references>`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``seeds``
-    tbd.
+    The seed points which were used by the Algorithm S1 (described in :ref:`Supplemental Material 5 of the paper <references>`) to determine the atomic image regions, represented by a list of tuples of coordinates. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``clusters``
-    tbd.
+    Integer-valued image representing the regions of possibly clustered obejcts (see :ref:`Section 2.3 of the paper <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``y_img``
-    tbd.
+    An :py:ref:`~.image.Image` object corresponding to a joint representation of the offset image intensities ``y`` and mask ``y_mask``. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``cover``
-    tbd.
+    An ``~.minsetcover.MinSetCover`` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``objects``
     tbd.

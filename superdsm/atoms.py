@@ -6,6 +6,10 @@ import skimage.segmentation
 
 
 class AtomAdjacencyGraph:
+    """Graph representation of the adjacencies of atomic image regions.
+
+    This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`Definition 1 in the paper <references>`.
+    """
 
     def __init__(self, g_atoms, g_clusters, fg_mask, seeds, out=None):
         out = get_output(out)
