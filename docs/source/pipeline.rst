@@ -32,7 +32,7 @@ Pipeline stages require different inputs and produce different outputs. Below is
     This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method.
 
 ``y``
-    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, see Eq. (5) in Section 2.2). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
+    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (see :ref:`Eq. (5) in Section 2.2 <references>`). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
     A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.PreproDSM_ConfigStagecessing` stage.
@@ -56,14 +56,14 @@ Pipeline stages require different inputs and produce different outputs. Below is
     An :py:class:`~.image.Image` object corresponding to a joint representation of the offset image intensities ``y`` and mask ``y_mask``. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``cover``
-    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})` in the paper (see :ref:`Section 2.3.3 <references>`). The solution is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``objects``
-    tbd.
+    List of all computed objects, each represented by the :py:class:`.objects.Object` class. Corresponds to :math:`\mathscr U_{\# U}` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``workload``
-    tbd.
+    The cardinality of the set of all possible objects. Corresponds to the cardinality of :math:`\mathbb P(U)` in the paper (see :ref:`Eq. (9) in Section 2.3.1 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``postprocessed_objects``
-    tbd.
+    List of post-processed objects, each represented by the :py:class:`.postprocess.PostprocessedObject` class. Provided by the :py:class:`~.postprocess.Postprocessing` stage.
     

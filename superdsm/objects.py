@@ -21,6 +21,11 @@ class BaseObject:
 
 
 class Object(BaseObject):
+    """Each object of this class represents a set of atomic image regions.
+
+    Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
+    """
+
     def __init__(self):
         self.footprint       = set()
         self.energy          = np.nan

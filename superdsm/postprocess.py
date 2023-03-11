@@ -234,6 +234,9 @@ class Postprocessing(Stage):
 
 
 class PostprocessedObject(BaseObject):
+    """Each object of this class represents a segmented object after it has been post-processed.
+    """
+    
     def __init__(self, original):
         self.original    = original
         self.fg_offset   = original.fg_offset
