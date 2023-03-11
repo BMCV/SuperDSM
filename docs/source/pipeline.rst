@@ -27,21 +27,30 @@ where
 Convex energy minimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Model fitting within any image region :math:`\omega` is performed by minimization of the *convex* energy function,
+Model fitting within any image region :math:`\omega` is performed by minimization of the *convex* energy function
 
-.. math:: \psi_\omega(\theta, \xi) = \ell(\theta, \xi) + \alpha \cdot \|\xi\|_1
+.. math:: \psi_\omega(\theta, \xi) = \ell(\theta, \xi) + \alpha \cdot \|\xi\|_1,
 
 where :math:`\ell(\theta, \xi)` is a *convex* loss function defined by
 
-.. math:: \ell(\theta, \xi) = \mathbb 1^\top_{\#\omega} \ln(1 + \exp(-Y_\omega \cdot S_\omega(\theta, \xi))).
+.. math:: \ell(\theta, \xi) = \mathbb 1^\top_{\#\omega} \ln(1 + \exp(-Y_\omega \cdot S_\omega(\theta, \xi)))
 
-See Section 2.2 of the paper for more details.
+and :math:`\alpha` is a regularization parameter which governs the regularization of the deformations. See Section 2.2 of the paper for more details.
 
 The vector :math:`Y_\omega` corresponds to the image intensities, shifted by the intensity offsets :math:`\tau_{x^{(1)}}, \dots, \tau_{x^{(\#\omega)}}`. These offsets are chosen so that they *roughly* separate image foreground and image background, in the sense that image foreground *rather* corresponds to positive components of the vector
 
 .. math:: Y_\omega^\top = \begin{bmatrix} g_{x^{(1)}} - \tau_{x^{(1)}} & \dots & g_{x^{(\#\omega)}} - \tau_{x^{(\#\omega)}} \end{bmatrix},
 
-whereas image background *rather* corresponds to negative components. See Supplemental Material 1 of the paper for more details.
+whereas image background *rather* corresponds to negative components. The computation of the intensity offsets is described in Supplemental Material 1 of the paper.
+
+Joint segmentation and cluster splitting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let :math:`U` be a universe of atomic image regions, so that no atomic image region contains more than a single object. Global energy minimization is then performed by solving :math:`\operatorname{MSC}(\mathbb P(U))`, where :math:`\mathbb P(U) = \{ X \subseteq U | X \neq \emptyset, X\text{ is connected} \}` and
+
+.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
+
+is an instance of the *min-weight set-cover* problem.
 
 .. _pipeline_stages:
 
