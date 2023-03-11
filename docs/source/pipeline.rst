@@ -5,6 +5,13 @@ Default pipeline
 
 Refer to the :py:mod:`.pipeline` module for a general overview of the pipeline concept (involving different stages, inputs, and outputs).
 
+.. _pipeline_theory:
+
+Theory
+------
+
+.. math:: Y_\\Omega^\\top = \\begin{bmatrix} g_{x^{(1)}} - \\tau_{x^{(1)}} & \\dots & g_{x^{(\\#\\Omega)}} - \\tau_{x^{(\\#\\Omega)}} \\end{bmatrix}
+
 .. _pipeline_stages:
 
 Pipeline stages
