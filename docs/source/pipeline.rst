@@ -54,7 +54,7 @@ is an instance of the *min-weight set-cover* problem, and
 
 .. math:: c(X) = \inf_{\theta,\xi} \psi_{\tilde\omega(X)}(\theta,\xi) + \beta
 
-is the *extended set energy function*, where :math:`\tilde\omega(X) = \bigcup X`.
+is the *extended set energy function*, where :math:`\tilde\omega(X) = \bigcup X`. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions).
 
 .. _pipeline_stages:
 
