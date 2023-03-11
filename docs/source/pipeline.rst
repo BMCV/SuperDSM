@@ -50,7 +50,11 @@ Let :math:`U` be a universe of atomic image regions, so that no atomic image reg
 
 .. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
 
-is an instance of the *min-weight set-cover* problem.
+is an instance of the *min-weight set-cover* problem, and
+
+.. math:: c(X) = \inf_{\theta,\xi} \psi_{\tilde\omega(X)}(\theta,\xi) + \beta
+
+is the *extended set energy function*, where :math:`\tilde\omega(X) = \bigcup X`.
 
 .. _pipeline_stages:
 
