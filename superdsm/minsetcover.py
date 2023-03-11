@@ -76,6 +76,10 @@ def _get_atom_label(atom):
 
 
 class MinSetCover:
+    """Represents instances of the min-weight set-cover problem.
+
+    Corresponds to :math:`\operatorname{MSC}(\mathscr S)` in the paper (see :ref:`Eq. (17) in Section 2.3.2 <references>`).
+    """
 
     def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
         self.atoms = {_get_atom_label(atom): atom for atom in atoms}
