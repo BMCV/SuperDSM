@@ -12,6 +12,8 @@ Theory
 
 This is a brief recap of the most important concepts described in the paper (:ref:`Kostrykin and Rohr (2023) <references>`).
 
+.. _pipeline_theory_dsm:
+
 Deformable shape models
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -25,6 +27,8 @@ where
 .. math:: F_\omega = \begin{bmatrix} f_{x^{(1)}} & \dots & f_{x^{(\#\omega)}} \end{bmatrix},
 
 :math:`f_x` is a second-order polynomial basis function expansion of the image point :math:`x`, and :math:`G_\omega` is a block Toeplitz matrix where each row corresponds to a Gaussian function with standard deviation :math:`\sigma_G` centered at the image points :math:`x_1, \dots, x_{\#\omega}`. The vectors :math:`\theta` and :math:`\xi` are the polynomial parameters and the deformation parameters, respectively. See Section 2.1 of the paper for more details.
+
+.. _pipeline_theory_cvxprog:
 
 Convex energy minimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -44,6 +48,8 @@ The vector :math:`Y_\omega` corresponds to the image intensities, shifted by the
 .. math:: Y_\omega^\top = \begin{bmatrix} g_{x^{(1)}} - \tau_{x^{(1)}} & \dots & g_{x^{(\#\omega)}} - \tau_{x^{(\#\omega)}} \end{bmatrix},
 
 whereas image background *rather* corresponds to negative components. The computation of the intensity offsets is described in Supplemental Material 1 of the paper.
+
+.. _pipeline_theory_jointsegandclustersplit:
 
 Joint segmentation and cluster splitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -127,13 +133,13 @@ Pipeline stages require different inputs and produce different outputs. Below is
     An :py:class:`~.image.Image` object corresponding to a joint representation of the offset image intensities ``y`` and mask ``y_mask``. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``cover``
-    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})`. The solution is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})`. The optimal family :math:`\mathscr X \subseteq \mathbb P(U)` is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``objects``
     List of all computed objects :math:`\mathscr U_{\# U}`, each represented by the :py:class:`~.objects.Object` class. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``workload``
-    The cardinality of the set of all possible objects :math:`\mathbb P(U)`. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    An upper bound of the number of objects which need to be computed. The upper bound is the cardinality of the set of all possible objects :math:`\mathbb P(U)`. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``postprocessed_objects``
     List of post-processed objects, each represented by the :py:class:`~.postprocess.PostprocessedObject` class. Provided by the :py:class:`~.postprocess.Postprocessing` stage.
