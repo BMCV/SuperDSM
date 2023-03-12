@@ -31,7 +31,7 @@ The following hyperparameters can be set automatically based on the scale of obj
 ``dsm/smooth_amount``
     Stage: :py:class:`~superdsm.dsmcfg.DSM_ConfigStage`
 
-    Corresponds to :math:`\sigma_G` in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Section 3.3).
+    Corresponds to :math:`\sigma_G` described in :ref:`pipeline_theory_dsm`.
 
     Defaults to ``AF_smooth_amount × scale`` (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
@@ -45,14 +45,14 @@ The following hyperparameters can be set automatically based on the scale of obj
 ``c2f-region-analysis/min_region_radius``
     Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
-    No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
+    No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
     Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
 ``global-energy-minimization/beta``
     Stage: :py:class:`~superdsm.globalenergymin.GlobalEnergyMinimization`
 
-    Corresponds to the constant term :math:`\beta` of the extended set energy functions in the paper (:ref:`Kostrykin and Rohr, 2023 <references>`, Sections 2.3.2 and 3.3).
+    Corresponds to the constant term :math:`\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`.
 
     Defaults to ``AF_beta × scale^2`` (where ``AF_beta`` corresponds to :math:`\beta_\text{factor}` in the paper and defaults to 0.66). Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
