@@ -46,7 +46,9 @@ whereas image background *rather* corresponds to negative components. The comput
 Joint segmentation and cluster splitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let :math:`U` be a universe of atomic image regions, so that no atomic image region contains more than a single object. Two atomic image regions :math:`u,v \in U` are called *adjacent* if and only if there exists a path :math:`\pi \subset \Omega` between :math:`u` and :math:`v` so that :math:`Y_\omega|_{\omega=\pi} > 0`. Let :math:`\Pi \subseteq U \times U` be the set of all *connected* atomic image regions, i.e. :math:`(u,v) \in \Pi` if and only if the adjacency graph :math:`\mathcal G = (U, \mathcal E)` contains a path between :math:`u` and :math:`v`. Global energy minimization is then performed by solving :math:`\operatorname{MSC}(\mathbb P(U))`, where
+Let :math:`U` be a universe of atomic image regions, so that no atomic image region contains more than a single object. Two atomic image regions :math:`u,v \in U` are called *adjacent* if and only if there exists a path :math:`\pi \subset \Omega` between :math:`u` and :math:`v` so that :math:`Y_\omega|_{\omega=\pi} > 0`. Let :math:`\Pi \subseteq U \times U` be the set of all *connected* atomic image regions, i.e. :math:`(u,v) \in \Pi` if and only if the adjacency graph :math:`\mathcal G = (U, \mathcal E)` contains a path between :math:`u` and :math:`v`. Details are given in Section 2.3.1 of the paper. The computation of the universe :math:`U` is described in Supplemental Material 5.
+
+Global energy minimization is performed by solving :math:`\operatorname{MSC}(\mathbb P(U))`, where
 
 .. math:: \mathbb P(U) = \{ X \subseteq U | X \neq \emptyset, X \times X \subseteq \Pi \}
 
@@ -63,8 +65,6 @@ is the *extended set energy function*, where :math:`\tilde\omega(X) = \bigcup X`
 .. math:: \operatorname{MSC}(\mathbb P(U)) = \operatorname{MSC}(\mathscr U_{\# U}),
 
 where :math:`\mathscr U_k \subseteq \mathbb P(U)`. See Section 2.3 of the paper for details.
-
-The computation of the universe :math:`U` is described in Supplemental Material 5 of the paper.
 
 .. _pipeline_stages:
 
