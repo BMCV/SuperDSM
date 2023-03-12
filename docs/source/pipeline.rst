@@ -46,7 +46,11 @@ whereas image background *rather* corresponds to negative components. The comput
 Joint segmentation and cluster splitting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let :math:`U` be a universe of atomic image regions, so that no atomic image region contains more than a single object. Global energy minimization is then performed by solving :math:`\operatorname{MSC}(\mathbb P(U))`, where :math:`\mathbb P(U) = \{ X \subseteq U | X \neq \emptyset, X\text{ is connected} \}` and
+Let :math:`U` be a universe of atomic image regions, so that no atomic image region contains more than a single object. Two atomic image regions :math:`u,v \in U` are called *adjacent* if and only if there exists a path :math:`\pi \subset \Omega` between :math:`u` and :math:`v` so that :math:`Y_\omega|_{\omega=\pi} > 0`. Let :math:`\Pi \subseteq U \times U` be the set of all *connected* atomic image regions, i.e. :math:`(u,v) \in \Pi` if and only if the adjacency graph :math:`\mathcal G = (U, \mathcal E)` contains a path between :math:`u` and :math:`v`. Global energy minimization is then performed by solving :math:`\operatorname{MSC}(\mathbb P(U))`, where
+
+.. math:: \mathbb P(U) = \{ X \subseteq U | X \neq \emptyset, X \times X \subseteq \Pi \}
+
+and
 
 .. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
 
