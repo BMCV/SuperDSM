@@ -68,7 +68,7 @@ Instead of solving :math:`\operatorname{MSC}(\mathbb P(U))` directly, a sequence
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = \operatorname{MSC}(\mathscr U_{\# U}).
 
-If, however, :math:`c(U) + \# U \beta \leq 2\beta + \sum_{u \in U} c(\{u\})`, then the closed-form solution
+If, however, :math:`c(U) + (\# U - 2) \cdot \beta \leq \sum_{u \in U} c(\{u\})`, then the closed-form solution
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
 
