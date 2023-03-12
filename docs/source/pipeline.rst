@@ -10,6 +10,8 @@ Refer to the :py:mod:`.pipeline` module for a general overview of the pipeline c
 Theory
 ------
 
+This is a brief recap of the most important concepts described in the paper (:ref:`Kostrykin and Rohr (2023) <references>`).
+
 Deformable shape models
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -56,7 +58,7 @@ Global energy minimization is performed by solving :math:`\operatorname{MSC}(\ma
 
 and
 
-.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} \beta + c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
+.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} \beta + c(X) \enspace\text{s.t. } \bigcup \mathscr S = \bigcup \mathscr X
 
 is an instance of the *min-weight set-cover* problem, and
 
@@ -72,7 +74,7 @@ If, however, :math:`c(U) \leq \beta + \sum_{u \in U} c(\{u\})`, then the closed-
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
 
-holds and the sequential computation is not required. Regions of possibly clustered objects are processed separately of each other, thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3 and 3.3 of the paper for details.
+holds and the sequential computation is not required. Regions of possibly clustered objects are processed separately of each other, thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3, 3.1, and 3.3 of the paper for details.
 
 .. _pipeline_stages:
 
@@ -95,43 +97,43 @@ Inputs and outputs
 Pipeline stages require different inputs and produce different outputs. Below is an overview over all inputs and outputs available within the default pipeline:
 
 ``g_raw``
-    The raw image intensities. This is the normalized original image, unless histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method.
+    The raw image intensities :math:`g_{x^{1}}, \dots, g_{x^{\#\Omega}}`, normalized so that the intensities range from 0 to 1. Up to the normalization, this corresponds to the original input image, unless histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method, refer to its documentation for details.
 
 ``g_rgb``
-    This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method.
+    This is the original image, if histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Otherwise, ``g_rgb`` is not available as an input. Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method, refer to its documentation for details.
 
 ``y``
-    The offset image intensities (object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image). Corresponds to :math:`Y_\Omega` in the paper (see :ref:`Eq. (5) in Section 2.2 <references>`). Provided by the :py:class:`~.preprocess.Preprocessing` stage.
+    The offset image intensities :math:`Y_\omega|_{\omega = \Omega}`, represented as an object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image. Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
     A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.DSM_ConfigStage` stage.
 
 ``y_mask``
-    Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in :ref:`Section 3.1 of the paper <references>`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``g_atoms``
-    Integer-valued image representing the universe of atomic image regions (see :ref:`Section 2.3 of the paper <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Integer-valued image representing the universe :math:`U` of atomic image regions. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``adjacencies``
-    The adjacencies of the atomic image regions, represented as an object of the type :py:class:`~.atoms.AtomAdjacencyGraph`. This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`Definition 1 in the paper <references>`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    The adjacency graph :math:`\mathcal G`, represented as an object of the type :py:class:`~.atoms.AtomAdjacencyGraph`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``seeds``
-    The seed points which were used by the Algorithm S1 (described in :ref:`Supplemental Material 5 of the paper <references>`) to determine the atomic image regions, represented by a list of tuples of coordinates. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``clusters``
-    Integer-valued image representing the regions of possibly clustered obejcts (see :ref:`Section 2.3 of the paper <references>`). Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Integer-valued image representing the regions of possibly clustered obejcts. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``y_img``
     An :py:class:`~.image.Image` object corresponding to a joint representation of the offset image intensities ``y`` and mask ``y_mask``. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``cover``
-    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})` in the paper (see :ref:`Section 2.3.3 <references>`). The solution is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    An :py:class:`~.minsetcover.MinSetCover` object corresponding to :math:`\operatorname{MSC}(\mathscr U_{\# U})`. The solution is accessible via its :py:attr:`~.minsetcover.MinSetCover.solution` property. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``objects``
-    List of all computed objects, each represented by the :py:class:`~.objects.Object` class. Corresponds to :math:`\mathscr U_{\# U}` in the paper (see :ref:`Section 2.3.3 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    List of all computed objects :math:`\mathscr U_{\# U}`, each represented by the :py:class:`~.objects.Object` class. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``workload``
-    The cardinality of the set of all possible objects. Corresponds to the cardinality of :math:`\mathbb P(U)` in the paper (see :ref:`Eq. (9) in Section 2.3.1 <references>`). Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+    The cardinality of the set of all possible objects :math:`\mathbb P(U)`. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``postprocessed_objects``
     List of post-processed objects, each represented by the :py:class:`~.postprocess.PostprocessedObject` class. Provided by the :py:class:`~.postprocess.Postprocessing` stage.
