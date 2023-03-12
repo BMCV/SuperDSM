@@ -23,7 +23,7 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization described in Sections 2.3 and 3.3 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``y``, ``y_mask``, ``g_atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     Hyperparameters
     ---------------
@@ -53,12 +53,12 @@ class GlobalEnergyMinimization(Stage):
 
     def __init__(self):
         super(GlobalEnergyMinimization, self).__init__('global-energy-minimization',
-                                                       inputs  = ['y', 'y_mask', 'g_atoms', 'adjacencies', 'dsm_cfg'],
+                                                       inputs  = ['y', 'y_mask', 'atoms', 'adjacencies', 'dsm_cfg'],
                                                        outputs = ['y_img', 'cover', 'objects', 'workload'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         y_img             = Image.create_from_array(input_data['y'], normalize=False, mask=input_data['y_mask'])
-        g_atoms           = input_data['g_atoms']
+        atoms             = input_data['atoms']
         adjacencies       = input_data['adjacencies']
         conservative      = cfg.get(     'conservative', True)
         beta              = cfg.get(             'beta', 0)
@@ -71,7 +71,7 @@ class GlobalEnergyMinimization(Stage):
 
         mode  = 'conservative' if conservative else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, workload = compute_generations(adjacencies, y_img, g_atoms, log_root_dir, mode, dsm_cfg, beta, try_lower_beta, lower_beta_mul, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, workload = compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, try_lower_beta, lower_beta_mul, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_img':    y_img,
@@ -81,7 +81,7 @@ class GlobalEnergyMinimization(Stage):
         }
 
 
-def compute_generations(adjacencies, y_img, g_atoms, log_root_dir, mode, dsm_cfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = get_output(out)
 
@@ -91,14 +91,14 @@ def compute_generations(adjacencies, y_img, g_atoms, log_root_dir, mode, dsm_cfg
         c.footprint = {atom_label}
         atoms.append(c)
     out.write(f'\nIteration 1:')
-    compute_objects(atoms, y_img, g_atoms, dsm_cfg, _get_generation_log_dir(log_root_dir, 1), out=out)
+    compute_objects(atoms, y_img, atoms_map, dsm_cfg, _get_generation_log_dir(log_root_dir, 1), out=out)
 
     universes = []
     for cluster_label in adjacencies.cluster_labels:
         universe = Object()
         universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
         universes.append(universe)
-    compute_objects(universes, y_img, g_atoms, dsm_cfg, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
+    compute_objects(universes, y_img, atoms_map, dsm_cfg, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
     trivial_cluster_labels = set()
     for cluster_label, universe in zip(adjacencies.cluster_labels, universes):
         atoms_in_cluster = [atoms[atom_label - 1] for atom_label in adjacencies.get_atoms_in_cluster(cluster_label)]
@@ -136,7 +136,7 @@ def compute_generations(adjacencies, y_img, g_atoms, log_root_dir, mode, dsm_cfg
                 progress_text = f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {Text.style(progress_text, Text.BOLD)}')
             
-            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, g_atoms, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
+            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
             objects += new_objects
@@ -204,7 +204,7 @@ def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=D
     return finished_amount, remaining_amount
 
 
-def _process_generation(cover, objects, previous_generation, y, g_atoms, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
+def _process_generation(cover, objects, previous_generation, y, atoms_map, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
     new_objects = []
     new_objects_thresholds = []
     discarded = 0
@@ -234,7 +234,7 @@ def _process_generation(cover, objects, previous_generation, y, g_atoms, adjacen
             new_objects_thresholds.append(max_new_object_energy)
             new_objects.append(new_object)
 
-    compute_objects(new_objects, y, g_atoms, dsm_cfg, log_root_dir, out=out)
+    compute_objects(new_objects, y, atoms_map, dsm_cfg, log_root_dir, out=out)
 
     next_generation = []
     for new_object_idx, new_object in enumerate(new_objects):

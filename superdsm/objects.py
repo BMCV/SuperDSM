@@ -44,12 +44,12 @@ class Object(BaseObject):
             self._default_kwargs[kwarg_name] = value
         return value
     
-    def get_mask(self, g_atoms):
-        return np.in1d(g_atoms, list(self.footprint)).reshape(g_atoms.shape)
+    def get_mask(self, atoms):
+        return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
-    def get_cvxprog_region(self, y, g_atoms, min_background_margin=None):
+    def get_cvxprog_region(self, y, atoms, min_background_margin=None):
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
-        region = y.get_region(self.get_mask(g_atoms))
+        region = y.get_region(self.get_mask(atoms))
         region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
         return region
 
@@ -81,10 +81,10 @@ def extract_foreground_fragment(fg_mask):
         return np.zeros(2, int), np.zeros((1, 1), bool)
 
 
-def _compute_object(y, g_atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
+def _compute_object(y, atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
     min_background_margin = max((cvxprog_kwargs.pop('min_background_margin'), cvxprog_kwargs['smooth_subsample']))
-    region = object.get_cvxprog_region(y, g_atoms, min_background_margin)
+    region = object.get_cvxprog_region(y, atoms, min_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
@@ -148,7 +148,7 @@ def _compute_object_logged(log_root_dir, cidx, *args, **kwargs):
 DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 
 
-def compute_objects(objects, y, g_atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
+def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
     smooth_mat_max_allocations = cvxprog_kwargs.pop('smooth_mat_max_allocations', np.inf)
@@ -156,24 +156,24 @@ def compute_objects(objects, y, g_atoms, cvxprog_kwargs, log_root_dir, status_li
         objects = list(objects)
         fallbacks  = 0
         x_map      = y.get_map(normalized=False, pad=1)
-        for ret_idx, ret in enumerate(_compute_objects(objects, y, g_atoms, x_map, smooth_mat_allocation_lock, cvxprog_kwargs, log_root_dir)):
+        for ret_idx, ret in enumerate(_compute_objects(objects, y, atoms, x_map, smooth_mat_allocation_lock, cvxprog_kwargs, log_root_dir)):
             objects[ret[0]].set(ret[1])
             out.intermediate(f'{status_line[0]}... {ret_idx + 1} / {len(objects)} ({fallbacks}x fallback)')
             if ret[2]: fallbacks += 1
     out.write(f'{status_line[1]}: {len(objects)} ({fallbacks}x fallback)')
 
 
-def _compute_objects(objects, y, g_atoms, x_map, lock, cvxprog_kwargs, log_root_dir):
+def _compute_objects(objects, y, atoms, x_map, lock, cvxprog_kwargs, log_root_dir):
     if _compute_objects._DEBUG: ## run serially
         for cidx, c in enumerate(objects):
-            yield _compute_object_logged(log_root_dir, cidx, y, g_atoms, x_map, c, cvxprog_kwargs, lock)
+            yield _compute_object_logged(log_root_dir, cidx, y, atoms, x_map, c, cvxprog_kwargs, lock)
     else: ## run in parallel
         y_id         = ray.put(y)
-        g_atoms_id   = ray.put(g_atoms)
+        atoms_id     = ray.put(atoms)
         x_map_id     = ray.put(x_map)
         cp_kwargs_id = ray.put(cvxprog_kwargs)
         lock_id      = ray.put(lock)
-        futures      = [_ray_compute_object_logged.remote(log_root_dir, obj_idx, y_id, g_atoms_id, x_map_id, obj, cp_kwargs_id, lock_id) for obj_idx, obj in enumerate(objects)]
+        futures      = [_ray_compute_object_logged.remote(log_root_dir, obj_idx, y_id, atoms_id, x_map_id, obj, cp_kwargs_id, lock_id) for obj_idx, obj in enumerate(objects)]
         for ret in get_ray_1by1(futures): yield ret
 
 

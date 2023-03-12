@@ -122,7 +122,7 @@ Pipeline stages require different inputs and produce different outputs. Below is
 ``y_mask``
     Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
-``g_atoms``
+``atoms``
     Integer-valued image representing the universe :math:`U` of atomic image regions. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``adjacencies``

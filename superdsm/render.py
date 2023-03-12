@@ -113,7 +113,7 @@ def _fetch_rgb_image_from_data(data, normalize_img=True, override_img=None):
 
 def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
-    return render_regions_over_image(img / img.max(), data['g_atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
+    return render_regions_over_image(img / img.max(), data['atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
 
 
 def render_foreground_clusters(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):

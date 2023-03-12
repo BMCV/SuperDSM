@@ -11,27 +11,27 @@ class AtomAdjacencyGraph:
     This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`Definition 1 in the paper <references>`.
     """
 
-    def __init__(self, g_atoms, g_clusters, fg_mask, seeds, out=None):
+    def __init__(self, atoms, g_clusters, fg_mask, seeds, out=None):
         out = get_output(out)
-        self._adjacencies, se = {atom_label: set() for atom_label in range(1, g_atoms.max() + 1)}, morph.disk(1)
+        self._adjacencies, se = {atom_label: set() for atom_label in range(1, atoms.max() + 1)}, morph.disk(1)
         self._atoms_by_cluster, self._cluster_by_atom = {}, {}
         self._seeds = seeds
-        for l0 in range(1, g_atoms.max() + 1):
-            cc = (g_atoms == l0)
+        for l0 in range(1, atoms.max() + 1):
+            cc = (atoms == l0)
             cluster_label = g_clusters[cc][0]
             cluster_mask  = np.logical_and(fg_mask, g_clusters == cluster_label)
             cc_dilated = np.logical_and(morph.binary_dilation(cc, se), np.logical_not(cc))
             cc_dilated = np.logical_and(cc_dilated, cluster_mask)
             if cluster_label not in self._atoms_by_cluster:
                 self._atoms_by_cluster[cluster_label] = set()
-            adjacencies = set(g_atoms[cc_dilated].flatten()) - {0, l0}
+            adjacencies = set(atoms[cc_dilated].flatten()) - {0, l0}
             self._adjacencies[l0] |= adjacencies
             for l1 in adjacencies:
                 self._adjacencies[l1] |= {l0}
             self._cluster_by_atom[l0] = cluster_label
             self._atoms_by_cluster[cluster_label] |= {l0}
 
-            out.intermediate('Processed atom %d / %d' % (l0, g_atoms.max()))
+            out.intermediate('Processed atom %d / %d' % (l0, atoms.max()))
         out.write('Computed atom adjacencies')
         assert self.is_symmetric()
     

@@ -90,7 +90,7 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
 class C2F_RegionAnalysis(Stage):
     """Implements the coarse-to-fine region analysis scheme (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``y`` and ``dsm_cfg`` for input and produces ``y_mask``, ``g_atoms``, ``adjacencies``, ``seeds``, ``clusters`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage requires ``y`` and ``dsm_cfg`` for input and produces ``y_mask``, ``atoms``, ``adjacencies``, ``seeds``, ``clusters`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     The following hyperparameters can be used to control this pipeline stage:
 
@@ -115,7 +115,7 @@ class C2F_RegionAnalysis(Stage):
     def __init__(self):
         super(C2F_RegionAnalysis, self).__init__('c2f-region-analysis',
                                                  inputs  = ['y', 'dsm_cfg'],
-                                                 outputs = ['y_mask', 'g_atoms', 'adjacencies', 'seeds', 'clusters'])
+                                                 outputs = ['y_mask', 'atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         seed_connectivity = cfg.get('seed_connectivity', 8)
@@ -176,7 +176,7 @@ class C2F_RegionAnalysis(Stage):
         
         return {
             'y_mask': y_mask,
-            'g_atoms': atoms_map,
+            'atoms': atoms_map,
             'adjacencies': adjacencies,
             'seeds': atom_nodes,
             'clusters': clusters
