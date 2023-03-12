@@ -56,19 +56,19 @@ Global energy minimization is performed by solving :math:`\operatorname{MSC}(\ma
 
 and
 
-.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
+.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} \beta + c(X) \text{ s.t. } \bigcup \mathscr S = \bigcup \mathscr X
 
 is an instance of the *min-weight set-cover* problem, and
 
-.. math:: c(X) = \inf_{\theta,\xi} \psi_\omega(\theta,\xi)|_{\omega = \bigcup X} + \beta
+.. math:: c(X) = \inf_{\theta,\xi} \psi_\omega(\theta,\xi)|_{\omega = \bigcup X}
 
-is the *extended set energy function*. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions). See Section 2.3.2 of the paper for details.
+is the *set energy function*. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions). See Section 2.3.2 of the paper for details.
 
 Instead of solving :math:`\operatorname{MSC}(\mathbb P(U))` directly, a sequence :math:`\mathscr U_1, \dots, \mathscr U_{\# U} \subseteq \mathbb P(U)` is computed so that
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = \operatorname{MSC}(\mathscr U_{\# U}).
 
-If, however, :math:`c(U) + (\# U - 2) \cdot \beta \leq \sum_{u \in U} c(\{u\})`, then the closed-form solution
+If, however, :math:`c(U) \leq \beta + \sum_{u \in U} c(\{u\})`, then the closed-form solution
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
 
