@@ -24,7 +24,7 @@ The following hyperparameters can be set automatically based on the scale of obj
 ``dsm/alpha``
     Stage: :py:class:`~superdsm.dsmcfg.DSM_ConfigStage`
 
-    Governs the regularization of the deformations and corresponds to :math:`\alpha` described in :ref:`_pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
+    Governs the regularization of the deformations and corresponds to :math:`\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
 
     Defaults to ``AF_alpha × scale^2`` (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the paper and defaults to 5e-4).
 
