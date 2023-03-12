@@ -55,10 +55,9 @@ def _hash_mask(mask):
     return hashlib.sha1(mask).digest()
 
 
-def get_cached_energy_rate_computer(y, cluster, version=1):
+def get_cached_energy_rate_computer(y, cluster):
     cache = dict()
-    if version >= 2:
-        cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
+    cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_energy_rate(obj, region, atoms_map, dsm_cfg):
         cp_kwargs = copy_dict(dsm_cfg)
         bg_margin  = cp_kwargs.pop('min_background_margin')
@@ -67,19 +66,12 @@ def get_cached_energy_rate_computer(y, cluster, version=1):
         cache_hit  = cache.get(cp_region_hash, None)
         if cache_hit is None:
             if (cp_region.model[cp_region.mask] > 0).all() or (cp_region.model[cp_region.mask] < 0).all():
-                energy = None if version >= 1 else 0.0
+                energy = None
             else:
-                if version == 1:
-                    cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
-                    with contextlib.redirect_stdout(None):
-                        J, model, status = cvxprog(cp_region, smooth_mat_allocation_lock=None, **cp_kwargs)
-                elif version >= 2:
-                    cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
-                    with contextlib.redirect_stdout(None):
-                        J, model, status = cvxprog(cp_buffer, smooth_mat_allocation_lock=None, **cp_kwargs)
-                    cp_buffer.mask[cluster.full_mask].fill(False)
-                else:
-                    raise ValueError(f'unknown version: {version}')
+                cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
+                with contextlib.redirect_stdout(None):
+                    J, model, status = cvxprog(cp_buffer, smooth_mat_allocation_lock=None, **cp_kwargs)
+                cp_buffer.mask[cluster.full_mask].fill(False)
                 energy = J(model)
             cache_hit = energy / cp_region.mask.sum()
             cache[cp_region_hash] = cache_hit
@@ -123,7 +115,6 @@ class C2F_RegionAnalysis(Stage):
         max_atom_energy_rate = cfg.get('max_atom_energy_rate', 0.05)
         min_energy_rate_improvement = cfg.get('min_energy_rate_improvement', 0.1)
         max_cluster_marker_irregularity = cfg.get('max_cluster_marker_irregularity', 0.2)
-        version = cfg.get('version', 3)
 
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
         dsm_cfg['smooth_amount'] = np.inf
@@ -152,7 +143,7 @@ class C2F_RegionAnalysis(Stage):
         dsm_cfg_id = ray.put(dsm_cfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg_id, seed_connectivity, version) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         max_energy_rate = -np.inf
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
@@ -188,18 +179,15 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg, seed_connectivity, version):
-    if version < 3:
-        min_region_size = 2 * math.pi * (min_region_radius ** 2)
-    else:
-        min_region_size = math.pi * (min_region_radius ** 2)
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg, seed_connectivity):
+    min_region_size = math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = Object()
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
-    compute_energy_rate = get_cached_energy_rate_computer(y, cluster, version)
+    compute_energy_rate = get_cached_energy_rate_computer(y, cluster)
 
     leaf_candidates = []
     split_queue = queue.Queue()
@@ -214,7 +202,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         c0 = split_queue.get()
         c0_mask = c0.get_mask(atoms_map)
         
-        if version >= 3 and (c0_mask.sum() < 2 * min_region_size):
+        if c0_mask.sum() < 2 * min_region_size:
             leaf_candidates.append(c0) ## the region is too small to be split
             continue
 
@@ -231,21 +219,15 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
 
         new_atom_label   = atoms_map.max() + 1
         c1_mask, c2_mask = watershed_split(cluster.get_region(c0_mask), c1.seed, c2.seed)
-        
-        if version <= 2 and (c1_mask.sum() < min_region_size or c2_mask.sum() < min_region_size):
+            
+        if c1_mask.sum() < min_region_size:
+            c0.seed = c2.seed   ## change the seed for current region…
+            split_queue.put(c0) ## …and try again with different seed
+            continue
+            
+        if c2_mask.sum() < min_region_size:
             split_queue.put(c0) ## try again with different seed
             continue
-        
-        elif version >= 3:
-            
-            if c1_mask.sum() < min_region_size:
-                c0.seed = c2.seed   ## change the seed for current region…
-                split_queue.put(c0) ## …and try again with different seed
-                continue
-                
-            if c2_mask.sum() < min_region_size:
-                split_queue.put(c0) ## try again with different seed
-                continue
             
         atoms_map_previous = atoms_map.copy()
         atoms_map[c2_mask] = new_atom_label
