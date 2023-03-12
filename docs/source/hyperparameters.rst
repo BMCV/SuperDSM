@@ -45,7 +45,7 @@ The following hyperparameters can be set automatically based on the scale of obj
 ``c2f-region-analysis/min_region_radius``
     Stage: :py:class:`~superdsm.c2freganal.C2F_RegionAnalysis`
 
-    No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see :ref:`pipeline_theory_jointsegandclustersplit`).
+    No region determined by the coarse-to-fine region analysis scheme is smaller than a circle of this radius (see :ref:`pipeline_theory_c2freganal`).
 
     Defaults to ``AF_min_region_radius × radius`` (and ``AF_min_region_radius`` defaults to 0.33).
 
