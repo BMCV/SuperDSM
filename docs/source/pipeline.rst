@@ -58,13 +58,15 @@ and
 
 is an instance of the *min-weight set-cover* problem, and
 
-.. math:: c(X) = \inf_{\theta,\xi} \psi_{\tilde\omega(X)}(\theta,\xi) + \beta
+.. math:: c(X) = \inf_{\theta,\xi} \psi_\omega|_{\omega = \bigcup X}(\theta,\xi) + \beta
 
-is the *extended set energy function*, where :math:`\tilde\omega(X) = \bigcup X`. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions). Instead of solving :math:`\operatorname{MSC}(\mathbb P(U))` directly, a sequence :math:`\mathscr U_1, \dots, \mathscr U_{\# U}` is computed so that
+is the *extended set energy function*. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions). See Section 2.3.2 of the paper for details.
+
+Instead of solving :math:`\operatorname{MSC}(\mathbb P(U))` directly, a sequence :math:`\mathscr U_1, \dots, \mathscr U_{\# U}` is computed so that
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = \operatorname{MSC}(\mathscr U_{\# U}),
 
-where :math:`\mathscr U_k \subseteq \mathbb P(U)`. See Section 2.3 of the paper for details.
+where :math:`\mathscr U_k \subseteq \mathbb P(U)`. See Section 2.3.3 of the paper for details.
 
 .. _pipeline_stages:
 
