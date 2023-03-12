@@ -72,7 +72,7 @@ If, however, :math:`c(U) + (\# U - 2) \cdot \beta \leq \sum_{u \in U} c(\{u\})`,
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
 
-holds and the sequential computation is not required. Regions of possibly clustered objects are considered separately of each other, thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3 and 3.3 of the paper for details.
+holds and the sequential computation is not required. Regions of possibly clustered objects are processed separately of each other, thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3 and 3.3 of the paper for details.
 
 .. _pipeline_stages:
 
