@@ -68,7 +68,11 @@ Instead of solving :math:`\operatorname{MSC}(\mathbb P(U))` directly, a sequence
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = \operatorname{MSC}(\mathscr U_{\# U}).
 
-See Section 2.3.3 of the paper for details.
+If, however, :math:`c(U) + \# U \beta \leq 2\beta + \sum_{u \in U} c(\{u\})`, then the closed-form solution
+
+.. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
+
+holds and sequential computation is not required. See Section 2.3.3 of the paper for details.
 
 .. _pipeline_stages:
 
