@@ -24,20 +24,29 @@ To run SuperDSM from command line, use:
 
 .. code-block:: console
 
-   python -m 'superdsm.batch'
+   python -m 'superdsm.batch' --help
 
 To export (intermediate) results, use:
 
 .. code-block:: console
 
-   python -m 'superdsm.export'
+   python -m 'superdsm.export' --help
+
+For details, see :ref:`batch_processing`.
 
 .. _usage_example_interactive:
 
 Interactive
 ***********
 
-To use SuperDSM interactively, i.e. programatically, as opposed to batch processing:
+To use SuperDSM interactively, i.e. programatically, as opposed to batch processing, the first step is to `initialize Ray <https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html>`_. This is the multiprocessing framework used by SuperDSM. Initialization is simple, just remember to adapt the number of CPUs to be used:
+
+.. code-block:: python
+
+   import ray
+   ray.init(num_cpus=16, log_to_driver=False, logging_level=ray.logging.ERROR)
+
+After this initialization routine, SuperDSM is ready to use:
 
 .. code-block:: python
 
