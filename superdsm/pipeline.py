@@ -82,6 +82,7 @@ class Stage(object):
         :return: Dictionary of configuration entries of the form:
 
             .. code-block:: python
+            
                {
                    'key': (factor, default_user_factor),
                }
