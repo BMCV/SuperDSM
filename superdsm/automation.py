@@ -87,7 +87,7 @@ def create_config(pipeline, base_cfg, im):
         specs = stage.configure(scale, radius, diameter)
         for key, spec in specs.items():
             assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
-            kwargs = dict() if len(specs) == 2 else specs[-1]
+            kwargs = dict() if len(spec) == 2 else spec[-1]
             _create_config_entry(cfg, f'{stage.cfgns}/{key}', *spec[:2], **kwargs)
     return cfg, scale
 
