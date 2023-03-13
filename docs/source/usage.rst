@@ -1,5 +1,5 @@
-User guide
-==========
+Quick start
+===========
 
 .. _installation:
 
