@@ -47,7 +47,7 @@ The vector :math:`Y_\omega` corresponds to the image intensities, shifted by the
 
 .. math:: Y_\omega^\top = \begin{bmatrix} g_{x^{(1)}} - \tau_{x^{(1)}} & \dots & g_{x^{(\#\omega)}} - \tau_{x^{(\#\omega)}} \end{bmatrix},
 
-whereas image background *rather* corresponds to negative components. The computation of the intensity offsets is based on the Gaussian filter :math:`\\mathcal G_\\sigma` and described in Supplemental Material 1 of the paper.
+whereas image background *rather* corresponds to negative components. The computation of the intensity offsets is based on the Gaussian filter :math:`\mathcal G_\sigma` and described in Supplemental Material 1 of the paper.
 
 .. _pipeline_theory_c2freganal:
 
