@@ -15,6 +15,11 @@ Contents
    :maxdepth: 2
    
    pipeline
+   
+.. toctree::
+   :maxdepth: 2
+   
+   batch_processing
 
 .. toctree::
    :maxdepth: 2
