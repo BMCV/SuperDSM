@@ -69,8 +69,8 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=N
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     cfg.set_default(key, factor * cfg.get(af_key, default_user_factor), True)
     if type is not None: cfg.update(key, func=type)
-    if  min is not None: cfg.update(key, func=lambda value: max((value, min)))
-    if  max is not None: cfg.update(key, func=lambda value: min((value, max)))
+    if  min is not None: cfg.update(key, func=lambda value: __builtins__.max((value, min)))
+    if  max is not None: cfg.update(key, func=lambda value: __builtins__.min((value, max)))
 
 
 def create_config(pipeline, base_cfg, im):
