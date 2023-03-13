@@ -82,7 +82,7 @@ class Stage(object):
         :return: Dictionary of configuration entries of the form:
 
             .. code-block:: python
-            
+
                {
                    'key': (factor, default_user_factor),
                }
@@ -220,7 +220,7 @@ def create_default_pipeline():
     #. :py:class:`~.globalenergymin.GlobalEnergyMinimization`
     #. :py:class:`~.postprocess.Postprocessing`
 
-    Refer to :ref:`pipeline` for a more detailed documentation of the pipeline.
+    Refer to :ref:`pipeline` for a comprehensive documentation of the pipeline.
     """
     from .preprocess import Preprocessing
     from .dsmcfg import DSM_ConfigStage

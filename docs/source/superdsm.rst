@@ -11,6 +11,7 @@ SuperDSM API
     superdsm.atoms
     superdsm.objects
     superdsm.minsetcover
+    superdsm.maxsetpack
     superdsm.preprocess
     superdsm.c2freganal
     superdsm.globalenergymin

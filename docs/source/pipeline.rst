@@ -105,7 +105,7 @@ The function :py:meth:`.pipeline.create_default_pipeline` employs the following 
 Inputs and outputs
 ------------------
 
-Pipeline stages require different inputs and produce different outputs. Below is an overview over all inputs and outputs available within the default pipeline:
+Pipeline stages require different inputs and produce different outputs. These are like intermediate results, which are shared or passed between the stages. Below is an overview over all inputs and outputs available within the default pipeline:
 
 ``g_raw``
     The raw image intensities :math:`g_{x^{1}}, \dots, g_{x^{\#\Omega}}`, normalized so that the intensities range from 0 to 1. Up to the normalization, this corresponds to the original input image, unless histological image data is being processed (i.e. the hyperparameter ``histological`` is set to ``True``). Provided by the pipeline via the :py:meth:`~.pipeline.Pipeline.init` method, refer to its documentation for details.
