@@ -64,37 +64,35 @@ def _estimate_scale(im, min_radius=20, max_radius=200, num_radii=10, thresholds=
     return mean_radius / math.sqrt(2), blobs_doh, radii_inliers
 
 
-def _create_config_entry(cfg, key, factor, default_user_factor, type=None, _min=None, _max=None):
+def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=None, max=None):
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     cfg.set_default(key, factor * cfg.get(af_key, default_user_factor), True)
     if type is not None: cfg.update(key, func=type)
-    if _min is not None: cfg.update(key, func=lambda value: max((value, _min)))
-    if _max is not None: cfg.update(key, func=lambda value: min((value, _max)))
+    if  min is not None: cfg.update(key, func=lambda value: max((value, min)))
+    if  max is not None: cfg.update(key, func=lambda value: min((value, max)))
 
 
-def create_config(base_cfg, im):
+def create_config(pipeline, base_cfg, im):
+    """Automatically configures hyperparameters based on the scale of objects in an image. 
+
+    The scale of the objects is estimated automatically as described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). The current implementation determines values corresponding to object radii between 20 and 200 pixels. If, however, the hyperparameter ``AF_sigma`` is set, then the scale :math:`\sigma` is forced to its value and the automatic scale detection is not used. The hyperparameter ``AF_sigma`` is not set by default.
+    """
     cfg   = base_cfg.copy()
     scale = cfg.get('AF_scale', None)
     if scale is None: scale = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
     radius   = scale * math.sqrt(2)
     diameter = 2 * radius
-
-    _create_config_entry(cfg, 'preprocess/sigma2', scale, 1.0)
-    _create_config_entry(cfg, 'global-energy-minimization/beta', scale ** 2, 0.66)
-    _create_config_entry(cfg, 'global-energy-minimization/max_seed_distance', diameter, np.inf)
-    _create_config_entry(cfg, 'postprocess/min_object_radius', radius, 0.0)
-    _create_config_entry(cfg, 'postprocess/max_object_radius', radius, np.inf)
-    _create_config_entry(cfg, 'postprocess/min_glare_radius', radius, np.inf)
-    _create_config_entry(cfg, 'dsm/alpha', scale ** 2, 0.0005)
-    _create_config_entry(cfg, 'dsm/smooth_amount', scale, 0.2, type=int, _min=4)
-    _create_config_entry(cfg, 'dsm/smooth_subsample', scale, 0.4, type=int, _min=8)
-    _create_config_entry(cfg, 'c2f-region-analysis/min_region_radius', radius, 0.33, type=int)
-
+    for stage in pipeline.stages:
+        specs = stage.configure(scale, radius, diameter)
+        assert len(specs) in (2,3)
+        for spec in specs:
+            kwargs = dict() if len(specs) == 2 else specs[-1]
+            _create_config_entry(cfg, f'{stage.cfgns}/{spec[0]}', spec[1], **kwargs)
     return cfg, scale
 
 
 def process_image(pipeline, base_cfg, g_raw, **kwargs):
-    cfg, _ = create_config(base_cfg, g_raw)
+    cfg, _ = create_config(pipeline, base_cfg, g_raw)
     return pipeline.process_image(g_raw, cfg=cfg, **kwargs)
 

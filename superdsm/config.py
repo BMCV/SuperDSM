@@ -7,7 +7,7 @@ def _cleanup_value(value):
 
 
 class Config:
-    """Represents a set of :ref:`hyperparameters`.
+    """Represents a set of hyperparameters.
 
     Hyperparameters can be worked with as follows:
 

@@ -21,7 +21,7 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 
 
 class GlobalEnergyMinimization(Stage):
-    """Implements the global energy minimization described in Sections 2.3 and 3.3 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
+    """Implements the global energy minimization (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
     This stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
@@ -34,7 +34,7 @@ class GlobalEnergyMinimization(Stage):
         tbd.
 
     ``global-energy-minimization/beta``
-        tbd.
+        Corresponds to the constant term :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
     ``global-energy-minimization/try_lower_beta``
         tbd.
@@ -43,7 +43,7 @@ class GlobalEnergyMinimization(Stage):
         tbd.
 
     ``global-energy-minimization/max_seed_distance``
-        tbd.
+        Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object (cf. :ref:`pipeline_theory_c2freganal`). This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge. Defaults to infinity, or to ``AF_max_seed_distance × diameter`` if configured automatically (and ``AF_max_seed_distance`` defaults to infinity).
 
     ``global-energy-minimization/max_work_amount``
         tbd.
@@ -78,6 +78,12 @@ class GlobalEnergyMinimization(Stage):
             'cover':    cover,
             'objects':  objects,
             'workload': workload,
+        }
+
+    def configure(self, scale, radius, diameter):
+        return {
+            'beta': (scale ** 2, 0.66),
+            'max_seed_distance': (diameter, np.inf),
         }
 
 
@@ -246,4 +252,3 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
         new_object.cidx = new_object_idx ## for debugging purposes
     out.write(f'Next generation: {len(next_generation)} (discarded: {discarded})')
     return next_generation, new_objects
-

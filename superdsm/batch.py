@@ -61,7 +61,7 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
             g_gray = g_gray.max() - g_gray
         else:
             g_gray = g_raw
-        cfg, scale = create_config(cfg, g_gray)
+        cfg, scale = create_config(pipeline, cfg, g_gray)
         timings['autocfg'] = time.time() - t0
         with open(cfg_filepath, 'w') as fout:
             cfg.dump_json(fout)

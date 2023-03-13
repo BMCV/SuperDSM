@@ -10,18 +10,28 @@ import time
 class Stage(object):
     """A pipeline stage.
 
-    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
+    Each stage can be controlled by a separate set of hyperparameters. Refer to the documentation of the respective pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
 
     :param name: Readable identifier of this stage.
-    :param cfg_key: Hyperparameter namespace of this stage. Defaults to ``name`` if not specified.
+    :param cfgns: Hyperparameter namespace of this stage. Defaults to ``name`` if not specified.
     :param inputs: List of inputs required by this stage.
     :param outputs: List of outputs produced by this stage.
+
+    Automation
+    ^^^^^^^^^^
+
+    Hyperparameters can be set automatically using the :py:meth:`~.configure` method based on the scale :math:`\sigma` of objects in an image. Hyperparameters are only set automatically based on the scale of objects, if the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`~superdsm.pipeline.Pipeline.process_image` method of the :py:class:`~superdsm.pipeline.Pipeline` class is used directly.
+
+    Inputs and outputs
+    ^^^^^^^^^^^^^^^^^^
+
+    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name, cfg_key=None, inputs=[], outputs=[]):
-        if cfg_key is None: cfg_key = name
+    def __init__(self, name, cfgns=None, inputs=[], outputs=[]):
+        if cfgns is None: cfgns = name
         self.name    = name
-        self.cfg_key = cfg_key
+        self.cfgns   = cfgns
         self.inputs  = dict([(key, key) for key in  inputs])
         self.outputs = dict([(key, key) for key in outputs])
         self._callbacks = {}
@@ -40,7 +50,7 @@ class Stage(object):
 
     def __call__(self, data, cfg, out=None, log_root_dir=None):
         out = get_output(out)
-        cfg = cfg.get(self.cfg_key, {})
+        cfg = cfg.get(self.cfgns, {})
         if cfg.get('enabled', self.ENABLED_BY_DEFAULT):
             out.intermediate(f'Starting stage "{self.name}"')
             self._callback('start', data)
@@ -61,7 +71,26 @@ class Stage(object):
             return 0
 
     def process(self, input_data, cfg, out, log_root_dir):
-        raise ValueError('not implemented')
+        raise NotImplementedError()
+
+    def configure(self, scale, radius, diameter):
+        """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image.
+
+        :param scale: The average scale of objects in the image, corresponds to :math:`\sigma` in the :ref:`paper <references>`.
+        :param radius: The average radius of objects in the image, corresponds to :math:`\sqrt{2} \cdot \sigma`.
+        :param diameter: The average diameter of objects in the image, corresponds to :math:`\sqrt{8} \cdot \sigma`.
+        :return: Dictionary of configuration entries of the form:
+
+            .. code-block:: python
+                {
+                    'key': (factor, default_user_factor),
+                }
+
+            python -m 'superdsm.export'
+            
+            Each hyperparameter ``key`` is associated with a new hyperparameter ``AF_key``. The value of the hyperparameter ``key`` will be computed as the product of ``factor`` and the value of the ``AF_key`` hyperparameter, which defaults to ``default_user_factor``. The value given for ``factor`` is usually ``scale``, ``radius``, ``diameter``, or a polynomial thereof. Another dictionary may be provided as a third component of the tuple, which can specify a ``type``, ``min``, and ``max`` values.
+        """
+        return dict()
 
 
 class ProcessingControl:
@@ -79,7 +108,11 @@ class ProcessingControl:
 
 
 class Pipeline:
-
+    """Represents a processing pipeline for image segmentation.
+    
+    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically based on the scale of objects, if the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). 
+    """
+    
     def __init__(self):
         self.stages = []
 
@@ -89,7 +122,7 @@ class Pipeline:
         First, the image is provided to the stages of the pipeline using the :py:meth:`.init` method. Then, the :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
         :param g_raw: A ``numpy.ndarray`` object corresponding to the image which is to be processed.
-        :param cfg: A :py:class:`~superdsm.config.Config` object which represents the :ref:`hyperparameters`.
+        :param cfg: A :py:class:`~superdsm.config.Config` object which represents the hyperparameters.
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.

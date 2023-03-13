@@ -80,7 +80,7 @@ def get_cached_energy_rate_computer(y, cluster):
 
 
 class C2F_RegionAnalysis(Stage):
-    """Implements the coarse-to-fine region analysis scheme (see Section 3.2 and Supplemental Material 5 in :ref:`Kostrykin and Rohr, 2023 <references>`).
+    """Implements the :ref:`pipeline_theory_c2freganal` scheme.
 
     This stage requires ``y`` and ``dsm_cfg`` for input and produces ``y_mask``, ``atoms``, ``adjacencies``, ``seeds``, ``clusters`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
@@ -90,7 +90,7 @@ class C2F_RegionAnalysis(Stage):
         tbd.
 
     ``c2f-region-analysis/min_region_radius``
-        tbd.
+        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius. Defaults to 15, or to ``AF_min_region_radius × radius`` if configured automatically (and ``AF_min_region_radius`` defaults to 0.33).
 
     ``c2f-region-analysis/max_atom_energy_rate``
         tbd.
@@ -171,6 +171,11 @@ class C2F_RegionAnalysis(Stage):
             'adjacencies': adjacencies,
             'seeds': atom_nodes,
             'clusters': clusters
+        }
+
+    def configure(self, scale, radius, diameter):
+        return {
+            'min_region_radius': (radius, 0.33, dict(type=int)),
         }
 
 

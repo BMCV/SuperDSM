@@ -7,7 +7,7 @@ import numpy as np
 
 
 class Preprocessing(Stage):
-    """Implements the computation of the intensity offsets (see Supplemental Material 1 in :ref:`Kostrykin and Rohr, 2023 <references>`).
+    """Implements the computation of the intensity offsets (see :ref:`pipeline_theory_cvxprog`).
 
     This stage requires ``g_raw`` for input (the input image) and produces ``y`` for output (the offset image intensities). Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
@@ -17,7 +17,7 @@ class Preprocessing(Stage):
         The scale of the Gaussian filter used for denoising. Defaults to :math:`\\sqrt{2}`.
 
     ``preprocess/sigma2``
-        The scale of the Gaussian filter :math:`\mathcal G_\sigma`, which is used to determine the intensity offsets :math:`\\tau_x` and described in Supplemental Material 1. Defaults to :math:`40`.
+        The scale of the Gaussian filter :math:`\\mathcal G_\\sigma`, which is used to determine the intensity offsets :math:`\\tau_x` (see :ref:`pipeline_theory_cvxprog`). Defaults to :math:`40`, or to ``AF_sigma2 × scale`` if configured automatically (and ``AF_sigma2`` defaults to 1).
 
     ``preprocess/offset_clip``
         Corresponds to :math:`\\tau_\\text{max}` in Supplemental Material 1. Defaults to :math:`3`.
@@ -61,6 +61,11 @@ class Preprocessing(Stage):
         y = ndi.gaussian_filter(g_raw, sigma1) - offset_combined
         
         return {
-            'y': y
+            'y': y,
+        }
+
+    def configure(self, scale, radius, diameter):
+        return {
+            'sigma2': (scale, 1.0),
         }
 

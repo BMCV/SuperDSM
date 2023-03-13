@@ -15,11 +15,6 @@ Contents
    :maxdepth: 2
    
    pipeline
-   
-.. toctree::
-   :maxdepth: 1
-   
-   hyperparameters
 
 .. toctree::
    :maxdepth: 2

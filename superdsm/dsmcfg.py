@@ -37,18 +37,18 @@ class DSM_ConfigStage(Stage):
         tbd.
 
     ``dsm/smooth_amount``
-        tbd.
+        Corresponds to :math:`\sigma_G` described in :ref:`pipeline_theory_dsm`. Defaults to 10, or to ``AF_smooth_amount × scale`` if computed automatically (forced to :math:`\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
+
+    ``dsm/smooth_subsample``
+        Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\tilde G_\omega` in the :ref:`paper <references>` (Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
     ``dsm/epsilon``
         tbd.
 
     ``dsm/alpha``
-        tbd.
+        Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\alpha_\text{factor}` in the :ref:`paper <references>` and defaults to 5e-4).
 
     ``dsm/scale``
-        tbd.
-
-    ``dsm/smooth_subsample``
         tbd.
 
     ``dsm/gaussian_shape_multiplier``
@@ -76,5 +76,12 @@ class DSM_ConfigStage(Stage):
         
         return {
             'dsm_cfg': dsm_cfg
+        }
+
+    def configure(self, scale, radius, diameter):
+        return {
+            'alpha': (scale ** 2, 0.0005),
+            'smooth_amount': (scale, 0.2, dict(type=int, min=4)),
+            'smooth_subsample':  (scale, 0.4, dict(type=int, min=8)),
         }
 
