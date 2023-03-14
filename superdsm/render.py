@@ -58,7 +58,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     :param edge_color: The color of the edges of the adjacency graph (RGB).
     :param endpoint_color: The color of the nodes of the adjacency graph (RGB).
     :param endpoint_edge_color: The color of the border drawn around the nodes of the adjacency graph (RGB).
-    :param override_img: The image on top of which the adjacency graph is to be rendered. If ``None``, the contrast-enhanced raw image itensities will be used.
+    :param override_img: The image on top of which the adjacency graph is to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the adjacency graph.
     """
     if override_img is not None:
@@ -109,6 +109,13 @@ def render_ymap(data, clim=None, cmap='bwr'):
 
 
 def normalize_image(img, spread=1, ret_minmax=False):
+    """Performs contrast enhancement of an image.
+
+    :param img: The image to be enhanced (object of ``numpy.ndarray`` type).
+    :param spread: Governs the amount of enhancement. The lower the value, the stronger the enhancement.
+    :param ret_minmax: ``True`` if the clipped image intensities should be returned and ``False`` otherwise.
+    :return: The contrast-enhanced image if ``ret_minmax`` is ``False``, and a tuple of the structure ``(img, minval, maxval)`` if ``ret_minmax`` is ``True``, where ``img`` is the contrast-enhanced image, and ``minval`` and ``maxval`` are the clipped image intensities, respectively.
+    """
     if not np.allclose(img.std(), 0):
         minval, maxval = max([img.min(), img.mean() - spread * img.std()]), min([img.max(), img.mean() + spread * img.std()])
         img = img.clip(minval, maxval)
@@ -142,16 +149,43 @@ def _fetch_rgb_image_from_data(data, normalize_img=True, override_img=None):
 
 
 def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
+    """Returns a visualization of the atomic image regions (see :ref:`pipeline_theory_c2freganal`).
+
+    :param data: The pipeline data object.
+    :param normalize_img: ``True`` if contrast-enhancement should be performed and ``False`` otherwise. Only used if ``override_img`` is ``None``.
+    :param discarded_color: The color of image regions which are entirely discarded from processing (RGBA).
+    :param border_radius: The half width of the borders of the atomic image regions.
+    :param border_color: The color of the borders of the atomic image regions (RGB).
+    :param override_img: The image on top of which the borders of the atomic image regions are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the atomic image regions.
+    """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
 
 
-def render_foreground_clusters(data, discarded_only=False, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
+def render_foreground_clusters(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), border_radius=2, border_color=(0,1,0), override_img=None):
+    """Returns a visualization of regions of possibly clustered objects (see :ref:`pipeline_theory_jointsegandclustersplit`).
+
+    :param data: The pipeline data object.
+    :param normalize_img: ``True`` if contrast-enhancement should be performed and ``False`` otherwise. Only used if ``override_img`` is ``None``.
+    :param discarded_color: The color of image regions which are entirely discarded from processing (RGBA).
+    :param border_radius: The half width of the borders of the regions of possibly clustered objects.
+    :param border_color: The color of the borders of the regions of possibly clustered objects (RGB).
+    :param override_img: The image on top of which the borders of the regions of possibly clustered objects are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the regions of possibly clustered objects.
+    """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['clusters'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
 
 
 def rasterize_regions(regions, background_label=None, radius=3):
+    """Returns the binary masks corresponding to the border of image regions and, optionally, the image background.
+
+    :param regions: Integer-valued image (object of ``numpy.ndarray`` type) corresponding to the labels of different image regions.
+    :param background_label: A designated label value, which is to be treated as the ``image background``.
+    :param radius: The half width of the borders.
+    :return: Tuple of the structure ``(borders, background)``, where ``borders`` is a binary mask of the borders of the image regions, and ``background`` is a binary mask of the union of those regions corresponding to the ``background_label``, if this is not ``None``. Otherwise, ``background`` is an binary mask filled with ``False`` values.
+    """
     borders = np.zeros(regions.shape, bool)
     background = np.zeros(regions.shape, bool)
     for i in range(regions.max() + 1):
@@ -164,6 +198,16 @@ def rasterize_regions(regions, background_label=None, radius=3):
 
 
 def render_regions_over_image(img, regions, background_label=None, color=(0,1,0), bg=(0.6, 1, 0.6, 0.3), **kwargs):
+    """Returns a visualization of image regions.
+
+    :param img: The image on top of which the image regions are to be rendered.
+    :param regions: Integer-valued image (object of ``numpy.ndarray`` type) corresponding to the labels of different image regions.
+    :param background_label: A designated label value, which is to be treated as the ``image background``.
+    :param color: The color of the borders of the image regions (RGB).
+    :param bg: The color of the image regions corresponding to the ``image background`` (RGBA). Only used if ``background_label`` is not ``None``.
+    :param kwargs: Keyword arguments passed to the :py:meth:`~.rasterize_regions` function.
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the image regions.
+    """
     assert img.ndim == 2 or (img.ndim == 3 and img.shape[2] in (1,3)), f'image has wrong dimensions: {img.shape}'
     if img.ndim == 2 or img.shape[2] == 1:
         result = np.zeros((img.shape[0], img.shape[1], 3))
@@ -172,9 +216,6 @@ def render_regions_over_image(img, regions, background_label=None, color=(0,1,0)
         result = img.copy()
     borders, background = rasterize_regions(regions, background_label, **kwargs)
     for i in range(3): result[:, :, i][borders] = color[i]
-    #borders = borders.astype(int)
-    #for i in range(3): result[:, :, i]  = color[i] * ((1 - borders) * result[:, :, 1] + borders)
-    #for i in   [0, 2]: result[:, :, i] *=  1 - borders
     for i in range(3): result[background, i] = bg[i] * bg[3] + result[background, i] * (1 - bg[3])
     return (255 * result).clip(0, 255).astype('uint8')
 

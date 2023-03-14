@@ -85,7 +85,7 @@ If, however, :math:`c(U) \leq \beta + \sum_{u \in U} c(\{u\})`, then the closed-
 
 .. math:: \operatorname{MSC}(\mathbb P(U)) = c(U)
 
-holds and the sequential computation is not required. Regions of possibly clustered objects are processed separately of each other, thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3, 3.1, and 3.3 of the paper for details.
+holds and the sequential computation is not required. Regions of possibly clustered objects are processed separately of each other, so, in fact, there are multiple disjoint universes of atomic image regions per image. Thus, the closed-form solution corresponds to cases of non-clustered objects. See Sections 2.3.3, 3.1, and 3.3 of the paper for details.
 
 .. _pipeline_stages:
 
@@ -123,7 +123,7 @@ Pipeline stages require different inputs and produce different outputs. These ar
     Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``atoms``
-    Integer-valued image representing the universe :math:`U` of atomic image regions. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Integer-valued image representing the universe of atomic image regions. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``adjacencies``
     The adjacency graph :math:`\mathcal G`, represented as an object of the type :py:class:`~.atoms.AtomAdjacencyGraph`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
