@@ -23,14 +23,14 @@ To perform batch processing of a dataset, you first need to create a *task*. To 
        "overlay_pathpattern": "overlays/dna-%d.png",
        "file_ids": [1,2,3,4,5,6,7,8,9,10],
 
-       config: {
+       "config": {
        }
    }
 
 The meaning of the different settings is the follows:
 
 ``runnable``
-    Marks this task as runnable (or not runnable). If set to ``false``, the specification will be treated as a template for derived tasks. Derived tasks are placed in sub-folders and inherit the specification of the parent task.
+    Marks this task as runnable (or not runnable). If set to ``false``, the specification will be treated as a template for derived tasks. Derived tasks are placed in sub-folders and inherit the specification of the parent task. This is useful, for example, if you want to try out different hyperparameters. The batch system automatically picks up intermediate results of parent tasks to speed up the computations of derived tasks.
 
 ``num_cpus``
     The number of processes which is to be used simultaneously (in parallel).
