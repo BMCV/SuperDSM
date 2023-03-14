@@ -24,7 +24,7 @@ To perform batch processing of a dataset, you first need to create a *task*. To 
        "log_pathpattern": "log/dna-%d",
        "cfg_pathpattern": "cfg/dna-%d.json",
        "overlay_pathpattern": "overlays/dna-%d.png",
-       "file_ids": [1,2,3,4,5,6,7,8,9,10],
+       "file_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 
        "config": {
        }
@@ -69,4 +69,14 @@ Examples can be found in the ``examples`` sub-directory of the `SuperDSM reposit
 Batch system
 ------------
 
-tbd: root directory
+To perform batch processing of all tasks specified in the current working directory, including all sub-directories:
+
+.. code-block:: console
+
+   python -m 'superdsm.batch' .
+
+This will run the batch system in *dry mode*, so nothing will actually be processed. Instead, each task which is going to be processed will be printed, along with some additional information. To actually start the processing, re-run the command and include the ``--run`` argument.
+
+In this example, the current working directory will correspond to the root directory when it comes to resolving the ``{ROOTDIR}`` placeholder in the path specification.
+
+To run only a single task from the root directory, use the ``--task`` argument, or ``--task-dir`` if you want to automatically include the dervied tasks. Refer to ``python -m 'superdsm.batch' --help`` for further information.
