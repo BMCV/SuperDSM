@@ -3,4 +3,58 @@
 Batch processing
 ================
 
-XXX
+To perform batch processing of a dataset, you first need to create a *task*. To do that, create an empty directory, and put a ``task.json`` file in it. This file will contain the specification of the segmentation task. Below is an example specification:
+
+.. code-block:: json
+
+   {
+       "runnable": true,
+       "num_cpus": 16,
+       "environ": {
+           "MKL_NUM_THREADS": 2,
+           "OPENBLAS_NUM_THREADS": 2
+       },
+
+       "img_pathpattern": "/data/dataset/img-%d.tiff",
+       "seg_pathpattern": "seg/dna-%d.png",
+       "adj_pathpattern": "adj/dna-%d.png",
+       "log_pathpattern": "log/dna-%d",
+       "cfg_pathpattern": "cfg/dna-%d.json",
+       "overlay_pathpattern": "overlays/dna-%d.png",
+       "file_ids": [1,2,3,4,5,6,7,8,9,10]
+
+       config: {
+       }
+   }
+
+The meaning of the different settings is the follows:
+
+``runnable``
+    Marks this task as runnable (or not runnable). If set to ``false``, the specification will be treated as a template for derived tasks. Derived tasks are placed in sub-folders and inherit the specification of the parent task.
+
+``num_cpus``
+    The number of processes which is to be used simultaneously (in parallel).
+
+``environ``
+    Defines environment variables which are to be set. In the example above, MKL and OpenBLAS numpy backends are both instructed to use two threads for parallel computations.
+
+``img_pathpattern``
+    Defines the path to the input images of the dataset, using placeholders like ``%d`` for decimals and ``%s`` for strings (decimals can also be padded with zeros to a fixed length using, e.g., use ``%02d`` for a length of 2).
+
+``seg_pathpattern``
+    Relative path of files, where the segmentation masks are to be written to, using placeholders as described above.
+
+``adj_pathpattern``
+    Relative path of files, where the images of the atomic image regions and adjacency graphs are to be written to, using placeholders as described above (see :ref:`pipeline_theory_c2freganal` and :ref:`pipeline_theory_jointsegandclustersplit`).
+
+``log_pathpattern``
+    Relative path of files, where the logs are to be written to, using placeholders as described above (mainly for debugging purposes).
+
+``cfg_pathpattern``
+    Relative path of files, where the hyperparameters are to be written to, using placeholders as described above (mainly for reviewing the automatically generated hyperparameters).
+
+``file_ids``
+    List of file IDs, which are used to resolve the pattern-based settings described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``.
+
+``config``
+    Defines the hyperparameters to be used. The available hyperparameters are described in the documentation of the respective stages of the default pipeline (see :ref:`pipeline_stages`). Note that namespaces must be specified as nested JSON objects.
