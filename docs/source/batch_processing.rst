@@ -57,7 +57,7 @@ The meaning of the different fields is the follows:
     Relative path of files, where the hyperparameters are to be written to, using placeholders as described above (mainly for reviewing the automatically generated hyperparameters).
 
 ``file_ids``
-    List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. File IDs are allowed to be strings, and they are also allowed to contain `/` to encode paths which involve sub-directories.
+    List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. File IDs are allowed to be strings, and they are also allowed to contain ``/`` to encode paths which involve sub-directories.
 
 ``config``
     Defines the hyperparameters to be used. The available hyperparameters are described in the documentation of the respective stages of the default pipeline (see :ref:`pipeline_stages`). Note that namespaces must be specified as nested JSON objects.
