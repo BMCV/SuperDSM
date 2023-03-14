@@ -44,14 +44,14 @@ load_data(
     verify=False)
 
 load_data(
-    'https://kostrykin.github.io/SuperDSM/fibroblast-prolif.tar.bz2',
+    'https://bmcv.github.io/SuperDSM/fibroblast-prolif.tar.bz2',
     [
         ('fibroblast-prolif/prolif', 'fibroblast/prolif')
     ]
 )
 
 load_data(
-    'https://kostrykin.github.io/SuperDSM/fibroblast-ss.tar.bz2',
+    'https://bmcv.github.io/SuperDSM/fibroblast-ss.tar.bz2',
     [
         ('fibroblast-ss/ss', 'fibroblast/ss')
     ]
