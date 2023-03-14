@@ -175,30 +175,18 @@ class ContourPaint:
         return contour
 
 
-def render_result_over_image(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g', gt_seg=None, gt_radius=8, gt_color='r'):
+def render_result_over_image(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g'):
     assert border_width % 2 == 0
     assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
-    assert gt_color in COLORMAP.keys()
 
     im_seg  = _fetch_rgb_image_from_data(data, normalize_img, override_img)
     im_seg /= im_seg.max()
-    seg_objects = rasterize_labels(data, objects=objects, merge_overlap_threshold=merge_overlap_threshold)
+    seg_objects = rasterize_labels(data, objects, merge_overlap_threshold=merge_overlap_threshold)
     cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
     for l in set(seg_objects.flatten()) - {0}:
         seg_bnd = cp.get_contour_mask(seg_objects == l)
-        if isinstance(colors, dict):
-            if candidate not in colors: continue
-            colorchannels = COLORMAP[colors[candidate]]
-        else:
-            colorchannels = COLORMAP[colors]
+        colorchannels = COLORMAP[colors]
         for i in range(3): im_seg[seg_bnd, i] = (1 if i in colorchannels else 0)
-    if gt_seg is not None:
-        xmap = np.indices(im_seg.shape[:2])
-        for l in set(gt_seg.flatten()) - {0}:
-            gt_obj = (gt_seg == l)
-            gt_obj_center = np.asarray(ndimage.center_of_mass(gt_obj))
-            gt_obj_dist   = np.linalg.norm(xmap - gt_obj_center[:,None,None], axis=0)
-            for i in range(3): im_seg[gt_obj_dist <= gt_radius, i] = (1 if i in COLORMAP[gt_color] else 0)
     return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
 
