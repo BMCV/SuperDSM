@@ -32,7 +32,7 @@ To export (intermediate) results, use:
 
    python -m 'superdsm.export' --help
 
-For details, see :ref:`batch_processing`.
+For details, see :ref:`batch_system`.
 
 .. _usage_example_interactive:
 

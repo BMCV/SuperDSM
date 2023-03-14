@@ -1,7 +1,7 @@
-.. _batch_processing:
+.. _batch_system:
 
-Batch processing
-================
+Batch system
+============
 
 Task specification
 ------------------
@@ -66,8 +66,8 @@ Instead of specifying the hyperparameters in the task specification directly, it
 
 Examples can be found in the ``examples`` sub-directory of the `SuperDSM repository <https://github.com/BMCV/SuperDSM>`_.
 
-Batch system
-------------
+Batch processing
+----------------
 
 To perform batch processing of all tasks specified in the current working directory, including all sub-directories and so on:
 
