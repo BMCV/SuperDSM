@@ -17,5 +17,7 @@ SuperDSM API
     superdsm.c2freganal
     superdsm.globalenergymin
     superdsm.postprocess
+    superdsm.batch
+    superdsm.export
     superdsm.render
     superdsm.output
