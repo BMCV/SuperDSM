@@ -48,7 +48,7 @@ The meaning of the different fields is the follows:
     Relative path of files, where the segmentation masks are to be written to, using placeholders as described above.
 
 ``adj_pathpattern``
-    Relative path of files, where the images of the atomic image regions and adjacency graphs are to be written to, using placeholders as described above (see :ref:`pipeline_theory_c2freganal` and :ref:`pipeline_theory_jointsegandclustersplit`).
+    Relative path of files, where the images of the atomic image regions and adjacency graphs are to be written to, using placeholders as described above (see :ref:`pipeline_theory_c2freganal`).
 
 ``log_pathpattern``
     Relative path of files, where the logs are to be written to, using placeholders as described above (mainly for debugging purposes).

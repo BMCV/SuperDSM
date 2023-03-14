@@ -97,6 +97,16 @@ def create_config(pipeline, base_cfg, im):
 
 
 def process_image(pipeline, base_cfg, g_raw, **kwargs):
+    """Performs the segmentation of an image using hyperparameters automatically configured based on the scale of objects.
+
+    See the :py:meth:`~.create_config` function and the :py:meth:`~superdsm.pipeline.Pipeline.process_image` pipeline method for details.
+
+    :param pipeline: The :py:class:`~superdsm.pipeline.Pipeline` object to be used for image segmentation.
+    :param base_cfg: :py:class:`~superdsm.config.Config` object corresponding to custom hyperparameters.
+    :param g_raw: A ``numpy.ndarray`` object corresponding to the image which is to be processed.
+    :param kwargs: Additional keyword arguments passed to the :py:meth:`~superdsm.pipeline.Pipeline.process_image` pipeline method.
+    :return: The same tuple that is returned by the :py:meth:`~superdsm.pipeline.Pipeline.process_image` pipeline method.
+    """
     cfg, _ = create_config(pipeline, base_cfg, g_raw)
     return pipeline.process_image(g_raw, cfg=cfg, **kwargs)
 

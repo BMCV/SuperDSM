@@ -11,6 +11,14 @@ import matplotlib.pyplot as plt
 
 
 def draw_line(p1, p2, thickness, shape):
+    """Returns binary mask corresponding to a straight line.
+
+    :param p1: Coordinates of the first endpoint of the line.
+    :param p2: Coordinates of the second endpoint of the line.
+    :param thickness: The thickness of the line.
+    :param shape: The shape of the binary mask to be returned.
+    :return: Binary mask corresponding to the straight line between the two endpoints.
+    """
     assert thickness >= 1
     threshold = (thickness + 1) / 2
     if np.allclose(threshold, round(threshold)):
@@ -38,6 +46,21 @@ def draw_line(p1, p2, thickness, shape):
 
 def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radius=5, endpoint_edge_thickness=2,
                        edge_color=(1,0,0), endpoint_color=(1,0,0), endpoint_edge_color=(0,0,0), override_img=None):
+    """Returns a visualization of the adjacency graph (see :ref:`pipeline_theory_c2freganal`).
+
+    By default, the adjacency graph is rendered on top of the contrast-enhanced raw image itensities. Contrast enhancement is performed using the :py:meth:`normalize_image` function.
+
+    :param data: The pipeline data object.
+    :param normalize_img: ``True`` if contrast-enhancement should be performed and ``False`` otherwise. Only used if ``override_img`` is ``None``.
+    :param edge_thickness: The thickness of the edges of the adjacency graph.
+    :param endpoint_radius: The radius of the nodes of the adjacency graph.
+    :param endpoint_edge_thickness: The thickness of the border drawn around the nodes of the adjacency graph.
+    :param edge_color: The color of the edges of the adjacency graph (RGB).
+    :param endpoint_color: The color of the nodes of the adjacency graph (RGB).
+    :param endpoint_edge_color: The color of the border drawn around the nodes of the adjacency graph (RGB).
+    :param override_img: The image on top of which the adjacency graph is to be rendered. If ``None``, the contrast-enhanced raw image itensities will be used.
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the adjacency graph.
+    """
     if override_img is not None:
         assert override_img.ndim == 3 and override_img.shape[2] >= 3
         img = override_img[:, :, :3].copy()
@@ -64,6 +87,13 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
 
 
 def render_ymap(data, clim=None, cmap='bwr'):
+    """Returns a visualization of the offset image intensities :math:`Y_\omega|_{\omega = \Omega}` (see :py:ref:`pipeline_theory_cvxprog`).
+
+    :param data: The pipeline data object.
+    :param clim: Tuple of the structure ``(cmin, cmax)``, where ``cmin`` and ``cmax`` are used for intensity clipping. Intensity clipping is not performed if ``clim`` is set to ``None``.
+    :param cmap: Name of the color map to use for encoding the offset image intensities (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the offset image intensities.
+    """
     y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
     z = np.full((1, y.shape[1]), clim[0])
@@ -153,6 +183,13 @@ COLORMAP = {'r': [0], 'g': [1], 'b': [2], 'y': [0,1], 't': [1,2], 'w': [0,1,2]}
 
 
 class ContourPaint:
+    """Yields masks corresponding to contours of objects.
+
+    :param fg_mask: Binary mask of the image foreground. Any contour never overlaps the image foreground except of those image regions corresponding to the contoured object itself.
+    :param radius: The radius of the contour (half width).
+    :param where: The location of the contour (``inner``, ``center``, or ``outer``).
+    """
+
     def __init__(self, fg_mask, radius, where='center'):
         self.fg_mask = fg_mask
         self.where   = where
@@ -162,6 +199,11 @@ class ContourPaint:
             self.center_paint = ContourPaint(fg_mask, radius, where='center')
     
     def get_contour_mask(self, mask):
+        """Returns the binary mask of the contour of an object.
+
+        :param mask: Binary mask of an object.
+        :return: Binary mask the contour
+        """
         if self.where == 'center':
             contour = np.logical_xor(morphology.binary_erosion(mask, self.selem), morphology.binary_dilation(mask, self.selem))
         elif self.where == 'outer':

@@ -127,7 +127,7 @@ class Pipeline:
         :param data: The results of a previous execution.
         :param out: An output object obtained via :py:meth:`~superdsm._aux.get_output`.
         :param log_root_dir: Path to a directory where log files should be written to.
-        :return: Tuple ``(data, cfg, timings)``, where ``data`` contains all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
+        :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
         """
