@@ -374,6 +374,13 @@ def rasterize_labels(data, objects='postprocessed_objects', merge_overlap_thresh
 
 
 def shuffle_labels(labels, bg_label=None, seed=None):
+    """Randomly shuffles the values of an integer-valued image.
+
+    :param labels: An object of type ``numpy.ndarray`` corresponding to labeled segmentation masks.
+    :param bg_label: If not ``None``, then this label stays fixed.
+    :param seed: The seed used for randomization.
+    :return: An object of type ``numpy.ndarray`` corresponding to ``labels`` with shuffled values (labels).
+    """
     label_values0 = frozenset(labels.flatten())
     if bg_label is not None: label_values0 -= {bg_label}
     label_values0 = list(label_values0)
@@ -389,6 +396,15 @@ def shuffle_labels(labels, bg_label=None, seed=None):
 
 
 def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), shuffle=None):
+    """Returns a colorized representation of an integer-valued image.
+
+    :param labels: An object of type ``numpy.ndarray`` corresponding to labeled segmentation masks.
+    :param bg_label: Image areas with this label are forced to the color ``bg_color``.
+    :param cmap: The colormap used to colorize the remaining labels (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
+    :param bg_color: The color used to represent the image regions with label ``bg_label`` (RGB).
+    :param shuffle: If not ``None``, then used as ``seed`` to shuffle the labels before colorization (see :py:meth:`~.shuffle_labels`), and not used otherwise.
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image. 
+    """
     if shuffle is not None:
         labels = shuffle_labels(labels, bg_label=bg_label, seed=shuffle)
     if isinstance(cmap, str):
