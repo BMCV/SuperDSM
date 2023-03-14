@@ -61,6 +61,15 @@ The meaning of the different fields is the follows:
 ``file_ids``
     List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. File IDs are allowed to be strings, and they are also allowed to contain ``/`` to encode paths which involve sub-directories.
 
+``last_stage``
+    If specified, then the pipeline processing will end at the specified stage.
+
+``dilate``
+    Performs morphological dilation for all final segmentation masks, using the given amount of pixels. For negative values, morphological erosion is performed.
+
+``merge_overlap_threshold``
+    If specified, then any pair of two objects (final segmentation masks) with an overlap larger than this threshold will be merged into a single object.
+
 ``config``
     Defines the hyperparameters to be used. The available hyperparameters are described in the documentation of the respective stages of the default pipeline (see :ref:`pipeline_stages`). Note that namespaces must be specified as nested JSON objects.
 
