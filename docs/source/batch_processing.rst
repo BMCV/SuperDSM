@@ -21,7 +21,7 @@ To perform batch processing of a dataset, you first need to create a *task*. To 
        "log_pathpattern": "log/dna-%d",
        "cfg_pathpattern": "cfg/dna-%d.json",
        "overlay_pathpattern": "overlays/dna-%d.png",
-       "file_ids": [1,2,3,4,5,6,7,8,9,10]
+       "file_ids": [1,2,3,4,5,6,7,8,9,10],
 
        config: {
        }
