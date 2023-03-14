@@ -3,6 +3,13 @@ import os, warnings
 
 
 def imwrite(filepath, img, shape=None, antialias=False):
+    """Writes an image to a file.
+
+    :param filepath: The path of the file to be written.
+    :param img: A ``numpy.ndarray`` object corresponding to the image data.
+    :param shape: Resolution of the image to be written. Useful for up- and downsampling the image data.
+    :param antialias: Whether interpolation and/or anti aliasing should be used for resampling (only used if ``shape`` is not ``None``).
+    """
     if shape is not None:
         aa, aa_sigma = False, None
         img = img.astype(float)
@@ -26,6 +33,10 @@ def imwrite(filepath, img, shape=None, antialias=False):
 
 
 def imread(filepath, **kwargs):
+    """Loads an image from file.
+
+    Supported file extensions are PNG, TIF, and TIFF.
+    """
     filepath = os.path.expanduser(filepath)
     if not os.path.exists(filepath) or not os.path.isfile(filepath):
         raise ValueError('not a file: %s' % filepath)
