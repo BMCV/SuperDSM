@@ -57,16 +57,16 @@ The meaning of the different fields is the follows:
     Relative path of files, where the hyperparameters are to be written to, using placeholders as described above (mainly for reviewing the automatically generated hyperparameters).
 
 ``file_ids``
-    List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``.
+    List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. File IDs are allowed to be strings, and they are also allowed to contain `/` to encode paths which involve sub-directories.
 
 ``config``
     Defines the hyperparameters to be used. The available hyperparameters are described in the documentation of the respective stages of the default pipeline (see :ref:`pipeline_stages`). Note that namespaces must be specified as nested JSON objects.
 
-Instead of specifying the hyperparameters in the task specification directly, it is also possible to include them from a separate JSON file using the ``base_config_path`` field. The path must be either absolute or relative to the ``task.json`` file. It is also possible to use ``{DIRNAME}`` as a substitute for the name of the directory, which the ``task.json`` file resides in. The placeholder ``{ROOTDIR}`` in the path specification resolves to the *root directory* passed via command line to the batch system (see below).
+Instead of specifying the hyperparameters in the task specification directly, it is also possible to include them from a separate JSON file using the ``base_config_path`` field. The path must be either absolute or relative to the ``task.json`` file. It is also possible to use ``{DIRNAME}`` as a substitute for the name of the directory, which the ``task.json`` file resides in. The placeholder ``{ROOTDIR}`` in the path specification resolves to the *root directory* passed to the batch system (see below).
 
 Examples can be found in the ``examples`` sub-directory of the `SuperDSM repository <https://github.com/BMCV/SuperDSM>`_.
 
 Batch system
 ------------
 
-root directory
+tbd: root directory
