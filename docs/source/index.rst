@@ -19,7 +19,7 @@ Contents
 .. toctree::
    :maxdepth: 2
    
-   batch_processing
+   batch_system
 
 .. toctree::
    :maxdepth: 2
