@@ -10,11 +10,18 @@ import skimage.morphology as morph
 
 
 class BaseObject:
+    """Each object of this class represents a segmentation mask.
+    """
+
     def __init__(self):
         self.fg_offset   = None
         self.fg_fragment = None
     
     def fill_foreground(self, out, value=True):
+        """Reproduces the segmentation mask of this object.
+        
+        The segmentation mask is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
+        """
         sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
         out[sel] = value * self.fg_fragment
         return sel

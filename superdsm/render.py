@@ -202,9 +202,9 @@ def render_regions_over_image(img, regions, background_label=None, color=(0,1,0)
 
     :param img: The image on top of which the image regions are to be rendered.
     :param regions: Integer-valued image (object of ``numpy.ndarray`` type) corresponding to the labels of different image regions.
-    :param background_label: A designated label value, which is to be treated as the ``image background``.
+    :param background_label: A designated label value, which is to be treated as the image background.
     :param color: The color of the borders of the image regions (RGB).
-    :param bg: The color of the image regions corresponding to the ``image background`` (RGBA). Only used if ``background_label`` is not ``None``.
+    :param bg: The color of the image regions corresponding to the image background (RGBA). Only used if ``background_label`` is not ``None``.
     :param kwargs: Keyword arguments passed to the :py:meth:`~.rasterize_regions` function.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the image regions.
     """
@@ -228,7 +228,7 @@ class ContourPaint:
 
     :param fg_mask: Binary mask of the image foreground. Any contour never overlaps the image foreground except of those image regions corresponding to the contoured object itself.
     :param radius: The radius of the contour (half width).
-    :param where: The location of the contour (``inner``, ``center``, or ``outer``).
+    :param where: The position of the contour (``inner``, ``center``, or ``outer``).
     """
 
     def __init__(self, fg_mask, radius, where='center'):
@@ -258,9 +258,23 @@ class ContourPaint:
         return contour
 
 
-def render_result_over_image(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, colors='g'):
+def render_result_over_image(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, normalize_img=True, border_width=6, border_position='center', override_img=None, color='g'):
+    """Returns a visualization of the segmentation result.
+
+    By default, the segmentation result is rendered on top of the contrast-enhanced raw image intensities.
+
+    :param data: The pipeline data object.
+    :param objects: Either the name of the output which is to be treated as the segmentation result (see :ref:`pipeline_inputs_and_outputs`), or a list of :py:class:`~superdsm.objects.BaseObject` instances.
+    :param merge_overlap_threshold: Any pair of two objects with an overlap larger than this threshold will be merged into a single object.
+    :param normalize_img: ``True`` if contrast-enhancement should be performed and ``False`` otherwise. Only used if ``override_img`` is ``None``.
+    :param border_width: The width of the border to be drawn around the segmented objects.
+    :param border_position: The position of the border to be drawn around the segmented objects (``inner``, ``center``, or ``outer``).
+    :param override_img: The image on top of which the borders of the atomic image regions are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
+    :param color: The color of the border to be drawn around the segmented objects (``r`` for red, ``g`` green, ``b`` blue, ``y`` yellow, ``t`` teal, or ``w`` white).
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the segmentation result.
+    """
     assert border_width % 2 == 0
-    assert (isinstance(colors, dict) and all(c in COLORMAP.keys() for c in colors.values())) or colors in COLORMAP.keys()
+    assert color in COLORMAP.keys()
 
     im_seg  = _fetch_rgb_image_from_data(data, normalize_img, override_img)
     im_seg /= im_seg.max()
@@ -268,7 +282,7 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
     cp = ContourPaint(seg_objects > 0, radius=border_width // 2, where=border_position)
     for l in set(seg_objects.flatten()) - {0}:
         seg_bnd = cp.get_contour_mask(seg_objects == l)
-        colorchannels = COLORMAP[colors]
+        colorchannels = COLORMAP[color]
         for i in range(3): im_seg[seg_bnd, i] = (1 if i in colorchannels else 0)
     return (255 * im_seg).round().clip(0, 255).astype('uint8')
 
