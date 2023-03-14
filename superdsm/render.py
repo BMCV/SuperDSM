@@ -267,10 +267,10 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
     :param objects: Either the name of the output which is to be treated as the segmentation result (see :ref:`pipeline_inputs_and_outputs`), or a list of :py:class:`~superdsm.objects.BaseObject` instances.
     :param merge_overlap_threshold: Any pair of two objects with an overlap larger than this threshold will be merged into a single object.
     :param normalize_img: ``True`` if contrast-enhancement should be performed and ``False`` otherwise. Only used if ``override_img`` is ``None``.
-    :param border_width: The width of the border to be drawn around the segmented objects.
-    :param border_position: The position of the border to be drawn around the segmented objects (``inner``, ``center``, or ``outer``).
-    :param override_img: The image on top of which the borders of the atomic image regions are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
-    :param color: The color of the border to be drawn around the segmented objects (``r`` for red, ``g`` green, ``b`` blue, ``y`` yellow, ``t`` teal, or ``w`` white).
+    :param border_width: The width of the contour to be drawn around the segmented objects.
+    :param border_position: The position of the contour to be drawn around the segmented objects (``inner``, ``center``, or ``outer``).
+    :param override_img: The image on top of which the contours of the segmented objects are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
+    :param color: The color of the contour to be drawn around the segmented objects (``r`` for red, ``g`` for green, ``b`` for blue, ``y`` for yellow, ``t`` for teal, or ``w`` for white).
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the segmentation result.
     """
     assert border_width % 2 == 0
@@ -288,6 +288,12 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
 
 
 def rasterize_objects(data, objects, dilate=0):
+    """Generator which yields the segmentation masks of objects.
+
+    :param data: The pipeline data object.
+    :param objects: Either the name of the output which is to be rasterized (see :ref:`pipeline_inputs_and_outputs`), or a list of :py:class:`~superdsm.objects.BaseObject` instances.
+    :param dilate: Dilates the segmentation mask of each object by this value, or erodes if negative.
+    """
     if isinstance(objects, str): objects = [c for c in data[objects]]
 
     if dilate == 0:
