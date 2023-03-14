@@ -33,7 +33,7 @@ To perform batch processing of a dataset, you first need to create a *task*. To 
 The meaning of the different fields is the follows:
 
 ``runnable``
-    Marks this task as runnable (or not runnable). If set to ``false``, the specification will be treated as a template for derived tasks. Derived tasks are placed in sub-folders and inherit the specification of the parent task. This is useful, for example, if you want to try out different hyperparameters. The batch system automatically picks up intermediate results of parent tasks to speed up the computations of derived tasks.
+    Marks this task as runnable (or not runnable). If set to ``false``, the specification will be treated as a template for derived tasks. Derived tasks are placed in sub-folders and inherit the specification of the parent task. This is useful, for example, if you want to try out different hyperparameters. The batch system automatically picks up intermediate results of parent tasks to speed up the completion of derived tasks.
 
 ``num_cpus``
     The number of processes which is to be used simultaneously (in parallel).

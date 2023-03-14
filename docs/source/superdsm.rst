@@ -4,6 +4,7 @@ SuperDSM API
 .. toctree::
     superdsm.pipeline
     superdsm.config
+    superdsm.io
     superdsm.automation
     superdsm.image
     superdsm.dsm
