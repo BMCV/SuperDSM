@@ -136,8 +136,14 @@ DATA_DILL_GZ_FILENAME = 'data.dill.gz'
 
 
 class Task:
+    """Represents a batch processing task (see :ref:`batch_task_spec`).
 
-    def __init__(self, path, data, parent_task=None, rel_path=None):
+    :param path: The path of the directory where the task specification resides.
+    :param data: Dictionary corresponding to the task specification (JSON data).
+    :param parent_task: The parent task or ``None`` if there is no parent task.
+    """
+
+    def __init__(self, path, data, parent_task=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
         self.path = path
@@ -378,16 +384,22 @@ class Task:
 
 
 class BatchLoader:
+    """Loads all tasks from a given directory (see :ref:`batch_task_spec`).
+
+    :param override_cfg: Dictionary of task specification settings which are to be overwritten.
+    """
 
     def __init__(self, override_cfg={}):
         self.tasks        = []
         self.override_cfg = override_cfg
 
     def load(self, path):
+        """Loads all task from the root directory ``path``.
+        """
         root_path = pathlib.Path(path)
-        self.process_directory(root_path)
+        self._process_directory(root_path)
 
-    def process_directory(self, current_dir, parent_task=None):
+    def _process_directory(self, current_dir, parent_task=None):
         task = Task.create_from_directory(current_dir, parent_task, self.override_cfg)
         if task is not None:
             self.tasks.append(task)
@@ -395,7 +407,7 @@ class BatchLoader:
         for d in os.listdir(current_dir):
             f = current_dir / d
             if f.is_dir():
-                self.process_directory(f, parent_task)
+                self._process_directory(f, parent_task)
 
 
 def get_path(root_path, path):

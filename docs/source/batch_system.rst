@@ -3,6 +3,8 @@
 Batch system
 ============
 
+.. _batch_task_spec:
+
 Task specification
 ------------------
 
@@ -65,6 +67,8 @@ The meaning of the different fields is the follows:
 Instead of specifying the hyperparameters in the task specification directly, it is also possible to include them from a separate JSON file using the ``base_config_path`` field. The path must be either absolute or relative to the ``task.json`` file. It is also possible to use ``{DIRNAME}`` as a substitute for the name of the directory, which the ``task.json`` file resides in. The placeholder ``{ROOTDIR}`` in the path specification resolves to the *root directory* passed to the batch system (see below).
 
 Examples can be found in the ``examples`` sub-directory of the `SuperDSM repository <https://github.com/BMCV/SuperDSM>`_.
+
+.. _batch_prcessing:
 
 Batch processing
 ----------------
