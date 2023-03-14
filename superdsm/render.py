@@ -308,6 +308,15 @@ def rasterize_objects(data, objects, dilate=0):
 
 
 def rasterize_labels(data, objects='postprocessed_objects', merge_overlap_threshold=np.inf, dilate=0, background_label=0):
+    """Returns an integer-valued image corresponding to uniquely labeled segmentation masks.
+
+    :param data: The pipeline data object.
+    :param objects: Either the name of the output which is to be rasterized (see :ref:`pipeline_inputs_and_outputs`), or a list of :py:class:`~superdsm.objects.BaseObject` instances.
+    :param merge_overlap_threshold: Any pair of two objects with an overlap larger than this threshold will be merged into a single object.
+    :param dilate: Dilates the segmentation mask of each object by this value, or erodes if negative.
+    :param background_label: The label which is to be assigned to the image background. Must be non-positive.
+    :return: An object of type ``numpy.ndarray`` corresponding the uniquely labeled segmentation masks.
+    """
     assert background_label <= 0
     objects = [obj for obj in rasterize_objects(data, objects, dilate)]
 
