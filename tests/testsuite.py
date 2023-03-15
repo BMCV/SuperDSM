@@ -42,7 +42,7 @@ def require_data(data_id, filename=None):
 
 
 def validate_image(test, name, img):
-    expected = superdsm.io.imread(root_dir / 'expected' / f'{name}.png')
+    expected = superdsm.io.imread(root_dir / 'expected' / name)
     try:
         test.assertTrue(np.allclose(img, expected))
     except:
