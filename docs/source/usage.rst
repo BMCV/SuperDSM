@@ -53,22 +53,22 @@ After this initialization routine, SuperDSM is ready to use:
     import superdsm.automation
     pipeline = superdsm.pipeline.create_default_pipeline()
     cfg = superdsm.config.Config()
-    results, _, _ = superdsm.automation.process_image(pipeline, cfg, img)
+    data, _, _ = superdsm.automation.process_image(pipeline, cfg, img)
 
 In this example, the default set of hyperparameters will be used. The parameters can be changed using the ``cfg`` object (see the :py:class:`~superdsm.config.Config` class API). The available hyperparameters are described in the documentation of the respective stages employed in the pipeline created by the :py:meth:`~superdsm.pipeline.create_default_pipeline` function.
 
 The variable ``img`` must be a two-dimensional ``numpy.ndarray`` object which represents the raw image intensities. Images can be loaded from file using :py:meth:`~superdsm.io.imread`.
 
-The dictionary ``results`` contains all the intermediate results which might be necessary for further computations. This can also be used to obtain a graphical representation of the segmentation results:
+The pipeline data object ``data`` is a dictionary containing all the intermediate results which might be necessary for further computations. This can also be used to obtain a graphical representation of the segmentation results:
 
 .. code-block:: python
 
     import superdsm.render
-    result_img = superdsm.render.render_result_over_image(results)
+    seg = superdsm.render.render_result_over_image(data)
 
-The obtained ``result_img`` object is an RGB image (represented by a ``numpy.ndarray`` object) which can be visualized directly (e.g., using matplotlib) or saved for later use (e.g., using :py:meth:`~superdsm.io.imwrite`).
+The obtained ``seg`` object is an RGB image (represented by a ``numpy.ndarray`` object) which can be visualized directly (e.g., using matplotlib) or saved for later use (e.g., using :py:meth:`~superdsm.io.imwrite`).
 
-Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the ``results`` dictionary.
+Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the pipeline data object.
 
 .. _references:
 
