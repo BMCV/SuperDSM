@@ -21,6 +21,7 @@ class Config:
     """
 
     def __init__(self, other=None):
+        if other is None: other = dict()
         if isinstance(other, dict):
             self.entries = other
         elif isinstance(other, Config):
