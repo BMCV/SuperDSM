@@ -5,6 +5,8 @@ SuperDSM is a globally optimal segmentation method based on superadditivity and 
 
 The documentation is available here: https://superdsm.readthedocs.io
 
+Use ``python -m unittest`` in the root directory to run the test suite.
+
 Publications:
 
 `L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 45(3), pp. 3831–3847, 2023.
