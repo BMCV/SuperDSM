@@ -1,12 +1,14 @@
 import unittest
-import testsuite
 import numpy as np
 import ray
 import superdsm.automation, superdsm.io, superdsm.render
 
+from . import testsuite
+
 
 class render(unittest.TestCase):
 
+    @testsuite.without_resource_warnings
     def setUp(self):
         ray.init(num_cpus=4, log_to_driver=False, logging_level=ray.logging.ERROR)
         self.pipeline = superdsm.pipeline.create_default_pipeline()
@@ -16,7 +18,7 @@ class render(unittest.TestCase):
         del self.pipeline
 
     def test_render_result_over_image(self):
-        data_path = testsuite.require_data('bbbc033')
+        data_path = testsuite.require_data('bbbc033', 'C2.tif')
         img_3d = superdsm.io.imread(data_path)
         img = img_3d[28]
         data, _, _ = superdsm.automation.process_image(self.pipeline, superdsm.config.Config(), img)
