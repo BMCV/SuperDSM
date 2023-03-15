@@ -1,0 +1,8 @@
+{
+    "bbbc033": {
+        "url": "https://data.broadinstitute.org/bbbc/BBBC033/BBBC033_v1_dataset.zip",
+        "datasets": [
+            ["C2.tif", "C2.tif"]
+        ]
+    }
+}

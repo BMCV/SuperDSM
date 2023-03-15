@@ -1,6 +1,7 @@
 *.pyc
 /build
 *.swp
+.DS_Store
 /examples/**/*.csv
 /examples/**/*.gz
 /examples/**/.*.json
