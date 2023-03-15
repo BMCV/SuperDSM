@@ -195,6 +195,13 @@ class Task:
 
     @staticmethod
     def create_from_directory(task_dir, parent_task, override_cfg={}, force_runnable=False):
+        """Instantiates the task from the specification in a directory (see :ref:`batch_task_spec`).
+
+        :param task_dir: The path of the directory which contains a ``task.json`` specification file.
+        :param parent_task: The parent task (or ``None`` if this a root task).
+        :param override_cfg: Dictionary of task specification settings which are to be overwritten.
+        :param force_runnable: If ``True``, the task will be treated as runnable, regardless of the task specification.
+        """
         task_file = task_dir / 'task.json'
         if task_file.exists():
             try:
@@ -211,6 +218,7 @@ class Task:
     
     @property
     def root_path(self):
+        """The root path of the task (see :ref:`batch_system`)."""
         if self.parent_task is not None: return self.parent_task.root_path
         else: return self.path
 
@@ -239,10 +247,14 @@ class Task:
         
     @property
     def config_digest(self):
+        """Hash code of the hyperparameters of this task.
+        """
         return self.config.md5.hexdigest()
         
     @property
     def is_pending(self):
+        """``True`` if the task needs to run, and ``False`` if the task is completed or not runnable.
+        """
         return self.runnable and not (self.digest_path.exists() and self.digest_path.read_text() == self.config_digest)
 
     def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, debug=False, report=None, pickup=True, out=None):
