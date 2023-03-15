@@ -21,7 +21,7 @@ class render(unittest.TestCase):
         img = img_3d[28]
         data, _, _ = superdsm.automation.process_image(self.pipeline, superdsm.config.Config(), img)
         seg = superdsm.render.render_result_over_image(data, normalize_img=False)
-        testsuite.validate_image(self, 'render.render_result_over_image', seg)
+        testsuite.validate_image(self, 'render.render_result_over_image/bbbc033-z28.png', seg)
 
 
 if __name__ == '__main__':
