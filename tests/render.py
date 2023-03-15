@@ -15,7 +15,7 @@ class render(unittest.TestCase):
         img = img_3d[28]
         pipeline = superdsm.pipeline.create_default_pipeline()
         data_path = testsuite.require_data('bbbc033', 'C2.tif')
-        self.data, _, _ = superdsm.automation.process_image(self.pipeline, superdsm.config.Config(), img)
+        self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img)
 
     @classmethod
     @testsuite.without_resource_warnings
