@@ -13,3 +13,4 @@
 /examples/**/overlays
 /examples/data
 /tests/data
+/tests/actual

@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import json
 import warnings
+import numpy as np
 import superdsm.io
 
 requests.packages.urllib3.disable_warnings()
@@ -42,13 +43,15 @@ def require_data(data_id, filename=None):
 
 
 def validate_image(test, name, img):
-    expected = superdsm.io.imread(root_dir / 'expected' / name)
+    expected = superdsm.io.imread(str(root_dir / 'expected' / name), as_gray=False)
     try:
+        test.assertEqual(img.shape, expected.shape)
         test.assertTrue(np.allclose(img, expected))
     except:
-        actual_path = root_dir / 'actual'
-        actual_path.mkdir(exist_ok=True)
-        superdsm.io.imwrite(actual_path / name, img)
+        actual_path = root_dir / 'actual' / name
+        actual_path.parent.mkdir(parents=True, exist_ok=True)
+        superdsm.io.imwrite(str(actual_path), img)
+        raise
 
 
 def without_resource_warnings(test_func):
