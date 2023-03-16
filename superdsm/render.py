@@ -72,7 +72,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
        - .. figure:: ../../tests/expected/render.render_adjacencies/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.render_adjacencies` method.
+            Result of using :py:meth:`~.render_adjacencies`.
     """
     if override_img is not None:
         assert override_img.ndim == 3 and override_img.shape[2] >= 3
@@ -103,7 +103,7 @@ def render_ymap(data, clim=None, cmap='bwr'):
     """Returns a visualization of the offset image intensities :math:`Y_\omega|_{\omega = \Omega}` (see :py:ref:`pipeline_theory_cvxprog`).
 
     :param data: The pipeline data object.
-    :param clim: Tuple of the structure ``(cmin, cmax)``, where ``cmin`` and ``cmax`` are used for intensity clipping. Intensity clipping is not performed if ``clim`` is set to ``None``.
+    :param clim: Tuple of the structure ``(cmin, cmax)``, where ``cmin`` and ``cmax`` are used for intensity clipping. The limits ``cmin`` and ``cmax`` are chosen automatically if ``clim`` is set to ``None``.
     :param cmap: Name of the color map to use for encoding the offset image intensities (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the offset image intensities.
 
@@ -118,7 +118,7 @@ def render_ymap(data, clim=None, cmap='bwr'):
        - .. figure:: ../../tests/expected/render.render_ymap/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.render_ymap` method.
+            Result of using :py:meth:`~.render_ymap`.
     """
     y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
@@ -153,7 +153,7 @@ def normalize_image(img, spread=1, ret_minmax=False):
        - .. figure:: ../../tests/expected/render.normalize_image/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.normalize_image` method.
+            Result of using :py:meth:`~.normalize_image`.
     """
     if not np.allclose(img.std(), 0):
         minval, maxval = max([img.min(), img.mean() - spread * img.std()]), min([img.max(), img.mean() + spread * img.std()])
@@ -209,7 +209,7 @@ def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), b
        - .. figure:: ../../tests/expected/render.render_atoms/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.render_atoms` method.
+            Result of using :py:meth:`~.render_atoms`.
     """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
@@ -237,7 +237,7 @@ def render_foreground_clusters(data, normalize_img=True, discarded_color=(0.3, 1
        - .. figure:: ../../tests/expected/render.render_foreground_clusters/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.render_foreground_clusters` method.
+            Result of using :py:meth:`~.render_foreground_clusters`.
     """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['clusters'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
@@ -349,7 +349,7 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
        - .. figure:: ../../tests/expected/render.render_result_over_image/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.render_result_over_image` method.
+            Result of using :py:meth:`~.render_result_over_image`.
     """
     assert border_width % 2 == 0
     assert color in COLORMAP.keys()
@@ -494,7 +494,7 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
        - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
             :width: 100%
 
-            Result of using the :py:meth:`~.rasterize_labels` and :py:meth:`~.colorize_labels` methods.
+            Result of using :py:meth:`~.rasterize_labels` and :py:meth:`~.colorize_labels`.
     """
     if shuffle is not None:
         labels = shuffle_labels(labels, bg_label=bg_label, seed=shuffle)
