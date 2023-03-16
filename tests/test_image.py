@@ -22,8 +22,8 @@ class image(unittest.TestCase):
                     [0., 1., 2., 3., 4.],
                     [0., 1., 2., 3., 4.],
                     [0., 1., 2., 3., 4.]]])
-        self.assertEqual(actual1, expected)
-        self.assertEqual(actual2, expected / 4)
+        np.testing.assert_allclose(actual1, expected)
+        np.testing.assert_allclose(actual2, expected / 4)
 
 
 if __name__ == '__main__':
