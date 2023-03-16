@@ -87,9 +87,10 @@ def create_config(pipeline, base_cfg, img):
        >>> import superdsm, superdsm.automation, superdsm.config
        >>> import numpy as np
        >>> img = np.zeros((512, 512))
+       >>> base_cfg = superdsm.config.Config(dict(AF_scale=40))
        >>> pipeline = superdsm.pipeline.create_default_pipeline()
-       >>> cfg, _ = superdsm.automation.create_config(pipeline, superdsm.config.Config(dict(AF_scale=40)), img)
-       >>> str(cfg)
+       >>> cfg, _ = superdsm.automation.create_config(pipeline, base_cfg, img)
+       >>> print(cfg)
     """
     cfg   = base_cfg.copy()
     scale = cfg.get('AF_scale', None)

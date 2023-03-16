@@ -76,10 +76,10 @@ class Stage(object):
     def configure(self, scale):
         """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image.
 
-        :param scale: The average scale of objects in the image, corresponds to :math:`\sigma` in the :ref:`paper <references>`.
+        :param scale: The average scale of objects in the image.
         :return: See :py:meth:`~.configure_ex`.
         
-        Delegates to the :py:meth:`~.configure_ex` method, using :math:`\sqrt{2} \cdot \sigma` for ``radius`` and :math:`\sqrt{8} \cdot \sigma` for ``diameter``.
+        The parameter ``scale`` corresponds to :math:`\sigma` in the :ref:`paper <references>`. Delegates to the :py:meth:`~.configure_ex` method, using :math:`\sqrt{2} \cdot \sigma` for ``radius`` and :math:`\sqrt{8} \cdot \sigma` for ``diameter``.
 
         .. runblock:: pycon
 
