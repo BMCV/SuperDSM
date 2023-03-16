@@ -14,10 +14,6 @@ def get_pixel_map(shape, normalized=False):
 
        >>> import superdsm.image
        >>> superdsm.image.get_pixel_map((6, 3))
-
-    .. runblock:: pycon
-
-       >>> import superdsm.image
        >>> superdsm.image.get_pixel_map((6, 3), normalized=True)
     """
     z = (np.array(shape) - 1. if normalized else np.ones(2))[Ellipsis, None, None]
@@ -25,7 +21,7 @@ def get_pixel_map(shape, normalized=False):
     return np.indices(shape) / z
 
 
-def bbox(mask, include_end=True):
+def bbox(mask, include_end=False):
     """Returns the bounding box of a mask.
 
     :param include_end: If ``True``, then the pair of last indices ``bbox[0][1]`` and ``bbox[1][1]`` is *included* in the specified ranges. It is *excluded* otherwise.
@@ -39,13 +35,13 @@ def bbox(mask, include_end=True):
        ...                  [0, 0, 0, 1, 0],
        ...                  [0, 0, 1, 1, 0],
        ...                  [0, 0, 1, 0, 0]])
-       >>> superdsm.image.bbox(mask.astype(bool), include_end=False)
        >>> superdsm.image.bbox(mask.astype(bool))
+       >>> superdsm.image.bbox(mask.astype(bool), include_end=True)
     """
     mask_a0 = mask.any(axis=0)
     mask_a1 = mask.any(axis=1)
     ret = np.array([np.where(mask_a1)[0][[0, -1]], np.where(mask_a0)[0][[0, -1]]])
-    if include_end: ret += np.array([0, 1])
+    if not include_end: ret += np.array([0, 1])
     return ret, np.s_[ret[0][0] : ret[0][1], ret[1][0] : ret[1][1]]
 
 
