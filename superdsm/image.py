@@ -30,6 +30,16 @@ def bbox(mask, include_end=True):
 
     :param include_end: If ``True``, then the pair of last indices ``bbox[0][1]`` and ``bbox[1][1]`` is *included* in the specified ranges. It is *excluded* otherwise.
     :return: Tuple ``(bbox, sel)``, where ``bbox[0]`` are the first and last indices of the rows and ``bbox[1]`` are the first and last indices of the columns, and ``sel`` is a numpy slice corresponding to that image region.
+
+    .. runblock:: pycon
+
+       >>> import superdsm.image
+       ... import numpy as np
+       ... mask = np.array([[0, 0, 0, 0, 0],
+       ...                  [0, 0, 0, 1, 0],
+       ...                  [0, 0, 1, 1, 0],
+       ...                  [0, 0, 1, 0, 0]])
+       ... superdsm.image.bbox(mask.astype(bool))
     """
     mask_a0 = mask.any(axis=0)
     mask_a1 = mask.any(axis=1)
