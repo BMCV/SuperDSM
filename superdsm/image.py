@@ -13,7 +13,12 @@ def get_pixel_map(shape, normalized=False):
     .. runblock:: pycon
 
        >>> import superdsm.image
-       ... superdsm.image.get_pixel_map((5, 5))
+       ... superdsm.image.get_pixel_map((6, 3))
+
+    .. runblock:: pycon
+
+       >>> import superdsm.image
+       ... superdsm.image.get_pixel_map((6, 3), normalized=True)
     """
     z = (np.array(shape) - 1. if normalized else np.ones(2))[Ellipsis, None, None]
     z[z == 0] = 1
