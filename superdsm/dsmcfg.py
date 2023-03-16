@@ -78,7 +78,7 @@ class DSM_ConfigStage(Stage):
             'dsm_cfg': dsm_cfg
         }
 
-    def configure(self, scale, radius, diameter):
+    def configure_ex(self, scale, radius, diameter):
         return {
             'alpha': (scale ** 2, 0.0005),
             'smooth_amount': (scale, 0.2, dict(type=int, min=4)),

@@ -232,7 +232,7 @@ class Postprocessing(Stage):
             'postprocessed_objects': postprocessed_objects
         }
 
-    def configure(self, scale, radius, diameter):
+    def configure_ex(self, scale, radius, diameter):
         return {
             'min_object_radius': (radius, 0.0),
             'max_object_radius': (radius, np.inf),

@@ -64,7 +64,7 @@ class Preprocessing(Stage):
             'y': y,
         }
 
-    def configure(self, scale, radius, diameter):
+    def configure_ex(self, scale, radius, diameter):
         return {
             'sigma2': (scale, 1.0),
         }

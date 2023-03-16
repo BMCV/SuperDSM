@@ -73,12 +73,30 @@ class Stage(object):
     def process(self, input_data, cfg, out, log_root_dir):
         raise NotImplementedError()
 
-    def configure(self, scale, radius, diameter):
+    def configure(self, scale):
         """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image.
 
         :param scale: The average scale of objects in the image, corresponds to :math:`\sigma` in the :ref:`paper <references>`.
-        :param radius: The average radius of objects in the image, corresponds to :math:`\sqrt{2} \cdot \sigma`.
-        :param diameter: The average diameter of objects in the image, corresponds to :math:`\sqrt{8} \cdot \sigma`.
+        :return: See :py:meth:`~.configure_ex`.
+        
+        Delegates to the :py:meth:`~.configure_ex` method, using :math:`\sqrt{2} \cdot \sigma` for ``radius`` and :math:`\sqrt{8} \cdot \sigma` for ``diameter``.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.globalenergymin
+           >>> stage = superdsm.globalenergymin.GlobalEnergyMinimization()
+           >>> stage.configure(40)
+        """
+        radius   = scale * math.sqrt(2)
+        diameter = 2 * radius
+        return self.configure_ex(scale, radius, diameter)
+
+    def configure_ex(self, scale, radius, diameter):
+        """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image, using explicitly stated values for the expected radius and diameter of the objects.
+
+        :param scale: The average scale of objects in the image.
+        :param radius: The average radius of objects in the image.
+        :param diameter: The average diameter of objects in the image.
         :return: Dictionary of configuration entries of the form:
 
             .. code-block:: python

@@ -180,4 +180,9 @@ class Config:
         """The MD5 hash code associated with the hyperparameters set in this configuration.
         """
         return hashlib.md5(json.dumps(self.entries).encode('utf8'))
+    
+    def __str__(self):
+        """Readable representation of this configuration.
+        """
+        return json.dumps(self.entries, indent=2)
 

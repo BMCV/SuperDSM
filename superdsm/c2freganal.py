@@ -173,7 +173,7 @@ class C2F_RegionAnalysis(Stage):
             'clusters': clusters
         }
 
-    def configure(self, scale, radius, diameter):
+    def configure_ex(self, scale, radius, diameter):
         return {
             'min_region_radius': (radius, 0.33, dict(type=int)),
         }

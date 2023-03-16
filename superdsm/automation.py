@@ -77,18 +77,25 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=N
     if  max is not None: cfg.update(key, func=lambda value: _min((value, max)))
 
 
-def create_config(pipeline, base_cfg, im):
+def create_config(pipeline, base_cfg, img):
     """Automatically configures hyperparameters based on the scale of objects in an image. 
 
     The scale of the objects is estimated automatically as described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). The current implementation determines values corresponding to object radii between 20 and 200 pixels. If, however, the hyperparameter ``AF_sigma`` is set, then the scale :math:`\sigma` is forced to its value and the automatic scale detection is not used. The hyperparameter ``AF_sigma`` is not set by default.
+
+    .. runblock:: pycon
+
+       >>> import superdsm, superdsm.automation, superdsm.config
+       >>> import numpy as np
+       >>> img = np.zeros((512, 512))
+       >>> pipeline = superdsm.pipeline.create_default_pipeline()
+       >>> cfg, _ = superdsm.automation.create_config(pipeline, superdsm.config.Config(dict(AF_scale=40)), img)
+       >>> str(cfg)
     """
     cfg   = base_cfg.copy()
     scale = cfg.get('AF_scale', None)
-    if scale is None: scale = _estimate_scale(im, num_radii=10, thresholds=[0.01])[0]
-    radius   = scale * math.sqrt(2)
-    diameter = 2 * radius
+    if scale is None: scale = _estimate_scale(img, num_radii=10, thresholds=[0.01])[0]
     for stage in pipeline.stages:
-        specs = stage.configure(scale, radius, diameter)
+        specs = stage.configure(scale)
         for key, spec in specs.items():
             assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
             kwargs = dict() if len(spec) == 2 else spec[-1]

@@ -80,7 +80,7 @@ class GlobalEnergyMinimization(Stage):
             'workload': workload,
         }
 
-    def configure(self, scale, radius, diameter):
+    def configure_ex(self, scale, radius, diameter):
         return {
             'beta': (scale ** 2, 0.66),
             'max_seed_distance': (diameter, np.inf),
