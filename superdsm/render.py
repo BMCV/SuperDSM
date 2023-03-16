@@ -60,6 +60,19 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
     :param endpoint_edge_color: The color of the border drawn around the nodes of the adjacency graph (RGB).
     :param override_img: The image on top of which the adjacency graph is to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the adjacency graph.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.render_adjacencies/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.render_adjacencies` method.
     """
     if override_img is not None:
         assert override_img.ndim == 3 and override_img.shape[2] >= 3
@@ -93,6 +106,19 @@ def render_ymap(data, clim=None, cmap='bwr'):
     :param clim: Tuple of the structure ``(cmin, cmax)``, where ``cmin`` and ``cmax`` are used for intensity clipping. Intensity clipping is not performed if ``clim`` is set to ``None``.
     :param cmap: Name of the color map to use for encoding the offset image intensities (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the offset image intensities.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.render_ymap/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.render_ymap` method.
     """
     y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
@@ -115,6 +141,19 @@ def normalize_image(img, spread=1, ret_minmax=False):
     :param spread: Governs the amount of enhancement. The lower the value, the stronger the enhancement.
     :param ret_minmax: ``True`` if the clipped image intensities should be returned and ``False`` otherwise.
     :return: The contrast-enhanced image if ``ret_minmax`` is ``False``, and a tuple of the structure ``(img, minval, maxval)`` if ``ret_minmax`` is ``True``, where ``img`` is the contrast-enhanced image, and ``minval`` and ``maxval`` are the clipped image intensities, respectively.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.normalize_image/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.normalize_image` method.
     """
     if not np.allclose(img.std(), 0):
         minval, maxval = max([img.min(), img.mean() - spread * img.std()]), min([img.max(), img.mean() + spread * img.std()])
@@ -158,6 +197,19 @@ def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), b
     :param border_color: The color of the borders of the atomic image regions (RGB).
     :param override_img: The image on top of which the borders of the atomic image regions are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the atomic image regions.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.render_atoms/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.render_atoms` method.
     """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['atoms'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
@@ -173,6 +225,19 @@ def render_foreground_clusters(data, normalize_img=True, discarded_color=(0.3, 1
     :param border_color: The color of the borders of the regions of possibly clustered objects (RGB).
     :param override_img: The image on top of which the borders of the regions of possibly clustered objects are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the regions of possibly clustered objects.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.render_foreground_clusters/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.render_foreground_clusters` method.
     """
     img = _fetch_image_from_data(data, normalize_img) if override_img is None else override_img
     return render_regions_over_image(img / img.max(), data['clusters'], background_label=0, bg=discarded_color, radius=border_radius, color=border_color)
@@ -272,6 +337,19 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
     :param override_img: The image on top of which the contours of the segmented objects are to be rendered. If ``None``, the (contrast-enhanced) raw image itensities will be used.
     :param color: The color of the contour to be drawn around the segmented objects (``r`` for red, ``g`` for green, ``b`` for blue, ``y`` for yellow, ``t`` for teal, or ``w`` for white).
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the segmentation result.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+
+       - .. figure:: ../../tests/expected/render.render_result_over_image/bbbc033-z28.png
+            :width: 100%
+
+            Result of using the :py:meth:`~.render_result_over_image` method.
     """
     assert border_width % 2 == 0
     assert color in COLORMAP.keys()
@@ -403,7 +481,7 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
     :param cmap: The colormap used to colorize the remaining labels (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
     :param bg_color: The color used to represent the image regions with label ``bg_label`` (RGB).
     :param shuffle: If not ``None``, then used as ``seed`` to shuffle the labels before colorization (see :py:meth:`~.shuffle_labels`), and not used otherwise.
-    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image. 
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image.
 
     .. hlist::
        :columns: 2
@@ -411,12 +489,12 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Caption.
+            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
 
        - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
             :width: 100%
 
-            Caption.
+            Result of using the :py:meth:`~.rasterize_labels` and :py:meth:`~.colorize_labels` methods.
     """
     if shuffle is not None:
         labels = shuffle_labels(labels, bg_label=bg_label, seed=shuffle)
