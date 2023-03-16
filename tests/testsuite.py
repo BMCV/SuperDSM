@@ -42,11 +42,20 @@ def require_data(data_id, filename=None):
     return data_path if filename is None else data_path / filename
 
 
+def normalize_image(img):
+    if str(img.dtype).startswith('float'):
+        img = (img - img.min()) / (img.max() - img.min()) 
+        img = (img * 255).round().astype('uint8')
+    return img
+
+
 def validate_image(test, name, img):
-    expected = superdsm.io.imread(str(root_dir / 'expected' / name), as_gray=False)
     try:
+        expected = superdsm.io.imread(str(root_dir / 'expected' / name), as_gray=False)
+        img = normalize_image(img) ## processes the image as if it was written to a file and read back
         test.assertEqual(img.shape, expected.shape)
-        test.assertTrue(np.allclose(img, expected))
+        msg = f'Maximum absolute difference: {np.abs(img - expected).max():g}'
+        test.assertTrue(np.allclose(img, expected), msg)
     except:
         actual_path = root_dir / 'actual' / name
         actual_path.parent.mkdir(parents=True, exist_ok=True)
