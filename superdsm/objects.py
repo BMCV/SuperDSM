@@ -88,6 +88,36 @@ class Object(BaseObject):
         return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
     def get_cvxprog_region(self, y, atoms, min_background_margin=None):
+        """Returns the image region used for convex programming.
+
+        :param y: Object of :py:class:`~.image.Image` type, corresponding to the offset image intensities.
+        :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
+        :param min_background_margin: Governs the amount of image background included in the obtained image region. It is the minimal width of the "stripe" of background retained around each connected foreground region (in pixels). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
+        :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.objects
+           >>> import superdsm.image
+           >>> import numpy as np
+           >>> y_data = np.array([[-1, -1, -1, -1, -1, -1],
+           ...                    [-1, -1, +1, +1, -1, -1],
+           ...                    [-1, +1, +1, +1, -1, -1],
+           ...                    [-1, +1, +1, -1, -1, -1],
+           ...                    [+1, +1, +1, -1, +1, +1],
+           ...                    [+1, +1, -1, -1, +1, +1]])
+           >>> atoms  = np.array([[ 1,  1,  1,  1,  1,  1],
+           ...                    [ 1,  1,  1,  1,  1,  1],
+           ...                    [ 1,  1,  1,  1,  1,  1],
+           ...                    [ 1,  1,  1,  1,  2,  2],
+           ...                    [ 1,  1,  1,  1,  2,  2]])
+           >>> obj = superdsm.objects.Object()
+           >>> obj.footprint = set([2])
+           >>> y = superdsm.image.Image(y_data)
+           >>> roi = obj.get_cvxprog_region(y, atoms, min_background_margin=1)
+           >>> roi.mask
+           >>> roi.model
+        """
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
         region = y.get_region(self.get_mask(atoms))
         region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
