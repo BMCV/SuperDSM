@@ -39,7 +39,7 @@ For details, see :ref:`batch_system`.
 Interactive
 ***********
 
-To use SuperDSM interactively, i.e. programatically, as opposed to batch processing, the first step is to `initialize Ray <https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html>`_. This is the multiprocessing framework used by SuperDSM. Initialization is simple, just remember to adapt the number of CPUs to be used:
+To use SuperDSM interactively, i.e. programatically as opposed to batch processing, the first step is to `initialize Ray <https://docs.ray.io/en/latest/ray-core/api/doc/ray.init.html>`_. This is the multiprocessing framework used by SuperDSM. Initialization is simple, just remember to adapt the number of CPUs to be used:
 
 .. code-block:: python
 
