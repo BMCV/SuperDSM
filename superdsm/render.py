@@ -67,7 +67,7 @@ def render_adjacencies(data, normalize_img=True, edge_thickness=3, endpoint_radi
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.render_adjacencies/bbbc033-z28.png
             :width: 100%
@@ -113,7 +113,7 @@ def render_ymap(data, clim=None, cmap='bwr'):
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.render_ymap/bbbc033-z28.png
             :width: 100%
@@ -148,7 +148,7 @@ def normalize_image(img, spread=1, ret_minmax=False):
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.normalize_image/bbbc033-z28.png
             :width: 100%
@@ -204,7 +204,7 @@ def render_atoms(data, normalize_img=True, discarded_color=(0.3, 1, 0.3, 0.1), b
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.render_atoms/bbbc033-z28.png
             :width: 100%
@@ -232,7 +232,7 @@ def render_foreground_clusters(data, normalize_img=True, discarded_color=(0.3, 1
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.render_foreground_clusters/bbbc033-z28.png
             :width: 100%
@@ -344,7 +344,7 @@ def render_result_over_image(data, objects='postprocessed_objects', merge_overla
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.render_result_over_image/bbbc033-z28.png
             :width: 100%
@@ -489,7 +489,7 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
        - .. figure:: bbbc033-z28.png
             :width: 100%
 
-            Original image from `BBBC033 <https://bbbc.broadinstitute.org/BBBC033>`_.
+            Original image (BBBC033).
 
        - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
             :width: 100%
