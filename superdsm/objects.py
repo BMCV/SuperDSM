@@ -21,6 +21,19 @@ class BaseObject:
         """Reproduces the segmentation mask of this object.
         
         The segmentation mask is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.objects
+           >>> import numpy as np
+           >>> obj = superdsm.objects.BaseObject()
+           >>> obj.fg_fragment = np.array([[0, 1, 0],
+           ...                             [1, 1, 0],
+           ...                             [1, 0, 0]])
+           >>> obj.fg_offset = (1, 2)
+           >>> obj.fill_foreground(mask)
+        
+        .. seealso:: :py:meth:`~.extract_foreground_fragment`
         """
         sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
         out[sel] = value * self.fg_fragment
@@ -76,6 +89,20 @@ class Object(BaseObject):
 
 
 def extract_foreground_fragment(fg_mask):
+    """Returns the minimal-size rectangle region of image foreground and the corresponding offset.
+
+    .. runblock:: pycon
+
+       >>> import superdsm.objects
+       >>> import numpy as np
+       >>> mask = np.array([[0, 0, 0, 0, 0],
+       ...                  [0, 0, 0, 1, 0],
+       ...                  [0, 0, 1, 1, 0],
+       ...                  [0, 0, 1, 0, 0]])
+       >>> superdsm.objects.extract_foreground_fragment(mask.astype(bool))
+    
+    .. seealso:: :py:meth:`~.BaseObject.fill_foreground`
+    """
     if fg_mask.any():
         rows = fg_mask.any(axis=1)
         cols = fg_mask.any(axis=0)
