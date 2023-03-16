@@ -85,11 +85,9 @@ def create_config(pipeline, base_cfg, img):
     .. runblock:: pycon
 
        >>> import superdsm, superdsm.automation, superdsm.config
-       >>> import numpy as np
-       >>> img = np.zeros((512, 512))
        >>> base_cfg = superdsm.config.Config(dict(AF_scale=40))
        >>> pipeline = superdsm.pipeline.create_default_pipeline()
-       >>> cfg, _ = superdsm.automation.create_config(pipeline, base_cfg, img)
+       >>> cfg, _ = superdsm.automation.create_config(pipeline, base_cfg, None)
        >>> print(cfg)
     """
     cfg   = base_cfg.copy()
