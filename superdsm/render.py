@@ -404,6 +404,19 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
     :param bg_color: The color used to represent the image regions with label ``bg_label`` (RGB).
     :param shuffle: If not ``None``, then used as ``seed`` to shuffle the labels before colorization (see :py:meth:`~.shuffle_labels`), and not used otherwise.
     :return: An object of type ``numpy.ndarray`` corresponding to an RGB image. 
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 50%
+
+            Caption.
+
+       - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
+            :width: 50%
+
+            Caption.
     """
     if shuffle is not None:
         labels = shuffle_labels(labels, bg_label=bg_label, seed=shuffle)
