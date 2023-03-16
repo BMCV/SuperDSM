@@ -27,11 +27,13 @@ class BaseObject:
            >>> import superdsm.objects
            >>> import numpy as np
            >>> obj = superdsm.objects.BaseObject()
-           >>> obj.fg_fragment = np.array([[0, 1, 0],
-           ...                             [1, 1, 0],
-           ...                             [1, 0, 0]])
+           >>> obj.fg_fragment = np.array([[False,  True, False],
+           ...                             [ True,  True, False],
+           ...                             [ True, False, False]])
            >>> obj.fg_offset = (1, 2)
+           >>> mask = np.zeros((4, 5), bool)
            >>> obj.fill_foreground(mask)
+           >>> mask
         
         .. seealso:: :py:meth:`~.extract_foreground_fragment`
         """
@@ -95,11 +97,13 @@ def extract_foreground_fragment(fg_mask):
 
        >>> import superdsm.objects
        >>> import numpy as np
-       >>> mask = np.array([[0, 0, 0, 0, 0],
-       ...                  [0, 0, 0, 1, 0],
-       ...                  [0, 0, 1, 1, 0],
-       ...                  [0, 0, 1, 0, 0]])
-       >>> superdsm.objects.extract_foreground_fragment(mask.astype(bool))
+       >>> mask = np.array([[False, False, False, False, False],
+       ...                  [False, False, False,  True, False],
+       ...                  [False, False,  True,  True, False],
+       ...                  [False, False,  True, False, False]])
+       >>> offset, fragment = superdsm.objects.extract_foreground_fragment(mask)
+       >>> offset
+       >>> fragment
     
     .. seealso:: :py:meth:`~.BaseObject.fill_foreground`
     """
