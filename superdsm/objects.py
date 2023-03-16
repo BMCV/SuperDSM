@@ -72,7 +72,7 @@ class Object(BaseObject):
         """Returns binary image corresponding to the union of the represented set of atomic image regions.
 
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-        :return: Binary image corresponding to :math:`\\tilde\\omega(X) = \\bigcup X` in the paper, where each object of this class corresponds to a realization of the set :math:`X` (see :ref:`Section 3 <references>`).
+        :return: Binary image corresponding to :math:`\\tilde\\omega(X) = \\bigcup X` in the paper, where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`).
 
         .. runblock:: pycon
 
@@ -83,7 +83,7 @@ class Object(BaseObject):
            ...                   [3, 3, 3]])
            >>> obj = superdsm.objects.Object()
            >>> obj.footprint = set([2, 3])
-           >>> obj.get_mask()
+           >>> obj.get_mask(atoms)
         """
         return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
