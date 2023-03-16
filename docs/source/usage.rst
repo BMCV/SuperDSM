@@ -66,20 +66,15 @@ The pipeline data object ``data`` is a dictionary containing all the intermediat
     import superdsm.render
     seg = superdsm.render.render_result_over_image(data)
 
-The obtained ``seg`` object is an RGB image (represented by a ``numpy.ndarray`` object) which can be visualized directly (e.g., using matplotlib) or saved for later use (e.g., using :py:meth:`~superdsm.io.imwrite`). Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the pipeline data object.
+The ``seg`` object returned by the :py:meth:`~superdsm.render.render_result_over_image` function is an RGB image (represented by a ``numpy.ndarray`` object) which can be visualized directly (e.g., using matplotlib) or saved for later use (e.g., using :py:meth:`~superdsm.io.imwrite`). Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the pipeline data object.
 
 .. hlist::
-   :columns: 3
+   :columns: 2
 
    - .. figure:: bbbc033-z28.png
         :width: 100%
 
         Original image (BBBC033).
-
-   - .. figure:: ../../tests/expected/render.render_result_over_image/bbbc033-z28.png
-        :width: 100%
-
-        Result of using :py:meth:`~superdsm.render.render_result_over_image`.
 
    - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
         :width: 100%
