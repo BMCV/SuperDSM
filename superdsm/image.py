@@ -13,12 +13,12 @@ def get_pixel_map(shape, normalized=False):
     .. runblock:: pycon
 
        >>> import superdsm.image
-       ... superdsm.image.get_pixel_map((6, 3))
+       >>> superdsm.image.get_pixel_map((6, 3))
 
     .. runblock:: pycon
 
        >>> import superdsm.image
-       ... superdsm.image.get_pixel_map((6, 3), normalized=True)
+       >>> superdsm.image.get_pixel_map((6, 3), normalized=True)
     """
     z = (np.array(shape) - 1. if normalized else np.ones(2))[Ellipsis, None, None]
     z[z == 0] = 1
@@ -34,12 +34,13 @@ def bbox(mask, include_end=True):
     .. runblock:: pycon
 
        >>> import superdsm.image
-       ... import numpy as np
-       ... mask = np.array([[0, 0, 0, 0, 0],
+       >>> import numpy as np
+       >>> mask = np.array([[0, 0, 0, 0, 0],
        ...                  [0, 0, 0, 1, 0],
        ...                  [0, 0, 1, 1, 0],
        ...                  [0, 0, 1, 0, 0]])
-       ... superdsm.image.bbox(mask.astype(bool))
+       >>> superdsm.image.bbox(mask.astype(bool), include_end=False)
+       >>> superdsm.image.bbox(mask.astype(bool))
     """
     mask_a0 = mask.any(axis=0)
     mask_a1 = mask.any(axis=1)
