@@ -35,7 +35,7 @@ def load_data(url, datasets, **kwargs):
 def require_data(data_id, filename=None):
     data_path = data_dir / data_id
     if not data_path.exists():
-        with open(data_dir.parent / 'database.json') as dbfp:
+        with open(data_dir.parent / 'datasets.json') as dbfp:
             db = json.load(dbfp)
         data = db[data_id]
         load_data(data['url'], [(src, f'{data_id}/{dst}') for (src, dst) in data['datasets']])
