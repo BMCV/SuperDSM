@@ -109,14 +109,15 @@ class Object(BaseObject):
            >>> atoms  = np.array([[ 1,  1,  1,  1,  1,  1],
            ...                    [ 1,  1,  1,  1,  1,  1],
            ...                    [ 1,  1,  1,  1,  1,  1],
+           ...                    [ 1,  1,  1,  1,  1,  1],
            ...                    [ 1,  1,  1,  1,  2,  2],
            ...                    [ 1,  1,  1,  1,  2,  2]])
            >>> obj = superdsm.objects.Object()
            >>> obj.footprint = set([2])
            >>> y = superdsm.image.Image(y_data)
-           >>> roi = obj.get_cvxprog_region(y, atoms, min_background_margin=1)
-           >>> roi.mask
-           >>> roi.model
+           >>> region = obj.get_cvxprog_region(y, atoms, min_background_margin=1)
+           >>> region.mask
+           >>> region.model
         """
         min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
         region = y.get_region(self.get_mask(atoms))
