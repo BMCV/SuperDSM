@@ -10,7 +10,7 @@ import skimage.morphology as morph
 
 
 class BaseObject:
-    """Each object of this class represents a segmentation mask.
+    """Each object of this class represents a segmentation mask, consisting of a *foreground fragment* and an *offset*.
     """
 
     def __init__(self):
@@ -20,22 +20,24 @@ class BaseObject:
     def fill_foreground(self, out, value=True):
         """Reproduces the segmentation mask of this object.
         
-        The segmentation mask is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
+        The foreground fragment is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
+
+        :return: The slice corresponding to the altered region of ``out``.
 
         .. runblock:: pycon
 
            >>> import superdsm.objects
            >>> import numpy as np
            >>> obj = superdsm.objects.BaseObject()
-           >>> obj.fg_fragment = np.array([[False,  True, False],
-           ...                             [ True,  True, False],
-           ...                             [ True, False, False]])
+           >>> obj.fg_fragment = np.array([[False,  True],
+           ...                             [ True,  True],
+           ...                             [ True, False]])
            >>> obj.fg_offset = (1, 2)
            >>> mask = np.zeros((4, 5), bool)
            >>> obj.fill_foreground(mask)
            >>> mask
         
-        .. seealso:: :py:meth:`~.extract_foreground_fragment`
+        This method is the counterpart of the :py:meth:`~.extract_foreground_fragment` function.
         """
         sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
         out[sel] = value * self.fg_fragment
@@ -67,6 +69,22 @@ class Object(BaseObject):
         return value
     
     def get_mask(self, atoms):
+        """Returns binary image corresponding to the union of the represented set of atomic image regions.
+
+        :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
+        :return: Binary image corresponding to :math:`\\tilde\\omega(X) = \\bigcup X` in the paper, where each object of this class corresponds to a realization of the set :math:`X` (see :ref:`Section 3 <references>`).
+
+        .. runblock:: pycon
+
+           >>> import superdsm.objects
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> obj = superdsm.objects.Object()
+           >>> obj.footprint = set([2, 3])
+           >>> obj.get_mask()
+        """
         return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
     def get_cvxprog_region(self, y, atoms, min_background_margin=None):
@@ -76,6 +94,8 @@ class Object(BaseObject):
         return region
 
     def set(self, state):
+        """Adopts the state of another object.
+        """
         self.fg_fragment     = state.fg_fragment.copy() if state.fg_fragment is not None else None
         self.fg_offset       = state.fg_offset.copy() if state.fg_offset is not None else None
         self.footprint       = set(state.footprint)
@@ -87,6 +107,8 @@ class Object(BaseObject):
         return self
 
     def copy(self):
+        """Returns a deep copy of this object.
+        """
         return Object().set(self)
 
 
@@ -105,7 +127,7 @@ def extract_foreground_fragment(fg_mask):
        >>> offset
        >>> fragment
     
-    .. seealso:: :py:meth:`~.BaseObject.fill_foreground`
+    This function is the counterpart of the :py:meth:`~.BaseObject.fill_foreground` method.
     """
     if fg_mask.any():
         rows = fg_mask.any(axis=1)

@@ -123,7 +123,7 @@ Pipeline stages require different inputs and produce different outputs. These ar
     Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``atoms``
-    Integer-valued image representing the universe of atomic image regions. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Integer-valued image representing the universe of atomic image regions. Each atomic image region has a unique label, which is the integer value. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``adjacencies``
     The adjacency graph :math:`\mathcal G`, represented as an object of the type :py:class:`~.atoms.AtomAdjacencyGraph`. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
@@ -132,7 +132,7 @@ Pipeline stages require different inputs and produce different outputs. These ar
     The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``clusters``
-    Integer-valued image representing the regions of possibly clustered obejcts. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
+    Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.
 
 ``y_img``
     An :py:class:`~.image.Image` object corresponding to a joint representation of the offset image intensities ``y`` and mask ``y_mask``. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
