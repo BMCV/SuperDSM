@@ -9,6 +9,11 @@ def get_pixel_map(shape, normalized=False):
     The first array corresponds to the row indices (coordinates), the second array corresponds to the column indices (coordinates). The coordinates are normalized to the range between 0 and 1 if ``normalized`` is ``True``.
 
     :return: The two 2D arrays, encapsulated as a single 3D array.
+
+    .. runblock:: pycon
+
+       >>> import superdsm.image
+       ... superdsm.image.get_pixel_map((5, 5))
     """
     z = (np.array(shape) - 1. if normalized else np.ones(2))[Ellipsis, None, None]
     z[z == 0] = 1
