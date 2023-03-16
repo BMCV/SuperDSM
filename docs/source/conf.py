@@ -22,6 +22,10 @@ intersphinx_mapping = {
 }
 intersphinx_disabled_domains = ['std']
 
+html_css_files = [
+    'custom.css',
+]
+
 templates_path = ['_templates']
 
 # -- Options for HTML output

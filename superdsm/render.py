@@ -409,12 +409,12 @@ def colorize_labels(labels, bg_label=0, cmap='gist_rainbow', bg_color=(0,0,0), s
        :columns: 2
 
        - .. figure:: bbbc033-z28.png
-            :width: 50%
+            :width: 100%
 
             Caption.
 
        - .. figure:: ../../tests/expected/render.colorize_labels/bbbc033-z28.png
-            :width: 50%
+            :width: 100%
 
             Caption.
     """
