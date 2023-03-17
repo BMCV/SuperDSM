@@ -41,7 +41,7 @@ class BaseObject:
            >>> obj.fill_foreground(mask)
            >>> mask
         
-        This method is the counterpart of the :py:meth:`~.extract_foreground_fragment` function.
+        This method is the counterpart of the :py:meth:`~extract_foreground_fragment` function.
         """
         assert self.fg_offset is not None
         assert self.fg_fragment is not None
@@ -61,7 +61,7 @@ class Object(BaseObject):
     :ivar is_optimal: ``True`` if optimization of :py:attr:`~.energy` was successful.
     :ivar processing_time: How long the computation of the attributes took (in seconds).
 
-    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet (see the :py:meth:`~.compute_objects` function).
+    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet (see the :py:meth:`~compute_objects` function).
 
     Possible reasons for :py:attr:`~.is_optimal` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
@@ -257,7 +257,7 @@ DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     """Computes the attributes of a list of objects.
 
-    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time`, :py:attr:`~.BaseObject.fg_fragment`, :py:attr:`~.BaseObject.fg_offset` of the objects.
+    The computation concerns the attributes :py:attr:`~Object.energy`, :py:attr:`~Object.on_boundary`, :py:attr:`~Object.is_optimal`, :py:attr:`~Object.processing_time`, :py:attr:`~BaseObject.fg_fragment`, :py:attr:`~BaseObject.fg_offset` of the objects.
 
     :param objects: List of objects for which the above mentioned attributes are to be computed.
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
@@ -265,7 +265,7 @@ def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line
     :param cvxprog_kwargs: tbd
     :param log_root_dir: Path of directory where log files will be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
-    :param out: An output object obtained via :py:meth:`~._aux.get_output`.
+    :param out: An output object obtained via :py:meth:`~superdsm._aux.get_output`.
     """
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
