@@ -68,10 +68,10 @@ class DSM_Config(Stage):
         Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation might require a considerable amount of system memory).
 
     ``dsm/min_background_margin``
-        Governs the amount of image background included in the obtained image region. It is the *minimal* width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error in Eq. (S11), the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). The actual width may actually be different (in fact, it is the maximum of the values set for ``min_background_margin`` and ``smooth_subsample``).
+        Governs the amount of image background included in the obtained image region. It is the *minimal* width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). The actual width may actually be different (in fact, it is the maximum of the values set for ``min_background_margin`` and ``smooth_subsample``).
 
     ``dsm/cp_timeout``
-        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~objects.cvxprog` function will report the status ``fallback`` in this case). Defaults to 300 (i.e. 5 minutes).
+        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). Defaults to 300 (i.e. 5 minutes).
     """
 
     ENABLED_BY_DEFAULT = True
