@@ -263,9 +263,9 @@ def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
     :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
     :param cvxprog_kwargs: tbd
-    :param log_root_dir: tbd
-    :param status_line: tbd
-    :param out: tbd
+    :param log_root_dir: Path of directory where log files will be written.
+    :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
+    :param out: An output object obtained via :py:meth:`~._aux.get_output`.
     """
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
