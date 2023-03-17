@@ -5,6 +5,7 @@ import numpy as np
 
 DSM_CONFIG_DEFAULTS = {
     'cachesize': 1,
+    'cachetest': None,
     'sparsity_tol': 0,
     'init': 'elliptical',
     'smooth_amount': 10,
@@ -31,6 +32,9 @@ class DSM_Config(Stage):
     The following hyperparameters are fetched:
 
     ``dsm/cachesize``
+        tbd.
+
+    ``dsm/cachetest``
         tbd.
 
     ``dsm/sparsity_tol``
