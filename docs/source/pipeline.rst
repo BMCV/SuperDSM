@@ -95,7 +95,7 @@ Pipeline stages
 The function :py:meth:`.pipeline.create_default_pipeline` employs the following stages:
 
 #. :py:class:`~.preprocess.Preprocessing` — Implements the computation of the intensity offsets.
-#. :py:class:`~.dsmcfg.DSM_ConfigStage` — Provides the hyperparameters from the ``dsm`` namespace as an output.
+#. :py:class:`~.dsmcfg.DSM_Config` — Provides the hyperparameters from the ``dsm`` namespace as an output.
 #. :py:class:`~.c2freganal.C2F_RegionAnalysis` — Implements the coarse-to-fine region analysis scheme.
 #. :py:class:`~.globalenergymin.GlobalEnergyMinimization` — Implements the global energy minimization.
 #. :py:class:`~.postprocess.Postprocessing` — Discards spurious objects and refines the segmentation masks.
@@ -117,7 +117,7 @@ Pipeline stages require different inputs and produce different outputs. These ar
     The offset image intensities :math:`Y_\omega|_{\omega = \Omega}`, represented as an object of type ``numpy.ndarray`` of the same shape as the ``g_raw`` image. Provided by the :py:class:`~.preprocess.Preprocessing` stage.
 
 ``dsm_cfg``
-    A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.DSM_ConfigStage` stage.
+    A dictionary corresponding to the hyperparameters which reside in the ``dsm`` namespace. Provided by the :py:class:`~.dsmcfg.DSM_Config` stage.
 
 ``y_mask``
     Binary image corresponding to a mask of "empty" image regions (``False``), that are discarded from consideration, and those which possibly contain objects and are considered for segmentation (``True``). This is described in Section 3.1 of the paper. Provided by the :py:class:`~.dsmcfg.C2F_RegionAnalysis` stage.

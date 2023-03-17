@@ -233,7 +233,7 @@ def create_default_pipeline():
     The pipeline consists of the following stages:
 
     #. :py:class:`~.preprocess.Preprocessing`
-    #. :py:class:`~.dsmcfg.DSM_ConfigStage`
+    #. :py:class:`~.dsmcfg.DSM_Config`
     #. :py:class:`~.c2freganal.C2F_RegionAnalysis`
     #. :py:class:`~.globalenergymin.GlobalEnergyMinimization`
     #. :py:class:`~.postprocess.Postprocessing`
@@ -241,14 +241,14 @@ def create_default_pipeline():
     Refer to :ref:`pipeline` for a comprehensive documentation of the pipeline.
     """
     from .preprocess import Preprocessing
-    from .dsmcfg import DSM_ConfigStage
+    from .dsmcfg import DSM_Config
     from .c2freganal import C2F_RegionAnalysis
     from .globalenergymin import GlobalEnergyMinimization
     from .postprocess import Postprocessing
 
     stages = [
         Preprocessing(),
-        DSM_ConfigStage(),
+        DSM_Config(),
         C2F_RegionAnalysis(),
         GlobalEnergyMinimization(),
         Postprocessing(),

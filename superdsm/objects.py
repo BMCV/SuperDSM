@@ -254,7 +254,7 @@ def _compute_object_logged(log_root_dir, cidx, *args, **kwargs):
 DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 
 
-def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
+def compute_objects(objects, y, atoms, dsm_cfg, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     """Computes the attributes of a list of objects.
 
     The computation concerns the attributes :py:attr:`~Object.energy`, :py:attr:`~Object.on_boundary`, :py:attr:`~Object.is_optimal`, :py:attr:`~Object.processing_time`, :py:attr:`~BaseObject.fg_fragment`, :py:attr:`~BaseObject.fg_offset` of the objects.
@@ -262,23 +262,19 @@ def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line
     :param objects: List of objects for which the above mentioned attributes are to be computed.
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
     :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-    :param cvxprog_kwargs: Dictionary of keyword arguments passed to the :py:meth:`~cvxprog` function, *not* including the ``region`` and ``smooth_mat_allocation_lock`` keys. Instead, the following keys must be included:
-
-        * ``smooth_mat_max_allocations``: Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` (see Section 3.3 of the :ref:`paper <references>`, each allocation requires a considerable amount of system memory).
-        * ``min_background_margin``: Passed to the :py:meth:`~Object.get_cvxprog_region` method.
-
+    :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`DSM_Config` stage (without the leading ``dsm/`` namespace).
     :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
     """
     out = get_output(out)
-    cvxprog_kwargs = copy_dict(cvxprog_kwargs)
-    smooth_mat_max_allocations = cvxprog_kwargs.pop('smooth_mat_max_allocations', np.inf)
+    dsm_cfg = copy_dict(dsm_cfg)
+    smooth_mat_max_allocations = dsm_cfg.pop('smooth_mat_max_allocations', np.inf)
     with SystemSemaphore('smooth-matrix-allocation', smooth_mat_max_allocations) as smooth_mat_allocation_lock:
         objects = list(objects)
         fallbacks  = 0
         x_map      = y.get_map(normalized=False, pad=1)
-        for ret_idx, ret in enumerate(_compute_objects(objects, y, atoms, x_map, smooth_mat_allocation_lock, cvxprog_kwargs, log_root_dir)):
+        for ret_idx, ret in enumerate(_compute_objects(objects, y, atoms, x_map, smooth_mat_allocation_lock, dsm_cfg, log_root_dir)):
             objects[ret[0]].set(ret[1])
             out.intermediate(f'{status_line[0]}... {ret_idx + 1} / {len(objects)} ({fallbacks}x fallback)')
             if ret[2]: fallbacks += 1
