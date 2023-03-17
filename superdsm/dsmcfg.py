@@ -16,7 +16,7 @@ DSM_CONFIG_DEFAULTS = {
     'smooth_mat_dtype': 'float32',
     'smooth_mat_max_allocations': np.inf,
     'min_background_margin': 20,
-    'cp_timeout': 300
+    'cp_timeout': 300,
 }
 
 
@@ -61,7 +61,7 @@ class DSM_ConfigStage(Stage):
         tbd.
 
     ``dsm/smooth_mat_max_allocations``
-        Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation requires a considerable amount of system memory).
+        Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation requires a considerable amount of system memory).
 
     ``dsm/min_background_margin``
         tbd.
