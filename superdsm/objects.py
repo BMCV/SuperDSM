@@ -262,7 +262,7 @@ def compute_objects(objects, y, atoms, dsm_cfg, log_root_dir, status_line=DEFAUL
     :param objects: List of objects for which the above mentioned attributes are to be computed.
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
     :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-    :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`DSM_Config` stage (without the leading ``dsm/`` namespace).
+    :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`~dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
     :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
@@ -373,6 +373,19 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
 
 
 def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
+    """Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`c(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
+
+    :param region: An object of the :py:class:`~image.Image` class corresponding to the image region :math:`X`.
+    :param smooth_mat_allocation_lock: A critical section lock used for allocation of the matrix :math:`\\tilde G_\\omega`.
+    
+    The other parameters correspond to the hyperparameters defined in the :py:class:`~dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
+    
+    :return: A tuple with the following components:
+
+        * The value of the set energy function :math:`c(X)`.
+        * An instance of the :py:class:`~dsm.DeformableShapeModel` class which represents the optimal parameters :math:`\\theta` and :math:`\\xi`.
+        * A status indicator string, where ``optimal`` indicats that convex programming was successful and ``fallback`` indicates that convex programmign failed for the deformable shape model and the initialization is used instead.
+    """
     _print_heading('initializing')
     smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
     J = Energy(region, epsilon, alpha, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
@@ -404,7 +417,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
         status = 'fallback'  ## at least something we can continue the work with
     assert status is not None
     if status == 'fallback':
-        _print_heading('DSM failed: falling back to elliptical result')
+        _print_heading(f'DSM failed: falling back to {"elliptical result" if init == "elliptical" else "initialization"}')
         solution = params
     _print_heading('finished')
     return J, DeformableShapeModel(solution), status
