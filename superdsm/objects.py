@@ -265,7 +265,7 @@ def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line
     :param cvxprog_kwargs: Dictionary of keyword arguments passed to the :py:meth:`~cvxprog` function, *not* including the ``region`` and ``smooth_mat_allocation_lock`` keys. Instead, the following keys must be included:
 
         * ``smooth_mat_max_allocations``: Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` (see Section 3.3 of the :ref:`paper <references>`, each allocation requires a considerable amount of system memory).
-        * ``min_background_margin``: Passed to the :py:meth:`~object.get_cvxprog_region` method.
+        * ``min_background_margin``: Passed to the :py:meth:`~Object.get_cvxprog_region` method.
 
     :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
