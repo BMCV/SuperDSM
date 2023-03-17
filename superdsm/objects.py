@@ -61,7 +61,7 @@ class Object(BaseObject):
     :ivar is_optimal: ``True`` if optimization of :py:attr:`~.energy` was successful.
     :ivar processing_time: How long the computation of the attributes took (in seconds).
 
-    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet (see the :py:meth:`~compute_objects` function).
+    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet, i.e. the object was not passed to the :py:meth:`~compute_objects` function yet.
 
     Possible reasons for :py:attr:`~.is_optimal` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
@@ -263,9 +263,9 @@ def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
     :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
     :param cvxprog_kwargs: tbd
-    :param log_root_dir: Path of directory where log files will be written.
+    :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
-    :param out: An output object obtained via :py:meth:`~superdsm._aux.get_output`.
+    :param out: An output object obtained via :py:meth:`~output.get_output`, or ``None`` if the default output should be used.
     """
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
