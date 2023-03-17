@@ -50,7 +50,7 @@ class DSM_Config(Stage):
         Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\\tilde G_\\omega` in the :ref:`paper <references>` (Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
     ``dsm/epsilon``
-        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term `\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`). Defaults to 1.
+        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`). Defaults to 1.
 
     ``dsm/alpha``
         Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in the :ref:`paper <references>` and defaults to 5e-4).
@@ -59,10 +59,10 @@ class DSM_Config(Stage):
         Fixed factor used during convex programming to slightly improve numerical stabilities. Defaults to 1000.
 
     ``dsm/gaussian_shape_multiplier``
-        tbd.
+        The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`). Defaults to 2.
 
     ``dsm/smooth_mat_dtype``
-        tbd.
+        A string indicating the data type used for the the block Toeplitz matrix :math:`G_\omega`. Defaults to ``float32``.
 
     ``dsm/smooth_mat_max_allocations``
         Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation requires a considerable amount of system memory).
