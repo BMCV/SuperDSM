@@ -11,6 +11,8 @@ import skimage.morphology as morph
 
 class BaseObject:
     """Each object of this class represents a segmentation mask, consisting of a *foreground fragment* and an *offset*.
+
+    The attributes :py:attr:`~.fg_offset` and :py:attr:`~.fg_fragment` are initialized with ``None``, indicating that they have not been computed yet.
     """
 
     def __init__(self):
@@ -21,6 +23,8 @@ class BaseObject:
         """Reproduces the segmentation mask of this object.
         
         The foreground fragment is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
+
+        The method requires that :py:attr:`~.fg_offset` and :py:attr:`~.fg_fragment` have been computed before (see the :py:meth:`~.compute_objects` function).
 
         :return: The slice corresponding to the altered region of ``out``.
 
@@ -39,6 +43,8 @@ class BaseObject:
         
         This method is the counterpart of the :py:meth:`~.extract_foreground_fragment` function.
         """
+        assert self.fg_offset is not None
+        assert self.fg_fragment is not None
         sel = np.s_[self.fg_offset[0] : self.fg_offset[0] + self.fg_fragment.shape[0], self.fg_offset[1] : self.fg_offset[1] + self.fg_fragment.shape[1]]
         out[sel] = value * self.fg_fragment
         return sel
@@ -52,12 +58,12 @@ class Object(BaseObject):
     :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
     :ivar energy: The value of the set energy function :math:`c(X)` (see :ref:`pipeline_theory_jointsegandclustersplit`).
     :ivar on_boundary: ``True`` if this object intersects the image boundary.
-    :ivar is_optimal: ``True`` if optimization of ``energy`` was successful.
-    :ivar processing_time: Number of seconds which the computation of ``energy`` took.
+    :ivar is_optimal: ``True`` if optimization of :py:attr:`~.energy` was successful.
+    :ivar processing_time: How long the computation of the attributes took (in seconds).
 
-    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet.
+    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet (see the :py:meth:`~.compute_objects` function).
 
-    Possible reasons for ``is_optimal`` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
+    Possible reasons for :py:attr:`~.is_optimal` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
 
     def __init__(self):
@@ -251,7 +257,7 @@ DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     """Computes the attributes of a list of objects.
 
-    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time` of the objects.
+    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time`, :py:attr:`~.BaseObject.fg_fragment`, :py:attr:`~.BaseObject.fg_offset` of the objects.
 
     :param objects: List of objects for which the above mentioned attributes are to be computed.
     :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
