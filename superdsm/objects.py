@@ -48,6 +48,14 @@ class Object(BaseObject):
     """Each object of this class represents a set of atomic image regions.
 
     Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
+
+    :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
+    :ivar energy: The value of the set energy function :math:`c'(X)`, or ``nan`` if not computed yet.
+    :ivar on_boundary: ``True`` if this object intersects the image boundary, or ``nan`` if not computed yet.
+    :ivar is_optimal: Indicates whether optimization of ``energy`` was performed successfully (``True``), not successfully (``False``), or not at all yet (``nan``).
+    :ivar processing_time: The clock time which the computation of ``energy`` took (in seconds).
+
+    Possible reasons for ``is_optimal`` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
 
     def __init__(self):
