@@ -24,7 +24,7 @@ class BaseObject:
         
         The foreground fragment is written into the image ``out``, which must be an object of ``numpy.ndarray`` type. Image points corresponding to the segmentation mask will be set to ``value``.
 
-        The method requires that :py:attr:`~.fg_offset` and :py:attr:`~.fg_fragment` have been computed before (see the :py:meth:`~.compute_objects` function).
+        The method requires that :py:attr:`~.fg_offset` and :py:attr:`~.fg_fragment` have been computed before (see the :py:meth:`~compute_objects` function).
 
         :return: The slice corresponding to the altered region of ``out``.
 
