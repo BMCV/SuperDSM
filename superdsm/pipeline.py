@@ -143,7 +143,7 @@ class Pipeline:
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
-        :param out: An output object obtained via :py:meth:`~output.get_output`, or ``None`` if the default output should be used.
+        :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
         :param log_root_dir: Path to a directory where log files should be written to.
         :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 

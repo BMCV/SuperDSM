@@ -20,7 +20,7 @@ def get_output(out=None):
     """Returns a suitable :py:class:`~.Output` implementation.
 
     :param out: This will be returned if it is not ``None``.
-    :return: A :py:class:`~.JupyterOutput` object if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise.
+    :return: ``out`` if ``out`` is not ``None``. If ``out`` is ``None``, then a :py:class:`~.JupyterOutput` object if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise.
     """
     if out is not None:
         return out
