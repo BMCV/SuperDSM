@@ -260,9 +260,9 @@ def compute_objects(objects, y, atoms, dsm_cfg, log_root_dir, status_line=DEFAUL
     The computation concerns the attributes :py:attr:`~Object.energy`, :py:attr:`~Object.on_boundary`, :py:attr:`~Object.is_optimal`, :py:attr:`~Object.processing_time`, :py:attr:`~BaseObject.fg_fragment`, :py:attr:`~BaseObject.fg_offset` of the objects.
 
     :param objects: List of objects for which the above mentioned attributes are to be computed.
-    :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
+    :param y: An :py:class:`~.image.Image` object corresponding to the offset image intensities.
     :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-    :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`~dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
+    :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`~superdsm.dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
     :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
@@ -378,8 +378,8 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
     :param region: An object of the :py:class:`~image.Image` class corresponding to the image region :math:`X`.
     :param smooth_mat_allocation_lock: A critical section lock used for allocation of the matrix :math:`\\tilde G_\\omega`.
     
-    The other parameters correspond to the hyperparameters defined in the :py:class:`~dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
-    
+    The other parameters correspond to the hyperparameters defined in the :py:class:`~superdsm.dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
+
     :return: A tuple with the following components:
 
         * The value of the set energy function :math:`c(X)`.
