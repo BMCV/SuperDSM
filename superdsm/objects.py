@@ -50,12 +50,12 @@ class Object(BaseObject):
     Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
 
     :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
-    :ivar energy: The value of the set energy function :math:`c'(X)`.
+    :ivar energy: The value of the set energy function :math:`c(X)` (see :ref:`pipeline_theory_jointsegandclustersplit`).
     :ivar on_boundary: ``True`` if this object intersects the image boundary.
     :ivar is_optimal: ``True`` if optimization of ``energy`` was successful.
-    :ivar processing_time: The clock time which the computation of ``energy`` took (in seconds).
+    :ivar processing_time: Number of seconds which the computation of ``energy`` took.
 
-    The attributes energy, on_boundary, is_optimal, and processing_time are initialized with ``nan``, which indicates that the values have not been computed yet.
+    The attributes :py:attr:`~.energy`, :py:attr:`~.on_boundary`, :py:attr:`~.is_optimal`, :py:attr:`~.processing_time` are initialized with ``nan``, which indicates that the values have not been computed yet.
 
     Possible reasons for ``is_optimal`` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
@@ -100,7 +100,7 @@ class Object(BaseObject):
     def get_cvxprog_region(self, y, atoms, min_background_margin=None):
         """Returns the image region used for convex programming.
 
-        :param y: Object of :py:class:`~.image.Image` type, corresponding to the offset image intensities.
+        :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
         :param min_background_margin: Governs the amount of image background included in the obtained image region. It is the minimal width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
         :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
@@ -251,7 +251,15 @@ DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
     """Computes the attributes of a list of objects.
 
-    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time`.
+    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time` of the objects.
+
+    :param objects: List of objects for which the above mentioned attributes are to be computed.
+    :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
+    :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
+    :param cvxprog_kwargs: tbd
+    :param log_root_dir: tbd
+    :param status_line: tbd
+    :param out: tbd
     """
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
