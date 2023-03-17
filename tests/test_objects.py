@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import superdsm.objects
+import superdsm.image
 
 from . import testsuite
 
@@ -45,6 +46,35 @@ class objects(unittest.TestCase):
                                       [ True, False]])
         np.testing.assert_allclose(actual_offset, expected_offset)
         np.testing.assert_allclose(actual_fragment, expected_fragment)
+
+    def test_get_cvxprog_region(self):
+        y_data = np.array([[-1, -1, -1, -1, -1],
+                           [-1, -1, -1, -1, -1],
+                           [-1, -1, -1, -1, -1],
+                           [-1, +1, -1, -1, -1],
+                           [-1, +1, -1, -1, +1],
+                           [-1, +1, -1, -1, +1]])
+        atoms  = np.array([[ 1,  1,  1,  1,  1],
+                           [ 1,  1,  1,  1,  1],
+                           [ 1,  1,  1,  1,  2],
+                           [ 1,  1,  1,  2,  2],
+                           [ 1,  1,  1,  2,  2],
+                           [ 1,  1,  1,  2,  2]])
+        obj = superdsm.objects.Object()
+        obj.footprint = set([1])
+        y = superdsm.image.Image(y_data)
+        region1 = obj.get_cvxprog_region(y, atoms, min_background_margin=2)
+        region2 = obj.get_cvxprog_region(y, atoms)
+        expected = np.array([[False, False, False, False, False],
+                             [False,  True, False, False, False],
+                             [ True,  True,  True, False, False],
+                             [ True,  True,  True, False, False],
+                             [ True,  True,  True, False, False],
+                             [ True,  True,  True, False, False]])
+        np.testing.assert_allclose(region1.mask, expected)
+        np.testing.assert_allclose(region2.mask, expected)
+        np.testing.assert_allclose(region1.model, y_data)
+        np.testing.assert_allclose(region2.model, y_data)
 
 
 if __name__ == '__main__':
