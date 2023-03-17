@@ -59,10 +59,10 @@ class DSM_Config(Stage):
         Fixed factor used during convex programming to slightly improve numerical stabilities. Defaults to 1000.
 
     ``dsm/gaussian_shape_multiplier``
-        The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`). Defaults to 2.
+        The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`). Defaults to 2.
 
     ``dsm/smooth_mat_dtype``
-        A string indicating the data type used for the matrix :math:`G_\omega`. Defaults to ``float32``.
+        A string indicating the data type used for the matrix :math:`G_\\omega`. Defaults to ``float32``.
 
     ``dsm/smooth_mat_max_allocations``
         Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation might require a considerable amount of system memory).
