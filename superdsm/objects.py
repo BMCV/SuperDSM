@@ -108,7 +108,7 @@ class Object(BaseObject):
 
         :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-        :param min_background_margin: Governs the amount of image background included in the obtained image region. It is the minimal width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
+        :param min_background_margin: Governs the amount of image background included in the obtained image region. It is the *minimal* width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
         :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
 
         .. runblock:: pycon
@@ -386,7 +386,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
 
         * The value of the set energy function :math:`c(X)`.
         * An instance of the :py:class:`~dsm.DeformableShapeModel` class which represents the optimal parameters :math:`\\theta` and :math:`\\xi`.
-        * A status indicator string, where ``optimal`` indicats that convex programming was successful and ``fallback`` indicates that convex programmign failed for the deformable shape model and the initialization is used instead.
+        * A status indicator string, where ``optimal`` indicats that convex programming was successful and ``fallback`` indicates that convex programming failed for the deformable shape model and the initialization is used instead.
     """
     _print_heading('initializing')
     smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
