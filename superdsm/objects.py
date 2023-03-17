@@ -373,9 +373,11 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
 
 
 def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
-    """Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`c(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
+    """Fits a deformable shape model to the intensities of an image region.
+    
+    Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`c(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
 
-    :param region: An object of the :py:class:`~image.Image` class corresponding to the image region :math:`X`.
+    :param region: An :py:class:`~image.Image` object corresponding to the image region :math:`X`.
     :param smooth_mat_allocation_lock: A critical section lock used for allocation of the matrix :math:`\\tilde G_\\omega`.
     
     The other parameters correspond to the hyperparameters defined in the :py:class:`~superdsm.dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
