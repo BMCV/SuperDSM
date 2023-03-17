@@ -32,16 +32,16 @@ class DSM_Config(Stage):
     The following hyperparameters are fetched:
 
     ``dsm/cachesize``
-        tbd.
+        The maximum number of entries used for caching during convex programming. This concerns invocations of the callback function ``F`` used by the `cvxopt solver for nonlinear problems <https://cvxopt.org/userguide/solvers.html#problems-with-nonlinear-objectives>`_. Defaults to 1.
 
     ``dsm/cachetest``
-        tbd.
+        The test function to be used for cache testing. If ``None``, then ``numpy.array_equal`` will be used. Using other functions like ``numpy.allclose`` has shown to introduce numerical instabilities. Defaults to ``None``.
 
     ``dsm/sparsity_tol``
-        tbd.
+        Absolute values less than or equal to this threshold will be treated as zeros during optimization. Defaults to 0.
 
     ``dsm/init``
-        tbd.
+        Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of the :ref:`paper <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
 
     ``dsm/smooth_amount``
         Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`. Defaults to 10, or to ``AF_smooth_amount × scale`` if computed automatically (forced to :math:`\\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
@@ -50,13 +50,13 @@ class DSM_Config(Stage):
         Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\\tilde G_\\omega` in the :ref:`paper <references>` (Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
     ``dsm/epsilon``
-        tbd.
+        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term `\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`). Defaults to 1.
 
     ``dsm/alpha``
         Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in the :ref:`paper <references>` and defaults to 5e-4).
 
     ``dsm/scale``
-        tbd.
+        Fixed factor used during convex programming to slightly improve numerical stabilities. Defaults to 1000.
 
     ``dsm/gaussian_shape_multiplier``
         tbd.
