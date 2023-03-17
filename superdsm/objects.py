@@ -50,10 +50,12 @@ class Object(BaseObject):
     Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
 
     :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
-    :ivar energy: The value of the set energy function :math:`c'(X)`, or ``nan`` if not computed yet.
-    :ivar on_boundary: ``True`` if this object intersects the image boundary, or ``nan`` if not computed yet.
-    :ivar is_optimal: Indicates whether optimization of ``energy`` was performed successfully (``True``), not successfully (``False``), or not at all yet (``nan``).
+    :ivar energy: The value of the set energy function :math:`c'(X)`.
+    :ivar on_boundary: ``True`` if this object intersects the image boundary.
+    :ivar is_optimal: ``True`` if optimization of ``energy`` was successful.
     :ivar processing_time: The clock time which the computation of ``energy`` took (in seconds).
+
+    The attributes energy, on_boundary, is_optimal, and processing_time are initialized with ``nan``, which indicates that the values have not been computed yet.
 
     Possible reasons for ``is_optimal`` being ``False`` include the rare cases of numerical issues during optimization as well as regions of the size of a single pixel.
     """
@@ -247,6 +249,10 @@ DEFAULT_COMPUTING_STATUS_LINE = ('Computing objects', 'Computed objects')
 
 
 def compute_objects(objects, y, atoms, cvxprog_kwargs, log_root_dir, status_line=DEFAULT_COMPUTING_STATUS_LINE, out=None):
+    """Computes the attributes of a list of objects.
+
+    The computation concerns the attributes :py:attr:`~.Object.energy`, :py:attr:`~.Object.on_boundary`, :py:attr:`~.Object.is_optimal`, :py:attr:`~.Object.processing_time`.
+    """
     out = get_output(out)
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
     smooth_mat_max_allocations = cvxprog_kwargs.pop('smooth_mat_max_allocations', np.inf)
