@@ -16,7 +16,7 @@ DSM_CONFIG_DEFAULTS = {
     'gaussian_shape_multiplier': 2,
     'smooth_mat_dtype': 'float32',
     'smooth_mat_max_allocations': np.inf,
-    'min_background_margin': 20,
+    'min_background_margin': 0,
     'cp_timeout': 300,
 }
 
