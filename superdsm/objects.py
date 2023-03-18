@@ -189,7 +189,7 @@ def extract_foreground_fragment(fg_mask):
 
 def _compute_object(y, atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
-    min_background_margin = max((cvxprog_kwargs.pop('min_background_margin'), cvxprog_kwargs['smooth_subsample']))
+    min_background_margin = cvxprog_kwargs.pop('min_background_margin')
     region = object.get_cvxprog_region(y, atoms, min_background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
         print(f'{infoline}: {eval(infoline)}')

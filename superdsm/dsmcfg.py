@@ -16,7 +16,7 @@ DSM_CONFIG_DEFAULTS = {
     'gaussian_shape_multiplier': 2,
     'smooth_mat_dtype': 'float32',
     'smooth_mat_max_allocations': np.inf,
-    'min_background_margin': 0,
+    'min_background_margin': 20,
     'cp_timeout': 300,
 }
 
@@ -89,9 +89,11 @@ class DSM_Config(Stage):
         }
 
     def configure_ex(self, scale, radius, diameter):
+        smooth_subsample_spec = (scale, 0.4, dict(type=int, min=8))
         return {
             'alpha': (scale ** 2, 0.0005),
             'smooth_amount': (scale, 0.2, dict(type=int, min=4)),
-            'smooth_subsample':  (scale, 0.4, dict(type=int, min=8)),
+            'smooth_subsample': smooth_subsample_spec,
+            'min_background_margin': smooth_subsample_spec,
         }
 
