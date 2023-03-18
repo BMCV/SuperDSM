@@ -61,8 +61,8 @@ def get_cached_energy_rate_computer(y, cluster):
     def compute_energy_rate(obj, region, atoms_map, dsm_cfg):
         cp_kwargs = copy_dict(dsm_cfg)
         cp_kwargs.pop('smooth_mat_max_allocations', None)
-        bg_margin  = cp_kwargs.pop('min_background_margin')
-        cp_region  = obj.get_cvxprog_region(region, atoms_map, min_background_margin=bg_margin)
+        cp_kwargs.pop('min_background_margin')
+        cp_region  = obj.get_cvxprog_region(region, atoms_map, min_background_margin=20)
         cp_region_hash = _hash_mask(cp_region.mask)
         cache_hit  = cache.get(cp_region_hash, None)
         if cache_hit is None:
