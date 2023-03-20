@@ -3,7 +3,7 @@
 
     "config": {
         "dsm": {
-            "alpha": 0.1
+            "alpha": 0.2
         },
         "postprocess": {
             "max_energy_rate": 0.5,
