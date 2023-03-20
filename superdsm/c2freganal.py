@@ -103,7 +103,7 @@ class C2F_RegionAnalysis(Stage):
         tbd.
 
     .. note::
-       This stage takes the DSM-related hyperparameters as an input. Due to a bug in the original implementation, the value set for the hyperparameter ``dsm/background_margin`` was disrespected and a value of 20 was always used instead. However, the impact on the results is only subtle. Having this issue fixed, the results are mostly consistent with those originally reported in the :ref:`paper <references>` (the hyperparameter :math:`\\alpha` is changed from 0.1 to 0.2 for the GOWT1-2 dataset when using SuperDSM*, see `examples/GOWT1-2/task.json`).
+       This stage takes the DSM-related hyperparameters as an input. Due to a bug in the original implementation, the value set for the hyperparameter ``dsm/background_margin`` was disrespected and a value of 20 was always used instead. However, the impact on the results is only subtle. Having this issue fixed, the results are mostly consistent with those originally reported in the :ref:`paper <references>` (the hyperparameter :math:`\\alpha` is changed from 0.1 to 0.2 for the GOWT1-2 dataset when using SuperDSM*, see ``examples/GOWT1-2/task.json``).
     """
 
     ENABLED_BY_DEFAULT = True
