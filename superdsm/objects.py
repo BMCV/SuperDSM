@@ -72,17 +72,6 @@ class Object(BaseObject):
         self.on_boundary     = np.nan
         self.is_optimal      = np.nan
         self.processing_time = np.nan
-        self._default_kwargs = {}
-
-    def _update_default_kwarg(self, kwarg_name, value):
-        if value is None:
-            if kwarg_name in self._default_kwargs:
-                return self._default_kwargs[kwarg_name]
-            else:
-                raise ValueError(f'kwarg "{kwarg_name}" not set yet')
-        elif kwarg_name not in self._default_kwargs:
-            self._default_kwargs[kwarg_name] = value
-        return value
     
     def get_mask(self, atoms):
         """Returns binary image corresponding to the union of the represented set of atomic image regions.
@@ -103,12 +92,12 @@ class Object(BaseObject):
         """
         return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
-    def get_cvxprog_region(self, y, atoms, background_margin=None):
+    def get_cvxprog_region(self, y, atoms, background_margin):
         """Returns the image region used for convex programming.
 
         :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-        :param background_margin: Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
+        :param background_margin: Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method).
         :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
 
         .. runblock:: pycon
@@ -134,7 +123,6 @@ class Object(BaseObject):
            >>> region = obj.get_cvxprog_region(y, atoms, background_margin=2)
            >>> region.mask
         """
-        background_margin = self._update_default_kwarg('background_margin', background_margin)
         region = y.get_region(self.get_mask(atoms))
         region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= background_margin)
         return region

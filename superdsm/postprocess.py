@@ -14,7 +14,7 @@ import numpy as np
 class Postprocessing(Stage):
     """Discards spurious objects and refines the segmentation masks as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
 
-    This stage requires ``g_raw``, ``cover``, ``y_img`, ``atoms`` for input and produces ``postprocessed_objects`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage requires ``g_raw``, ``cover``, ``y_img`, ``atoms``, ``dsm_cfg`` for input and produces ``postprocessed_objects`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     Hyperparameters
     ---------------
@@ -113,7 +113,7 @@ class Postprocessing(Stage):
 
     def __init__(self):
         super(Postprocessing, self).__init__('postprocess',
-                                             inputs  = ['cover', 'y_img', 'atoms', 'g_raw'],
+                                             inputs  = ['cover', 'y_img', 'atoms', 'g_raw', 'dsm_cfg'],
                                              outputs = ['postprocessed_objects'])
 
     def process(self, input_data, cfg, out, log_root_dir):
@@ -156,6 +156,7 @@ class Postprocessing(Stage):
             'y':                          input_data['y_img'],
             'g':                          input_data['g_raw'],
             'atoms':                      input_data['atoms'],
+            'background_margin':          input_data['dsm_cfg']['background_margin'],
             'g_mask_processing':          ndi.gaussian_filter(input_data['g_raw'], mask_smoothness),
             'g_glare_detection':          ndi.gaussian_filter(input_data['g_raw'], glare_detection_smoothness),
             'background_mask':            background_mask,
@@ -168,7 +169,7 @@ class Postprocessing(Stage):
             'min_glare_radius':           min_glare_radius,
             'min_boundary_glare_radius':  min_boundary_glare_radius,
             'glare_detection_min_layer':  glare_detection_min_layer,
-            'glare_detection_num_layers': glare_detection_num_layers
+            'glare_detection_num_layers': glare_detection_num_layers,
         }
 
         objects    = [obj for obj in input_data['cover'].solution if c.fg_fragment.any()]
@@ -285,8 +286,8 @@ def _is_glare(object, g, min_layer=0.5, num_layers=5):
     return is_glare
 
 
-def _compute_energy_rate(object, y, atoms):
-    region = object.get_cvxprog_region(y, atoms)
+def _compute_energy_rate(object, y, atoms, background_margin):
+    region = object.get_cvxprog_region(y, atoms, background_margin)
     return object.energy / region.mask.sum()
 
 
@@ -296,7 +297,7 @@ def _process_object(cidx, object, params):
     is_glare   = False
     if params['min_boundary_glare_radius' if object.on_boundary else 'min_glare_radius'] < obj_radius:
         is_glare = _is_glare(object, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
-    energy_rate  = _compute_energy_rate(object, params['y'], params['atoms'])
+    energy_rate  = _compute_energy_rate(object, params['y'], params['atoms'], params['background_margin'])
     contrast_response = _compute_contrast_response(object, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
     fg_offset, fg_fragment = _process_mask(object, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(object)

@@ -63,18 +63,15 @@ class objects(unittest.TestCase):
         obj = superdsm.objects.Object()
         obj.footprint = set([1])
         y = superdsm.image.Image(y_data)
-        region1 = obj.get_cvxprog_region(y, atoms, background_margin=2)
-        region2 = obj.get_cvxprog_region(y, atoms)
+        region = obj.get_cvxprog_region(y, atoms, background_margin=2)
         expected = np.array([[False, False, False, False, False],
                              [False,  True, False, False, False],
                              [ True,  True,  True, False, False],
                              [ True,  True,  True, False, False],
                              [ True,  True,  True, False, False],
                              [ True,  True,  True, False, False]])
-        np.testing.assert_allclose(region1.mask, expected)
-        np.testing.assert_allclose(region2.mask, expected)
-        np.testing.assert_allclose(region1.model, y_data)
-        np.testing.assert_allclose(region2.model, y_data)
+        np.testing.assert_allclose(region.mask, expected)
+        np.testing.assert_allclose(region.model, y_data)
 
 
 if __name__ == '__main__':
