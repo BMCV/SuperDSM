@@ -175,10 +175,9 @@ def extract_foreground_fragment(fg_mask):
         return np.zeros(2, int), np.zeros((1, 1), bool)
 
 
-def _compute_object(y, atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
-    cvxprog_kwargs = copy_dict(cvxprog_kwargs)
-    background_margin = cvxprog_kwargs.pop('background_margin')
-    region = object.get_cvxprog_region(y, atoms, background_margin)
+def _compute_object(y, atoms, x_map, object, dsm_cfg, smooth_mat_allocation_lock):
+    cp_kwargs = copy_dict(dsm_cfg)
+    region = object.get_cvxprog_region(y, atoms, cp_kwargs.pop('background_margin'))
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
@@ -195,7 +194,7 @@ def _compute_object(y, atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocati
     # Otherwise, perform model fitting
     else:
         t0 = time.time()
-        J, result, status = cvxprog(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **cvxprog_kwargs)
+        J, result, status = cvxprog(region, smooth_mat_allocation_lock=smooth_mat_allocation_lock, **cp_kwargs)
         dt = time.time() - t0
         padded_mask = np.pad(region.mask, 1)
         smooth_mat  = uplift_smooth_matrix(J.smooth_mat, padded_mask)
@@ -269,17 +268,17 @@ def compute_objects(objects, y, atoms, dsm_cfg, log_root_dir, status_line=DEFAUL
     out.write(f'{status_line[1]}: {len(objects)} ({fallbacks}x fallback)')
 
 
-def _compute_objects(objects, y, atoms, x_map, lock, cvxprog_kwargs, log_root_dir):
+def _compute_objects(objects, y, atoms, x_map, lock, dsm_cfg, log_root_dir):
     if _compute_objects._DEBUG: ## run serially
         for cidx, c in enumerate(objects):
-            yield _compute_object_logged(log_root_dir, cidx, y, atoms, x_map, c, cvxprog_kwargs, lock)
+            yield _compute_object_logged(log_root_dir, cidx, y, atoms, x_map, c, dsm_cfg, lock)
     else: ## run in parallel
-        y_id         = ray.put(y)
-        atoms_id     = ray.put(atoms)
-        x_map_id     = ray.put(x_map)
-        cp_kwargs_id = ray.put(cvxprog_kwargs)
-        lock_id      = ray.put(lock)
-        futures      = [_ray_compute_object_logged.remote(log_root_dir, obj_idx, y_id, atoms_id, x_map_id, obj, cp_kwargs_id, lock_id) for obj_idx, obj in enumerate(objects)]
+        y_id       = ray.put(y)
+        atoms_id   = ray.put(atoms)
+        x_map_id   = ray.put(x_map)
+        dsm_cfg_id = ray.put(dsm_cfg)
+        lock_id    = ray.put(lock)
+        futures    = [_ray_compute_object_logged.remote(log_root_dir, obj_idx, y_id, atoms_id, x_map_id, obj, dsm_cfg_id, lock_id) for obj_idx, obj in enumerate(objects)]
         for ret in get_ray_1by1(futures): yield ret
 
 
