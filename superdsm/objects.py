@@ -137,7 +137,6 @@ class Object(BaseObject):
         self.on_boundary     = state.on_boundary
         self.is_optimal      = state.is_optimal
         self.processing_time = state.processing_time
-        self._default_kwargs = copy_dict(state._default_kwargs)
         return self
 
     def copy(self):
@@ -178,7 +177,7 @@ def extract_foreground_fragment(fg_mask):
 def _compute_object(y, atoms, x_map, object, dsm_cfg, smooth_mat_allocation_lock):
     cp_kwargs = copy_dict(dsm_cfg)
     region = object.get_cvxprog_region(y, atoms, cp_kwargs.pop('background_margin'))
-    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
+    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cp_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
     # Skip regions whose foreground is only a single pixel (this is just noise)
