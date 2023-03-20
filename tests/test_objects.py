@@ -63,7 +63,7 @@ class objects(unittest.TestCase):
         obj = superdsm.objects.Object()
         obj.footprint = set([1])
         y = superdsm.image.Image(y_data)
-        region1 = obj.get_cvxprog_region(y, atoms, min_background_margin=2)
+        region1 = obj.get_cvxprog_region(y, atoms, background_margin=2)
         region2 = obj.get_cvxprog_region(y, atoms)
         expected = np.array([[False, False, False, False, False],
                              [False,  True, False, False, False],

@@ -16,7 +16,7 @@ DSM_CONFIG_DEFAULTS = {
     'gaussian_shape_multiplier': 2,
     'smooth_mat_dtype': 'float32',
     'smooth_mat_max_allocations': np.inf,
-    'min_background_margin': 20,
+    'background_margin': 20,
     'cp_timeout': 300,
 }
 
@@ -67,8 +67,8 @@ class DSM_Config(Stage):
     ``dsm/smooth_mat_max_allocations``
         Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation might require a considerable amount of system memory).
 
-    ``dsm/min_background_margin``
-        Governs the amount of image background included in the obtained image region. It is the *minimal* width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). The actual width may actually be different (in fact, it is the maximum of the values set for ``min_background_margin`` and ``smooth_subsample``).
+    ``dsm/background_margin``
+        Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`).
 
     ``dsm/cp_timeout``
         The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). Defaults to 300 (i.e. 5 minutes).
@@ -94,6 +94,6 @@ class DSM_Config(Stage):
             'alpha': (scale ** 2, 0.0005),
             'smooth_amount': (scale, 0.2, dict(type=int, min=4)),
             'smooth_subsample': smooth_subsample_spec,
-            'min_background_margin': smooth_subsample_spec,
+            'background_margin': smooth_subsample_spec,
         }
 

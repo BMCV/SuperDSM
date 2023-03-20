@@ -103,12 +103,12 @@ class Object(BaseObject):
         """
         return np.in1d(atoms, list(self.footprint)).reshape(atoms.shape)
 
-    def get_cvxprog_region(self, y, atoms, min_background_margin=None):
+    def get_cvxprog_region(self, y, atoms, background_margin=None):
         """Returns the image region used for convex programming.
 
         :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-        :param min_background_margin: Governs the amount of image background included in the obtained image region. It is the *minimal* width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
+        :param background_margin: Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method). If set to ``None``, then the value used for the previous invocation of this method will be used again, unless it is the first invocation, in which case a ``ValueError`` will be raised.
         :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
 
         .. runblock:: pycon
@@ -131,12 +131,12 @@ class Object(BaseObject):
            >>> obj = superdsm.objects.Object()
            >>> obj.footprint = set([1])
            >>> y = superdsm.image.Image(y_data)
-           >>> region = obj.get_cvxprog_region(y, atoms, min_background_margin=2)
+           >>> region = obj.get_cvxprog_region(y, atoms, background_margin=2)
            >>> region.mask
         """
-        min_background_margin = self._update_default_kwarg('min_background_margin', min_background_margin)
+        background_margin = self._update_default_kwarg('background_margin', background_margin)
         region = y.get_region(self.get_mask(atoms))
-        region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= min_background_margin)
+        region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= background_margin)
         return region
 
     def set(self, state):
@@ -189,8 +189,8 @@ def extract_foreground_fragment(fg_mask):
 
 def _compute_object(y, atoms, x_map, object, cvxprog_kwargs, smooth_mat_allocation_lock):
     cvxprog_kwargs = copy_dict(cvxprog_kwargs)
-    min_background_margin = cvxprog_kwargs.pop('min_background_margin')
-    region = object.get_cvxprog_region(y, atoms, min_background_margin)
+    background_margin = cvxprog_kwargs.pop('background_margin')
+    region = object.get_cvxprog_region(y, atoms, background_margin)
     for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cvxprog_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
