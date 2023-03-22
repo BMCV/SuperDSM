@@ -25,7 +25,7 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_norm_energy``
-        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo). Defaults to 0.2.
+        Objects with a normalized energy larger than this value are discarded. Corresponds to *max_norm_energy2* in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo). Defaults to 0.2.
 
     ``postprocess/discard_image_boundary``
         Objects located directly on the image border are discarded if this is set to ``True``. Defaults to ``False``.
@@ -61,7 +61,7 @@ class Postprocessing(Stage):
         Corresponds to the thickness of the *inner* margin of image points within the exterior neighborhood which are weighted by 1. Increasing this value increases the importance of image points closest to the segmentation mask. Defaults to 5.
 
     ``postprocess/min_contrast_response``
-        A segmented object is discarded, if the contrast response as defined above is below this threshold. Corresponds to ``min_contrast`` in the paper (Supplemental Material 7 and 8). Defaults to 1.35.
+        A segmented object is discarded, if the contrast response as defined above is below this threshold. Corresponds to *min_contrast* in the paper (Supplemental Materials 7 and 8). Defaults to 1.35.
 
     ``postprocess/contrast_response_epsilon``
         This constant is added to both the nominator and the denominator of the fraction which defines the contrast response (see above). Defaults to 1e-4.

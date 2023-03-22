@@ -11,6 +11,9 @@ class Preprocessing(Stage):
 
     This stage requires ``g_raw`` for input (the input image) and produces ``y`` for output (the offset image intensities). Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
+    Hyperparameters
+    ---------------
+
     The following hyperparameters can be used to control this pipeline stage:
 
     ``preprocess/sigma1``
