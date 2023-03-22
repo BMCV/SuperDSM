@@ -71,6 +71,14 @@ class Stage(object):
             return 0
 
     def process(self, input_data, cfg, out, log_root_dir):
+        """Runs this pipeline stage.
+
+        :param input_data: Dictionary of the inputs declared by this stage.
+        :param cfg: The hyperparameters to be used by this stage.
+        :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
+        :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
+        :return: Dictionary of the outputs declared by this stage.
+        """
         raise NotImplementedError()
 
     def configure(self, scale):
