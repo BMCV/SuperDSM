@@ -60,7 +60,7 @@ Splitting of image regions is performed according to the *normalized energy*
 
 .. math:: r(\omega) = \inf_\theta \psi_\omega(\theta, \mathbb 0) / \#\omega,
 
-see the :py:class:`C2F_RegionAnalysis` stage for details.
+see the :py:class:`~.c2freganal.C2F_RegionAnalysis` stage for details.
 
 Two atomic image regions :math:`u,v \in U` are called *adjacent* if and only if there exists a path :math:`\pi \subset \Omega` between :math:`u` and :math:`v` so that :math:`Y_\omega|_{\omega=\pi} > 0`. Let :math:`\Pi \subseteq U \times U` be the set of all *connected* atomic image regions, i.e. :math:`(u,v) \in \Pi` if and only if the adjacency graph :math:`\mathcal G = (U, \mathcal E)` contains a path between :math:`u` and :math:`v`. Details are given in Section 2.3.1 of the paper.
 
