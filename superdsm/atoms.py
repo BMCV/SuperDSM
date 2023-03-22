@@ -12,7 +12,7 @@ class AtomAdjacencyGraph:
 
     :param atoms: Integer-valued image representing the universe of atomic image regions. Each atomic image region has a unique label, which is the integer value.
     :param clusters: Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value.
-    :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \\in \\Omega` is ``True`` if :math:`Y_\\omega|\\omega=\\{x\\} > 0` and ``False`` otherwise.
+    :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \\in \\Omega` is ``True`` if :math:`Y_\\omega|_{\\omega=\\{x\\}} > 0` and ``False`` otherwise.
     :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates.
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
     """
