@@ -8,7 +8,7 @@ import skimage.segmentation
 class AtomAdjacencyGraph:
     """Graph representation of the adjacencies of atomic image regions.
 
-    This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`pipeline_theory_c2freganal`.
+    This corresponds to the adjacency graph :math:`\\mathcal G` as defined in :ref:`pipeline_theory_c2freganal`.
 
     :param atoms: Integer-valued image representing the universe of atomic image regions. Each atomic image region has a unique label, which is the integer value.
     :param clusters: Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value.
