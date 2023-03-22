@@ -98,7 +98,7 @@ holds and the sequential computation is not required. Regions of possibly cluste
 Pipeline stages
 ---------------
 
-The function :py:meth:`.pipeline.create_default_pipeline` employs the following stages:
+The :py:meth:`~superdsm.pipeline.create_default_pipeline` function employs the following stages:
 
 #. :py:class:`~.preprocess.Preprocessing` — Implements the computation of the intensity offsets.
 #. :py:class:`~.dsmcfg.DSM_Config` — Provides the hyperparameters from the ``dsm`` namespace as an output.

@@ -92,21 +92,8 @@ class C2F_RegionAnalysis(Stage):
     ``c2f-region-analysis/seed_connectivity``
         Image points which are adjacent to each other are *not* to determine the atomic image regions. Adjacency of such image points is determined using either 4-connectivity or 8-connectivity. Must be either 4 or 8. Defaults to 8.
 
-    ``c2f-region-analysis/min_atom_radius``
-        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Defaults to 15, or to ``AF_min_atom_radius × radius`` if configured automatically (and ``AF_min_atom_radius`` defaults to 0.33).
-
-    ``c2f-region-analysis/max_atom_norm_energy``
-        No atomic image region :math:`\\omega` determined by the :ref:`pipeline_theory_c2freganal` has a normalized energy :math:`r(\\omega)` smaller than this value. Corresponds to *max_norm_energy1* in the :ref:`paper <references>` (Supplemental Materials 5 and 8). Defaults to 0.05.
-
-    ``c2f-region-analysis/min_norm_energy_improvement``
-        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction:
-        
-        .. math:: \\text{improvement} = \\frac{\\max\\{ r(\\omega_1), r(\\omega_1) \\} }{ r(\\omega_1 \\cup \\omega_2) }
-        
-        Lower values of the fraction correspond to better improvements. Defaults to 0.1.
-
-    ``c2f-region-analysis/max_cluster_marker_irregularity``
-        tbd.
+    .. note::
+       This stage takes the DSM-related hyperparameters as an input. Due to a bug in the original implementation, the value set for the hyperparameter ``dsm/background_margin`` was disrespected and a value of 20 was always used instead. However, the impact on the results is only subtle. Having this issue fixed, the results are mostly consistent with those originally reported in the :ref:`paper <references>` (the hyperparameter :math:`\\alpha` is changed from 0.1 to 0.2 for the GOWT1-2 dataset when using SuperDSM*, see the ``examples/GOWT1-2/default/adapted/task.json`` file).
     """
 
     ENABLED_BY_DEFAULT = True
