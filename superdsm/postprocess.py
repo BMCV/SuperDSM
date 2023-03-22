@@ -25,7 +25,7 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_energy_rate``
-        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the paper (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
+        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
 
     ``postprocess/discard_image_boundary``
         Objects located directly on the image border are discarded if this is set to ``True``.

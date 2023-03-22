@@ -55,10 +55,10 @@ def _hash_mask(mask):
     return hashlib.sha1(mask).digest()
 
 
-def get_cached_energy_rate_computer(y, cluster):
+def get_cached_normalized_energy_computer(y, cluster):
     cache = dict()
     cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
-    def compute_energy_rate(obj, region, atoms_map, dsm_cfg):
+    def compute_normalized_energy(obj, region, atoms_map, dsm_cfg):
         cp_kwargs = copy_dict(dsm_cfg)
         cp_kwargs.pop('smooth_mat_max_allocations', None)
         cp_region = obj.get_cvxprog_region(region, atoms_map, cp_kwargs.pop('background_margin'))
@@ -76,7 +76,7 @@ def get_cached_energy_rate_computer(y, cluster):
             cache_hit = energy / cp_region.mask.sum()
             cache[cp_region_hash] = cache_hit
         return cache_hit
-    return compute_energy_rate
+    return compute_normalized_energy
 
 
 class C2F_RegionAnalysis(Stage):
@@ -89,14 +89,18 @@ class C2F_RegionAnalysis(Stage):
     ``c2f-region-analysis/seed_connectivity``
         Image points which are adjacent to each other are *not* to determine the atomic image regions. Adjacency of such image points is determined using either 4-connectivity or 8-connectivity. Must be either 4 or 8. Defaults to 8.
 
-    ``c2f-region-analysis/min_region_radius``
-        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Defaults to 15, or to ``AF_min_region_radius × radius`` if configured automatically (and ``AF_min_region_radius`` defaults to 0.33).
+    ``c2f-region-analysis/min_atom_radius``
+        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Defaults to 15, or to ``AF_min_atom_radius × radius`` if configured automatically (and ``AF_min_atom_radius`` defaults to 0.33).
 
-    ``c2f-region-analysis/max_atom_energy_rate``
-        tbd.
+    ``c2f-region-analysis/max_atom_norm_energy``
+        No atomic image region :math:`\\omega` determined by the :ref:`pipeline_theory_c2freganal` has a normalized energy :math:`r(\\omega)` smaller than this value (see :ref:`pipeline_theory_c2freganal`). Corresponds to ``max_norm_energy1`` in the :ref:`paper <references>` (Supplemental Material 5 and 8). Defaults to 0.05.
 
     ``c2f-region-analysis/min_norm_energy_improvement``
-        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction :math:`\\max\\{ r(\\omega_1), r(\\omega_1) \\} / r(\\omega_1 \\cup \\omega_2)`. Lower values of the fraction correspond to better improvements. Defaults to 0.1.
+        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction
+        
+        .. :math:: \\max\\{ r(\\omega_1), r(\\omega_1) \\} / r(\\omega_1 \\cup \\omega_2).
+        
+        Lower values of the fraction correspond to better improvements. Defaults to 0.1.
 
     ``c2f-region-analysis/max_cluster_marker_irregularity``
         tbd.
@@ -114,8 +118,8 @@ class C2F_RegionAnalysis(Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         seed_connectivity = cfg.get('seed_connectivity', 8)
-        min_region_radius = cfg.get('min_region_radius', 15)
-        max_atom_energy_rate = cfg.get('max_atom_energy_rate', 0.05)
+        min_atom_radius = cfg.get('min_atom_radius', 15)
+        max_atom_norm_energy = cfg.get('max_atom_norm_energy', 0.05)
         min_norm_energy_improvement = cfg.get('min_norm_energy_improvement', 0.1)
         max_cluster_marker_irregularity = cfg.get('max_cluster_marker_irregularity', 0.2)
 
@@ -146,12 +150,12 @@ class C2F_RegionAnalysis(Stage):
         dsm_cfg_id = ray.put(dsm_cfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_norm_energy_improvement, dsm_cfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
-        max_energy_rate = -np.inf
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_norm_energy, min_atom_radius, min_norm_energy_improvement, dsm_cfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        max_normalized_energy = -np.inf
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
-            cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
+            cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_normalized_energy = ret
             cluster_label_offset = atoms_map.max()
-            max_energy_rate = max((cluster_max_energy_rate, max_energy_rate))
+            max_normalized_energy = max((cluster_max_normalized_energy, max_normalized_energy))
             cluster = y.get_region(clusters == cluster_label, shrink=True)
             atoms_map[cluster.full_mask] = cluster_label_offset + cluster_atoms_map[cluster.mask]
             for atom_candidate in cluster_atoms:
@@ -162,7 +166,7 @@ class C2F_RegionAnalysis(Stage):
         atoms_map, label_translation = normalize_labels_map(atoms_map, first_label=1, skip_labels=[0])
         for old_label, atom_candidate in dict(atom_candidate_by_label).items():
             atom_candidate_by_label[label_translation[old_label]] = atom_candidate
-        out.write(f'Extracted {atoms_map.max()} atoms (max energy rate: {max_energy_rate:g})')
+        out.write(f'Extracted {atoms_map.max()} atoms (max energy rate: {max_normalized_energy:g})')
         
         # Compute adjacencies graph
         atom_nodes  = [atom_candidate_by_label[atom_label].seed for atom_label in sorted(label_translation.values())]
@@ -178,7 +182,7 @@ class C2F_RegionAnalysis(Stage):
 
     def configure_ex(self, scale, radius, diameter):
         return {
-            'min_region_radius': (radius, 0.33, dict(type=int)),
+            'min_atom_radius': (radius, 0.33, dict(type=int)),
         }
 
 
@@ -187,20 +191,20 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_norm_energy_improvement, dsm_cfg, seed_connectivity):
-    min_region_size = math.pi * (min_region_radius ** 2)
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_energy, min_atom_radius, min_norm_energy_improvement, dsm_cfg, seed_connectivity):
+    min_atom_size = math.pi * (min_atom_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = Object()
     root_candidate.footprint = frozenset([1])
     root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
-    compute_energy_rate = get_cached_energy_rate_computer(y, cluster)
+    compute_normalized_energy = get_cached_normalized_energy_computer(y, cluster)
 
     leaf_candidates = []
     split_queue = queue.Queue()
-    root_candidate.energy_rate = compute_energy_rate(root_candidate, masked_cluster, atoms_map, dsm_cfg)
-    if root_candidate.energy_rate > max_atom_energy_rate:
+    root_candidate.normalized_energy = compute_normalized_energy(root_candidate, masked_cluster, atoms_map, dsm_cfg)
+    if root_candidate.normalized_energy > max_atom_norm_energy:
         split_queue.put(root_candidate)
     else:
         leaf_candidates.append(root_candidate)
@@ -210,7 +214,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         c0 = split_queue.get()
         c0_mask = c0.get_mask(atoms_map)
         
-        if c0_mask.sum() < 2 * min_region_size:
+        if c0_mask.sum() < 2 * min_atom_size:
             leaf_candidates.append(c0) ## the region is too small to be split
             continue
 
@@ -228,12 +232,12 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
         new_atom_label   = atoms_map.max() + 1
         c1_mask, c2_mask = watershed_split(cluster.get_region(c0_mask), c1.seed, c2.seed)
             
-        if c1_mask.sum() < min_region_size:
+        if c1_mask.sum() < min_atom_size:
             c0.seed = c2.seed   ## change the seed for current region…
             split_queue.put(c0) ## …and try again with different seed
             continue
             
-        if c2_mask.sum() < min_region_size:
+        if c2_mask.sum() < min_atom_size:
             split_queue.put(c0) ## try again with different seed
             continue
             
@@ -246,40 +250,40 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
 
         for c in (c1, c2):
             try:
-                c.energy_rate = compute_energy_rate(c, masked_cluster, atoms_map, dsm_cfg)
+                c.normalized_energy = compute_normalized_energy(c, masked_cluster, atoms_map, dsm_cfg)
             except:
-                c.energy_rate = None
+                c.normalized_energy = None
                 
-        if c1.energy_rate is None and c2.energy_rate is None:
+        if c1.normalized_energy is None and c2.normalized_energy is None:
             split_queue.put(c0) ## try again with different seed
             atoms_map = atoms_map_previous
             continue
             
-        if c1.energy_rate is None and c2.energy_rate is not None:
+        if c1.normalized_energy is None and c2.normalized_energy is not None:
             c0.seed = c2.seed   ## change the seed for current region…
             split_queue.put(c0) ## …and try again with different seed
             atoms_map = atoms_map_previous
             continue
             
-        if c1.energy_rate is not None and c2.energy_rate is None:
+        if c1.normalized_energy is not None and c2.normalized_energy is None:
             split_queue.put(c0) ## try again with different seed
             atoms_map = atoms_map_previous
             continue
             
-        assert c1.energy_rate is not None and c2.energy_rate is not None, str((c1.energy_rate, c2.energy_rate))
-        norm_energy_improvement = 1 - max((c1.energy_rate, c2.energy_rate)) / c0.energy_rate
+        assert c1.normalized_energy is not None and c2.normalized_energy is not None, str((c1.normalized_energy, c2.normalized_energy))
+        norm_energy_improvement = 1 - max((c1.normalized_energy, c2.normalized_energy)) / c0.normalized_energy
         if norm_energy_improvement < min_norm_energy_improvement:
             split_queue.put(c0) ## try again with different seed
             atoms_map = atoms_map_previous
         else:
             for c in (c1, c2):
-                if c.energy_rate > max_atom_energy_rate:
+                if c.normalized_energy > max_atom_norm_energy:
                     split_queue.put(c)
                 else:
                     leaf_candidates.append(c)
 
     root_candidate.footprint = frozenset(atoms_map.reshape(-1)) - {0}
     assert frozenset([list(c.footprint)[0] for c in leaf_candidates]) == root_candidate.footprint
-    max_energy_rate = max((c.energy_rate for c in leaf_candidates))
-    return cluster_label, root_candidate, leaf_candidates, atoms_map, max_energy_rate
+    max_normalized_energy = max((c.normalized_energy for c in leaf_candidates))
+    return cluster_label, root_candidate, leaf_candidates, atoms_map, max_normalized_energy
     
