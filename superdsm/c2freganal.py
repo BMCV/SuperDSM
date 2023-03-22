@@ -99,7 +99,7 @@ class C2F_RegionAnalysis(Stage):
         No atomic image region :math:`\\omega` determined by the :ref:`pipeline_theory_c2freganal` has a normalized energy :math:`r(\\omega)` smaller than this value. Corresponds to *max_norm_energy1* in the :ref:`paper <references>` (Supplemental Materials 5 and 8). Defaults to 0.05.
 
     ``c2f-region-analysis/min_norm_energy_improvement``
-        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction :math:`\\frac{\\max\\{ r(\\omega_1), r(\\omega_1) \\} }{ r(\\omega_1 \\cup \\omega_2) }`. Lower values of the fraction correspond to better improvements. Defaults to 0.1.
+        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction :math:`\\max\\{ r(\\omega_1), r(\\omega_1) \\} / r(\\omega_1 \\cup \\omega_2)`. Lower values of the fraction correspond to better improvements. Defaults to 0.1.
 
     ``c2f-region-analysis/max_cluster_marker_irregularity``
         tbd.

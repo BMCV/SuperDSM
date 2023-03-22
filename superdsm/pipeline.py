@@ -92,7 +92,7 @@ class Stage(object):
         return self.configure_ex(scale, radius, diameter)
 
     def configure_ex(self, scale, radius, diameter):
-        """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image, using explicitly stated values for the expected radius and diameter of the objects.
+        """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image, using explicit values for the expected radius and diameter of the objects.
 
         :param scale: The average scale of objects in the image.
         :param radius: The average radius of objects in the image.
