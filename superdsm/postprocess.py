@@ -31,10 +31,10 @@ class Postprocessing(Stage):
         Objects located directly on the image border are discarded if this is set to ``True``.
 
     ``postprocess/min_object_radius``
-        Objects smaller than a circle of this radius are discarded. Defaults to 0, or to ``AF_min_object_radius × radius`` if configured automatically (and ``AF_min_object_radius`` defaults to zero).
+        Objects smaller than a circle of this radius are discarded (in terms of the surface area). Defaults to 0, or to ``AF_min_object_radius × radius`` if configured automatically (and ``AF_min_object_radius`` defaults to zero).
 
     ``postprocess/max_object_radius``
-        Objects larger than a circle of this radius are discarded. Defaults to infinity, or to ``AF_max_object_radius × radius`` if configured automatically (and ``AF_max_object_radius`` defaults to infinity).
+        Objects larger than a circle of this radius are discarded (in terms of the surface area). Defaults to infinity, or to ``AF_max_object_radius × radius`` if configured automatically (and ``AF_max_object_radius`` defaults to infinity).
 
     ``postprocess/min_boundary_obj_radius``
         Overrides ``postprocess/min_object_radius`` for objects located directly on the image border. Defaults to the value of the ``postprocess/min_object_radius`` hyperparameter.
@@ -103,7 +103,7 @@ class Postprocessing(Stage):
         The top fraction of the Gaussian-smoothed intensity profile investigated for connectivity. Defaults to 0.5, i.e. the top 50% of the Gaussian-smoothed intensity profile is investigated.
 
     ``postprocess/min_glare_radius``
-        The size of a segmented object must correspond to a circle at least of this radius in order for the object to be possibly recognized as an autofluorescence artifact. Defaults to infinity, or to ``AF_min_glare_radius × radius`` if configured automatically (and ``AF_min_glare_radius defaults`` to infinity).
+        The size of a segmented object must correspond to a circle at least of this radius (in terms of the surface area) in order for the object to be possibly recognized as an autofluorescence artifact. Defaults to infinity, or to ``AF_min_glare_radius × radius`` if configured automatically (and ``AF_min_glare_radius defaults`` to infinity).
 
     ``postprocess/min_boundary_glare_radius``
         Overrides ``postprocess/min_glare_radius`` for objects located directly on the image border. Defaults to the value of the ``postprocess/min_glare_radius`` hyperparameter.

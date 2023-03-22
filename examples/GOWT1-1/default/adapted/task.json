@@ -4,7 +4,7 @@
     "config": {
         "AF_scale": 42.42640687119284,
         "c2f-region-analysis": {
-            "min_energy_rate_improvement": -Infinity
+            "min_norm_energy_improvement": -Infinity
         },
         "postprocess": {
             "mask_max_distance": 2,

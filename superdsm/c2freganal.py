@@ -87,16 +87,16 @@ class C2F_RegionAnalysis(Stage):
     The following hyperparameters can be used to control this pipeline stage:
 
     ``c2f-region-analysis/seed_connectivity``
-        tbd.
+        Image points which are adjacent to each other are *not* to determine the atomic image regions. Adjacency of such image points is determined using either 4-connectivity or 8-connectivity. Must be either 4 or 8. Defaults to 8.
 
     ``c2f-region-analysis/min_region_radius``
-        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius. Defaults to 15, or to ``AF_min_region_radius × radius`` if configured automatically (and ``AF_min_region_radius`` defaults to 0.33).
+        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Defaults to 15, or to ``AF_min_region_radius × radius`` if configured automatically (and ``AF_min_region_radius`` defaults to 0.33).
 
     ``c2f-region-analysis/max_atom_energy_rate``
         tbd.
 
-    ``c2f-region-analysis/min_energy_rate_improvement``
-        tbd.
+    ``c2f-region-analysis/min_norm_energy_improvement``
+        Each split performed during the computation of the atomic image regions must improve the normalized energy :math:`r(\\omega)` of an image region :math:`\\omega` by at least this factor (see :ref:`pipeline_theory_c2freganal`). Given that an image region is split into the sub-regions :math:`\\omega_1, \\omega_2`, the improvement of the split is defined by the fraction of :math:`\\max\\{ r(\\omega_1), r(\\omega_1) \\}` and :math:`r(\\omega_1 \\cup \\omega_2)`. Lower values of the fraction correspond to better improvements. Defaults to 0.1.
 
     ``c2f-region-analysis/max_cluster_marker_irregularity``
         tbd.
@@ -116,7 +116,7 @@ class C2F_RegionAnalysis(Stage):
         seed_connectivity = cfg.get('seed_connectivity', 8)
         min_region_radius = cfg.get('min_region_radius', 15)
         max_atom_energy_rate = cfg.get('max_atom_energy_rate', 0.05)
-        min_energy_rate_improvement = cfg.get('min_energy_rate_improvement', 0.1)
+        min_norm_energy_improvement = cfg.get('min_norm_energy_improvement', 0.1)
         max_cluster_marker_irregularity = cfg.get('max_cluster_marker_irregularity', 0.2)
 
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
@@ -146,7 +146,7 @@ class C2F_RegionAnalysis(Stage):
         dsm_cfg_id = ray.put(dsm_cfg)
         y_mask_id = ray.put(y_mask)
         clusters_id = ray.put(clusters)
-        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
+        futures = [process_cluster.remote(clusters_id, cluster_label, y_id, y_mask_id, max_atom_energy_rate, min_region_radius, min_norm_energy_improvement, dsm_cfg_id, seed_connectivity) for cluster_label in frozenset(clusters.reshape(-1)) - {0}]
         max_energy_rate = -np.inf
         for ret_idx, ret in enumerate(get_ray_1by1(futures)):
             cluster_label, cluster_universe, cluster_atoms, cluster_atoms_map, cluster_max_energy_rate = ret
@@ -187,7 +187,7 @@ def process_cluster(*args, **kwargs):
     return _process_cluster_impl(*args, **kwargs)
 
 
-def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_energy_rate_improvement, dsm_cfg, seed_connectivity):
+def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_rate, min_region_radius, min_norm_energy_improvement, dsm_cfg, seed_connectivity):
     min_region_size = math.pi * (min_region_radius ** 2)
     cluster = y.get_region(clusters == cluster_label, shrink=True)
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
@@ -267,8 +267,8 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_energy_ra
             continue
             
         assert c1.energy_rate is not None and c2.energy_rate is not None, str((c1.energy_rate, c2.energy_rate))
-        energy_rate_improvement = 1 - max((c1.energy_rate, c2.energy_rate)) / c0.energy_rate
-        if energy_rate_improvement < min_energy_rate_improvement:
+        norm_energy_improvement = 1 - max((c1.energy_rate, c2.energy_rate)) / c0.energy_rate
+        if norm_energy_improvement < min_norm_energy_improvement:
             split_queue.put(c0) ## try again with different seed
             atoms_map = atoms_map_previous
         else:
