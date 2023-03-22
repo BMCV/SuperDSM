@@ -97,7 +97,7 @@ class AtomAdjacencyGraph:
             for k in self[l]:
                 seed_k = self.get_seed(k)
                 if not accept(k): continue
-                lines.append([seed_l, seed_k])
+                lines.append((seed_l, seed_k))
         return lines
 
     @property
