@@ -12,7 +12,7 @@ import skimage.morphology as morph
 import queue, contextlib, math, hashlib
 
 
-def get_next_seed(region, where, score_func, connectivity=4):
+def _get_next_seed(region, where, score_func, connectivity=4):
     if   connectivity == 4: footprint = morph.disk(1)
     elif connectivity == 8: footprint = np.ones((3,3))
     else: raise ValeError(f'unknown connectivity: {connectivity}')
@@ -29,7 +29,7 @@ def get_next_seed(region, where, score_func, connectivity=4):
     return None
 
 
-def watershed_split(region, *markers):
+def _watershed_split(region, *markers):
     markers_map = np.zeros(region.model.shape, int)
     for marker_label, marker in enumerate(markers, start=1):
         assert markers_map[marker] == 0
@@ -38,7 +38,7 @@ def watershed_split(region, *markers):
     return [watershed == marker_label for marker_label in range(1, len(markers) + 1)]
 
 
-def normalize_labels_map(labels, first_label=0, skip_labels=[]):
+def _normalize_labels_map(labels, first_label=0, skip_labels=[]):
     result = np.zeros_like(labels)
     label_translation = {}
     next_label = first_label
@@ -55,7 +55,7 @@ def _hash_mask(mask):
     return hashlib.sha1(mask).digest()
 
 
-def get_cached_normalized_energy_computer(y, cluster):
+def _get_cached_normalized_energy_computer(y, cluster):
     cache = dict()
     cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_normalized_energy(obj, region, atoms_map, dsm_cfg):
@@ -138,7 +138,7 @@ class C2F_RegionAnalysis(Stage):
                 y_mask[cluster_marker] = False
                 
         cluster_markers[~y_mask] = cluster_markers.min()
-        cluster_markers = normalize_labels_map(cluster_markers, first_label=0)[0]
+        cluster_markers = _normalize_labels_map(cluster_markers, first_label=0)[0]
         out.write(f'Extracted {cluster_markers.max()} cluster markers')
         
         clusters  = segm.watershed(ndi.distance_transform_edt(cluster_markers == 0), markers=cluster_markers)
@@ -162,7 +162,7 @@ class C2F_RegionAnalysis(Stage):
                 atom_candidate.seed = np.round(ndi.center_of_mass(atom_candidate.seed)).astype(int) + cluster.offset
             out.intermediate(f'Analyzing clusters... {ret_idx + 1} / {len(futures)}')
             
-        atoms_map, label_translation = normalize_labels_map(atoms_map, first_label=1, skip_labels=[0])
+        atoms_map, label_translation = _normalize_labels_map(atoms_map, first_label=1, skip_labels=[0])
         for old_label, atom_candidate in dict(atom_candidate_by_label).items():
             atom_candidate_by_label[label_translation[old_label]] = atom_candidate
         out.write(f'Extracted {atoms_map.max()} atoms (max energy rate: {max_normalized_energy:g})')
@@ -196,9 +196,9 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_ener
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = Object()
     root_candidate.footprint = frozenset([1])
-    root_candidate.seed = get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
+    root_candidate.seed = _get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
-    compute_normalized_energy = get_cached_normalized_energy_computer(y, cluster)
+    compute_normalized_energy = _get_cached_normalized_energy_computer(y, cluster)
 
     leaf_candidates = []
     split_queue = queue.Queue()
@@ -220,7 +220,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_ener
         c1 = Object()
         c2 = Object()
         c1.seed = c0.seed
-        c2.seed = get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
+        c2.seed = _get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
         assert not np.logical_and(c1.seed, c2.seed).any()
         if c2.seed is None:
             leaf_candidates.append(c0)
@@ -229,7 +229,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_ener
             seed_distances = np.min([seed_distances, ndi.distance_transform_edt(~c2.seed)], axis=0)
 
         new_atom_label   = atoms_map.max() + 1
-        c1_mask, c2_mask = watershed_split(cluster.get_region(c0_mask), c1.seed, c2.seed)
+        c1_mask, c2_mask = _watershed_split(cluster.get_region(c0_mask), c1.seed, c2.seed)
             
         if c1_mask.sum() < min_atom_size:
             c0.seed = c2.seed   ## change the seed for current region…
