@@ -13,7 +13,7 @@ class AtomAdjacencyGraph:
     :param atoms: Integer-valued image representing the universe of atomic image regions. Each atomic image region has a unique label, which is the integer value.
     :param clusters: Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value.
     :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \\in \\Omega` is ``True`` if :math:`Y_\\omega|_{\\omega=\\{x\\}} > 0` and ``False`` otherwise.
-    :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. The :ref:`_pipeline` only uses these for rendering the adjacency graph.
+    :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. The :ref:`_pipeline` only uses these for rendering the adjacency graph (see the :py:meth:`~.get_edge_lines` method).
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
     """
 
@@ -39,7 +39,7 @@ class AtomAdjacencyGraph:
 
             out.intermediate('Processed atom %d / %d' % (l0, atoms.max()))
         out.write('Computed atom adjacencies')
-        assert self.is_symmetric()
+        assert self._is_symmetric()
     
     def __getitem__(self, atom_label):
         return self._adjacencies[atom_label]
@@ -53,23 +53,43 @@ class AtomAdjacencyGraph:
             self._atoms_by_cluster[old_cluster_label] -= {atom_label}
     
     def get_cluster_label(self, atom_label):
+        """Returns the label of the region of possibly clustered objects, which an atomic image region is a part of.
+        """
         return self._cluster_by_atom[atom_label]
     
     def get_atoms_in_cluster(self, cluster_label):
+        """Returns the set of labels of all atomic image regions, which are part of a region of possibly clustered objects.
+        """
         return self._atoms_by_cluster[cluster_label]
     
     @property
-    def cluster_labels(self): return frozenset(self._atoms_by_cluster.keys())
+    def cluster_labels(self):
+        """The set of labels of all regions of possibly clustered objects.
+        """
+        return frozenset(self._atoms_by_cluster.keys())
     
     @property
-    def atom_labels(self): return frozenset(self._cluster_by_atom.keys())
-    
-    ACCEPT_ALL_ATOMS = lambda atom_label: True
+    def atom_labels(self):
+        """The set of labels of all atomic image regions.
+        """
+        return frozenset(self._cluster_by_atom.keys())
 
     def get_seed(self, atom_label):
+        """Returns the seed point which was used to determine an atomic image region.
+        
+        :return: Tuple of the coordinates of the seed point.
+        """
         return self._seeds[atom_label - 1]
     
-    def get_edge_lines(self, accept=ACCEPT_ALL_ATOMS):
+    def get_edge_lines(self, accept='all'):
+        """Returns a list of lines corresponding to the edges of the graph.
+
+        :param accept: Must be either ``all`` or a callable. If ``all`` is used, all edges of the graph are included. Otherwise, an edge ``(i, j)`` is included if and only if ``accept(i)`` and ``accept(j)`` evaluate to ``True``, where ``i`` and ``j`` are the labels of two adjacent atomic image regions.
+
+        Each line is a tuple of two seed points, and each seed point is a tuple of coordinates.
+        """
+        if isinstance(accept, str) and accept == 'all': accept = lambda atom_label: True
+        assert callable(accept), f'Not a callable: {str(accept)}'
         lines = []
         for l in self.atom_labels:
             seed_l = self.get_seed(l)
@@ -82,12 +102,16 @@ class AtomAdjacencyGraph:
 
     @property
     def max_degree(self):
+        """The maximum degree of the graph.
+        """
         return max(self.get_atom_degree(atom_label) for atom_label in self.atom_labels)
 
     def get_atom_degree(self, atom_label):
+        """Returns the number of adjacent atomic image regions.
+        """
         return len(self[atom_label])
 
-    def is_symmetric(self):
+    def _is_symmetric(self):
         for atom1 in self.atom_labels:
             if not all(atom1 in self[atom2] for atom2 in self[atom1]):
                 return False
