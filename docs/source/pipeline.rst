@@ -75,11 +75,11 @@ Global energy minimization is performed by solving :math:`\operatorname{MSC}(\ma
 
 and
 
-.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} \beta + c(X) \enspace\text{s.t. } \bigcup \mathscr S = \bigcup \mathscr X
+.. math:: \operatorname{MSC}(\mathscr S) = \min_{\mathscr X \subseteq \mathscr S} \sum_{X \in \mathscr X} \beta + \nu(X) \enspace\text{s.t. } \bigcup \mathscr S = \bigcup \mathscr X
 
 is an instance of the *min-weight set-cover* problem, and
 
-.. math:: c(X) = \inf_{\theta,\xi} \psi_\omega(\theta,\xi)|_{\omega = \bigcup X}
+.. math:: \nu(X) = \inf_{\theta,\xi} \psi_\omega(\theta,\xi)|_{\omega = \bigcup X}
 
 is the *set energy function*. The constant term :math:`\beta` governs the sparsity of the solution. It is also the maximum allowed energy difference of merging two deformable shape models (two image regions). See Section 2.3.2 of the paper for details.
 

@@ -56,7 +56,7 @@ class Object(BaseObject):
     Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
 
     :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
-    :ivar energy: The value of the set energy function :math:`c(X)` (see :ref:`pipeline_theory_jointsegandclustersplit`).
+    :ivar energy: The value of the set energy function :math:`\\nu(X)` (see :ref:`pipeline_theory_jointsegandclustersplit`).
     :ivar on_boundary: ``True`` if this object intersects the image boundary.
     :ivar is_optimal: ``True`` if optimization of :py:attr:`~.energy` was successful.
     :ivar processing_time: How long the computation of the attributes took (in seconds).
@@ -361,7 +361,7 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
 def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     """Fits a deformable shape model to the intensities of an image region.
     
-    Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`c(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
+    Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`\\nu(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
 
     :param region: An :py:class:`~image.Image` object corresponding to the image region :math:`X`.
     :param smooth_mat_allocation_lock: A critical section lock used for allocation of the matrix :math:`\\tilde G_\\omega`.
@@ -370,7 +370,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
 
     :return: A tuple with the following components:
 
-        * The value of the set energy function :math:`c(X)`.
+        * The value of the set energy function :math:`\\nu(X)`.
         * An instance of the :py:class:`~dsm.DeformableShapeModel` class which represents the optimal parameters :math:`\\theta` and :math:`\\xi`.
         * A status indicator string, where ``optimal`` indicats that convex programming was successful and ``fallback`` indicates that convex programming failed for the deformable shape model and the initialization is used instead.
     """
