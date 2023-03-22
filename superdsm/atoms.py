@@ -8,18 +8,24 @@ import skimage.segmentation
 class AtomAdjacencyGraph:
     """Graph representation of the adjacencies of atomic image regions.
 
-    This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`Definition 1 in the paper <references>`.
+    This corresponds to the adjacency graph :math:`\mathcal G` as defined in :ref:`pipeline_theory_c2freganal`.
+
+    :param atoms: Integer-valued image representing the universe of atomic image regions. Each atomic image region has a unique label, which is the integer value.
+    :param clusters: Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value.
+    :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \in \Omega` is ``True`` if :math:`Y_\\omega|\\omega=\\{x\\} > 0` and ``False`` otherwise.
+    :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates.
+    :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
     """
 
-    def __init__(self, atoms, g_clusters, fg_mask, seeds, out=None):
+    def __init__(self, atoms, clusters, fg_mask, seeds, out=None):
         out = get_output(out)
         self._adjacencies, se = {atom_label: set() for atom_label in range(1, atoms.max() + 1)}, morph.disk(1)
         self._atoms_by_cluster, self._cluster_by_atom = {}, {}
         self._seeds = seeds
         for l0 in range(1, atoms.max() + 1):
             cc = (atoms == l0)
-            cluster_label = g_clusters[cc][0]
-            cluster_mask  = np.logical_and(fg_mask, g_clusters == cluster_label)
+            cluster_label = clusters[cc][0]
+            cluster_mask  = np.logical_and(fg_mask, clusters == cluster_label)
             cc_dilated = np.logical_and(morph.binary_dilation(cc, se), np.logical_not(cc))
             cc_dilated = np.logical_and(cc_dilated, cluster_mask)
             if cluster_label not in self._atoms_by_cluster:
