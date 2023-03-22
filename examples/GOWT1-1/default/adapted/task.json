@@ -9,7 +9,7 @@
         "postprocess": {
             "mask_max_distance": 2,
             "mask_stdamp": 1,
-            "max_energy_rate": 0.5,
+            "max_norm_energy": 0.5,
             "min_contrast_response": 1.45
         }
     }

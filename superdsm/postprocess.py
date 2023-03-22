@@ -24,11 +24,11 @@ class Postprocessing(Stage):
     Simple post-processing
     ^^^^^^^^^^^^^^^^^^^^^^
 
-    ``postprocess/max_energy_rate``
-        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo).
+    ``postprocess/max_norm_energy``
+        Objects with a normalized energy larger than this value are discarded. Corresponds to ``max_norm_energy2`` in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as ``min_norm_energy2`` in Supplemental Material 7 due to a typo). Defaults to 0.2.
 
     ``postprocess/discard_image_boundary``
-        Objects located directly on the image border are discarded if this is set to ``True``.
+        Objects located directly on the image border are discarded if this is set to ``True``. Defaults to ``False``.
 
     ``postprocess/min_object_radius``
         Objects smaller than a circle of this radius are discarded (in terms of the surface area). Defaults to 0, or to ``AF_min_object_radius × radius`` if configured automatically (and ``AF_min_object_radius`` defaults to zero).
@@ -118,7 +118,7 @@ class Postprocessing(Stage):
 
     def process(self, input_data, cfg, out, log_root_dir):
         # simple post-processing
-        max_energy_rate           = cfg.get(          'max_energy_rate',    0.2)
+        max_norm_energy           = cfg.get(          'max_norm_energy',    0.2)
         discard_image_boundary    = cfg.get(   'discard_image_boundary',  False)
         min_boundary_obj_radius   = cfg.get(  'min_boundary_obj_radius',      0)
         min_obj_radius            = cfg.get(        'min_object_radius',      0)
@@ -192,8 +192,8 @@ class Postprocessing(Stage):
             if object_results['is_glare']:
                 log_entries.append((object, f'glare removed (radius: {object_results["obj_radius"]})'))
                 continue
-            if object_results['energy_rate'] > max_energy_rate:
-                log_entries.append((object, f'energy rate too high ({object_results["energy_rate"]})'))
+            if object_results['norm_energy'] > max_norm_energy:
+                log_entries.append((object, f'energy rate too high ({object_results["norm_energy"]})'))
                 continue
             if object_results['contrast_response'] < min_contrast_response:
                 log_entries.append((object, f'contrast response too low ({object_results["contrast_response"]})'))
@@ -286,7 +286,7 @@ def _is_glare(object, g, min_layer=0.5, num_layers=5):
     return is_glare
 
 
-def _compute_energy_rate(object, y, atoms, background_margin):
+def _compute_norm_energy(object, y, atoms, background_margin):
     region = object.get_cvxprog_region(y, atoms, background_margin)
     return object.energy / region.mask.sum()
 
@@ -297,13 +297,13 @@ def _process_object(cidx, object, params):
     is_glare   = False
     if params['min_boundary_glare_radius' if object.on_boundary else 'min_glare_radius'] < obj_radius:
         is_glare = _is_glare(object, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
-    energy_rate  = _compute_energy_rate(object, params['y'], params['atoms'], params['background_margin'])
+    norm_energy  = _compute_norm_energy(object, params['y'], params['atoms'], params['background_margin'])
     contrast_response = _compute_contrast_response(object, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
     fg_offset, fg_fragment = _process_mask(object, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(object)
 
     return cidx, {
-        'energy_rate':       energy_rate,
+        'norm_energy':       norm_energy,
         'contrast_response': contrast_response,
         'fg_offset':         fg_offset,
         'fg_fragment':       fg_fragment,
