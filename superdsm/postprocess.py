@@ -48,7 +48,7 @@ class Postprocessing(Stage):
     Contrast-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    A segmented object is discarded, if the *contrast response* is too low, which is the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the average image intensity within its exterior neighborhood. The average image intensity within the exterior neighborhood is determined using a weighted mean of the image intensities, where the weight
+    A segmented object is discarded if the contrast is too low. The contrast is computed as the ratio of *(i)* the mean image intensity inside the segmentation mask of the object and *(ii)* the average image intensity within its exterior neighborhood. The average image intensity within the exterior neighborhood is determined using a weighted mean of the image intensities, where the weight
 
     .. math:: \\exp(-\\max\\{0, \\operatorname{dist}_M(x) - \\text{exterior_offset}\\} / \\text{exterior_scale})
         
@@ -60,11 +60,11 @@ class Postprocessing(Stage):
     ``postprocess/exterior_offset``
         Corresponds to the thickness of the *inner* margin of image points within the exterior neighborhood which are weighted by 1. Increasing this value increases the importance of image points closest to the segmentation mask. Defaults to 5.
 
-    ``postprocess/min_contrast_response``
-        A segmented object is discarded, if the contrast response as defined above is below this threshold. Corresponds to *min_contrast* in the paper (Supplemental Materials 7 and 8). Defaults to 1.35.
+    ``postprocess/min_contrast``
+        A segmented object is discarded, if the contrast as defined above is below this threshold. See Supplemental Materials 7 and 8 in the :ref:`paper <references>`. Defaults to 1.35.
 
-    ``postprocess/contrast_response_epsilon``
-        This constant is added to both the nominator and the denominator of the fraction which defines the contrast response (see above). Defaults to 1e-4.
+    ``postprocess/contrast_epsilon``
+        This constant is added to both the nominator and the denominator of the fraction which defines the contrast (see above). Defaults to 1e-4.
 
     Mask-based post-processing
     ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -128,10 +128,10 @@ class Postprocessing(Stage):
         if max_boundary_eccentricity is None: max_boundary_eccentricity = max_eccentricity
 
         # contrast-based post-processing
-        exterior_scale            = cfg.get(           'exterior_scale',    5)
-        exterior_offset           = cfg.get(          'exterior_offset',    5)
-        min_contrast_response     = cfg.get(    'min_contrast_response', 1.35)
-        contrast_response_epsilon = cfg.get('contrast_response_epsilon', 1e-4)
+        exterior_scale   = cfg.get(  'exterior_scale',    5)
+        exterior_offset  = cfg.get( 'exterior_offset',    5)
+        min_contrast     = cfg.get(    'min_contrast', 1.35)
+        contrast_epsilon = cfg.get('contrast_epsilon', 1e-4)
 
         # mask-based post-processing
         mask_stdamp          = cfg.get(      'mask_stdamp',    2)
@@ -162,7 +162,7 @@ class Postprocessing(Stage):
             'background_mask':            background_mask,
             'exterior_scale':             exterior_scale,
             'exterior_offset':            exterior_offset,
-            'contrast_response_epsilon':  contrast_response_epsilon,
+            'contrast_epsilon':           contrast_epsilon,
             'mask_stdamp':                mask_stdamp,
             'mask_max_distance':          mask_max_distance,
             'fill_holes':                 fill_holes,
@@ -195,8 +195,8 @@ class Postprocessing(Stage):
             if object_results['norm_energy'] > max_norm_energy:
                 log_entries.append((object, f'energy rate too high ({object_results["norm_energy"]})'))
                 continue
-            if object_results['contrast_response'] < min_contrast_response:
-                log_entries.append((object, f'contrast response too low ({object_results["contrast_response"]})'))
+            if object_results['contrast_response'] < min_contrast:
+                log_entries.append((object, f'contrast too low ({object_results["contrast_response"]})'))
                 continue
             if object.original.on_boundary:
                 if object_results['eccentricity'] > max_boundary_eccentricity:
@@ -251,7 +251,7 @@ class PostprocessedObject(BaseObject):
         self.fg_fragment = original.fg_fragment
 
 
-def _compute_contrast_response(object, g, exterior_scale, exterior_offset, epsilon, background_mask):
+def _compute_contrast(object, g, exterior_scale, exterior_offset, epsilon, background_mask):
     g = g / g.std()
     mask = np.zeros(g.shape, bool)
     object.fill_foreground(mask)
@@ -298,7 +298,7 @@ def _process_object(cidx, object, params):
     if params['min_boundary_glare_radius' if object.on_boundary else 'min_glare_radius'] < obj_radius:
         is_glare = _is_glare(object, params['g_glare_detection'], params['glare_detection_min_layer'], params['glare_detection_num_layers'])
     norm_energy  = _compute_norm_energy(object, params['y'], params['atoms'], params['background_margin'])
-    contrast_response = _compute_contrast_response(object, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_response_epsilon'], params['background_mask'])
+    contrast_response = _compute_contrast(object, params['g'], params['exterior_scale'], params['exterior_offset'], params['contrast_epsilon'], params['background_mask'])
     fg_offset, fg_fragment = _process_mask(object, params['g_mask_processing'], params['mask_max_distance'], params['mask_stdamp'], params['fill_holes'])
     eccentricity = _compute_eccentricity(object)
 
