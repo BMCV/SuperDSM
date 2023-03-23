@@ -19,8 +19,20 @@ def is_jupyter_notebook():
 def get_output(out=None):
     """Returns a suitable :py:class:`~.Output` implementation.
 
-    :param out: This will be returned if it is not ``None``.
-    :return: ``out`` if ``out`` is not ``None``. If ``out`` is ``None``, then a :py:class:`~.JupyterOutput` object if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise.
+    If ``out`` is None or set to ``'muted'``, then a :py:class:`~.JupyterOutput` object is retruned if code is being executed in a Jupyter notebook and a :py:class:`~.ConsoleOutput` object otherwise, and the returned object is set to *muted* in the latter case. In all other cases, ``out`` itself will be returned.
+
+    .. runblock:: pycon
+
+       >>> import superdsm.output
+       >>> out1 = superdsm.output.get_output(None)
+       >>> out1.muted
+       >>> type(out1)
+       >>> out2 = superdsm.output.get_output(out)
+       >>> out2.muted
+       >>> out1 is out2
+       >>> out3 = superdsm.output.get_output('muted')
+       >>> type(out3)
+       >>> out3.muted
     """
     if out is not None:
         return out
