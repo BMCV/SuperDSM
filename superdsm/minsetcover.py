@@ -162,7 +162,7 @@ class MinSetCover:
 
         .. math:: \\sum_{X \\in \\mathscr X} \\beta + \\nu(X),
 
-        where :math:`\mathscr X` is the min-weight set-cover.
+        where :math:`\\mathscr X` is the min-weight set-cover.
         """
         solution = self.solution
         return sum(c.energy for c in solution) + self.beta * len(solution)
