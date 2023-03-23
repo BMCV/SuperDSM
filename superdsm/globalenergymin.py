@@ -23,7 +23,7 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
-    This stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     Hyperparameters
     ---------------
@@ -31,7 +31,7 @@ class GlobalEnergyMinimization(Stage):
     The following hyperparameters can be used to control this pipeline stage:
 
     ``global-energy-minimization/conservative``
-        tbd.
+        tbd. Defaults to ``True``.
 
     ``global-energy-minimization/beta``
         Corresponds to the constant term :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
