@@ -130,7 +130,7 @@ class MinSetCover:
     def solution(self):
         """The optimal minimal-energy family of objects.
 
-        Corresponds to the family :math:`\mathscr X` of sets of atomic image regions in the paper (see :ref:`Section 2.3 <references>`).
+        Corresponds to the family :math:`\\mathscr X` of sets of atomic image regions in the paper (see :ref:`Section 2.3 <references>`).
         """
         return sum((list(partial_solution) for partial_solution in self.solution_by_cluster.values()), [])
 
