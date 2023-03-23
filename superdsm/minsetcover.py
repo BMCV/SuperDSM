@@ -98,6 +98,8 @@ class MinSetCover:
     where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
 
     The family of candidate sets :math:`\\mathscr S` is empty initially. Object prototypes (i.e. sets of atomic image regions) are added to :math:`\\mathscr S` by the :py:meth:`~.update` method. The approximative solution is then updated automatically using the :py:meth:`~.solve_minsetcover` function.
+
+    :param atoms: List of objects corresponding to the atomic image regions (instances of the :py:class:`~.objects.Object` class).
     """
 
     def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
@@ -113,6 +115,11 @@ class MinSetCover:
         objects = self.objects_by_cluster[cluster_label]
         partial_solution = solve_minsetcover(objects, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
+
+    def get_atom(self, atom_label):
+         """Returns the object corresponding to an atomic image region.
+         """
+         return self.atoms[atom_label]
 
     def update(self, new_objects, out=None):
         """Adds new objects to the family of candidate sets :math:`\\mathscr S` and updates the solution.
