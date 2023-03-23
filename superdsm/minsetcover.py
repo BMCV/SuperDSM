@@ -156,7 +156,7 @@ class MinSetCover:
 
     @property
     def costs(self):
-        """Returns the value of the min-weight set-cover (the optimal value of the objective function).
+        """The value of the min-weight set-cover (the optimal value of the objective function).
         """
         solution = self.solution
         return sum(c.energy for c in solution) + self.beta * len(solution)
