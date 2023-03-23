@@ -12,7 +12,9 @@ from scipy        import ndimage
 from scipy.sparse import csr_matrix, coo_matrix, bmat as sparse_block, diags as sparse_diag, issparse
 
 
-def fast_dot(A, B):
+def _fast_dot(A, B):
+    """Performs fast multiplication of two sparse or dense matrices (sparsity is exploited).
+    """
     if A.shape[1] == B.shape[0] == 1: return A @ B
     return mkl_dot(A, B)
 
@@ -66,7 +68,7 @@ class DeformableShapeModel:
     def s(self, x, smooth_mat):
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
-        svec = diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + fast_dot(smooth_mat, self.ξ)
+        svec = _diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + _fast_dot(smooth_mat, self.ξ)
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
@@ -105,10 +107,8 @@ class DeformableShapeModel:
         return DeformableShapeModel(self.ξ, A, b, c)
 
 
-def diagquad(A, X):
-    """Computes the diagonal entries of `X' A X` quickly.
-    
-    See: http://stackoverflow.com/a/14759341/1444073
+def _diagquad(A, X):
+    """Computes the diagonal entries of :math:`X^\\top A X` quickly.
     """
     return np.einsum('ij,ij->i', np.dot(X.T, A), X.T)
 
@@ -297,7 +297,7 @@ class Energy:
         if self.smooth_mat.shape[1] > 0:
             H = sparse_block([
                 [D1 @ D1.T, csr_matrix((D1.shape[0], D2.shape[0]))],
-                [fast_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
+                [_fast_dot(D2, D1.T), mkl_gram(D2).T if D2.shape[1] > 0 else csr_matrix((D2.shape[0], D2.shape[0]))]])
             g = self.alpha * (1 / self.term2 - self.term3 / np.power(self.term2, 3))
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
@@ -314,7 +314,7 @@ class Energy:
         return H
 
 
-class Cache:
+class _Cache:
 
     def __init__(self, size, getter, equality=None):
         if equality is None: equality = np.array_equal
@@ -361,8 +361,8 @@ class CP:
 
     def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None, timeout=None):
         self.params0  = params0
-        self.gradient = Cache(cachesize, lambda p: (scale * energy(p), cvxopt.matrix(scale * energy.grad(p)).T), equality=cachetest)
-        self.hessian  = Cache(cachesize, lambda p:  scale * energy.hessian(p), equality=cachetest)
+        self.gradient = _Cache(cachesize, lambda p: (scale * energy(p), cvxopt.matrix(scale * energy.grad(p)).T), equality=cachetest)
+        self.hessian  = _Cache(cachesize, lambda p:  scale * energy.hessian(p), equality=cachetest)
         self.timeout  = timeout
     
     def __call__(self, params=None, w=None):
