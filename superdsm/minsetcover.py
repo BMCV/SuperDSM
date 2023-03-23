@@ -61,9 +61,9 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
 
     :param objects: Corresponds to the family of the *candidate* sets :math:`\\mathscr S`. Any candidate set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonding to :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
-    :param merge: The *merge step* of Algorithm 2 will be used only if ``True`` is passed. Defaults to ``True``.
-    :param try_lower_beta: The number of *repetitions* to perform after the initial iteration (this is the *max_iter* parameter of Algorithm 2 minus 1). Each additional repetitions uses a more conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced). Defaults to 4.
-    :param lower_beta_mul: The factor used to reduce the sparsity parameter :math:`\\beta` in each repetition (this is the parameter :math:`\\gamma` of Algorithm 2, where :math:`0 < \\gamma < 1`). Defaults to 0.8.
+    :param merge: The *merge step* of Algorithm 2 will be used only if ``True`` is passed.
+    :param try_lower_beta: The number of *repetitions* to perform after the initial iteration (this is the *max_iter* parameter of Algorithm 2 minus 1). Each additional repetitions uses a more conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced).
+    :param lower_beta_mul: The factor used to reduce the sparsity parameter :math:`\\beta` in each repetition (this is the parameter :math:`\\gamma` of Algorithm 2, where :math:`0 < \\gamma < 1`).
     :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
     :return: The min-weight set-cover :math:`\\mathscr X \\subseteq \\mathscr S`.
     """
@@ -89,13 +89,15 @@ def _get_atom_label(atom):
 
 
 class MinSetCover:
-    """Represents instances of the min-weight set-cover problem.
+    """Objects of this class represent solved instances of the min-weight set-cover problem.
 
     The objective of the problem is to determine a sparse minimal-energy family :math:`\\mathscr X` of sets, where :math:`\\nu(X)` is the energy of a set :math:`X`, and :math:`\\beta \\geq 0` is the sparsity parameter,
 
     .. math:: \\operatorname{MSC}(\\mathscr S) = \\min_{\\mathscr X \\subseteq \\mathscr S} \\sum_{X \\in \\mathscr X} \\beta + \\nu(X) \\enspace\\text{s.t. } \\bigcup \\mathscr S = \\bigcup \\mathscr X,
 
     where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
+
+    The family of candidate sets :math:`\\mathscr S` is empty initially. Object prototypes (i.e. sets of atomic image regions) are added to :math:`\\mathscr S` by the :py:meth:`~.update` method. The approximative solution is then updated automatically using the :py:meth:`~.solve_minsetcover` function.
     """
 
     def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
@@ -107,15 +109,18 @@ class MinSetCover:
         self. objects_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
         self.solution_by_cluster = {cluster: self.objects_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
-    def get_atom(self, atom_label):
-        return self.atoms[atom_label]
-
     def _update_partial_solution(self, cluster_label, out):
         objects = self.objects_by_cluster[cluster_label]
         partial_solution = solve_minsetcover(objects, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
         self.solution_by_cluster[cluster_label] = partial_solution
 
     def update(self, new_objects, out=None):
+        """Adds new objects to the family of candidate sets :math:`\\mathscr S` and updates the solution.
+
+        :param new_objects: An iterable of :py:class:`~.objects.Object` instances, each representing a set of atomic image regions.
+
+        The solution of the min-weight set-cover is updated automatically.
+        """
         invalidated_clusters = []
         for new_object in new_objects:
             cluster_label = self.adjacencies.get_cluster_label(list(new_object.footprint)[0])
@@ -125,18 +130,32 @@ class MinSetCover:
             self._update_partial_solution(cluster_label, out)
 
     def get_cluster_costs(self, cluster_label):
+        """Returns the value of the min-weight set-cover for the subset of candidate sets which correspond to a single region of possibly clustered objects.
+        """
         partial_solution = self.solution_by_cluster[cluster_label]
         return sum(c.energy for c in partial_solution) + self.beta * len(partial_solution)
 
     @property
     def solution(self):
-        """The optimal minimal-energy family of objects.
+        """The min-weight set-cover, i.e. the optimal family of sets of atomic image regions.
 
-        Corresponds to an approximation of the min-weight set-cover, which is the family :math:`\\mathscr X` of sets of atomic image regions.
+        This is the family :math:`\\mathscr X \\subseteq \\mathscr S` of objects, which is optimal with respect to the objective function
+
+        .. math:: \\sum_{X \\in \\mathscr X} \\beta + \\nu(X)
+
+        subject to the constraint that :math:`\\bigcup \\mathscr S = \\bigcup \\mathscr X`.
         """
         return sum((list(partial_solution) for partial_solution in self.solution_by_cluster.values()), [])
 
     @property
     def costs(self):
+        """Returns the value of the min-weight set-cover.
+
+        This is the optimal value of the objective function, i.e.
+
+        .. math:: \\sum_{X \\in \\mathscr X} \\beta + \\nu(X),
+
+        where :math:`\mathscr X` is the min-weight set-cover.
+        """
         solution = self.solution
         return sum(c.energy for c in solution) + self.beta * len(solution)
