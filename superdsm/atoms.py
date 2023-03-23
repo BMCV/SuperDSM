@@ -37,9 +37,9 @@ class AtomAdjacencyGraph:
        >>> clusters = np.array([[1, 1, 2, 2],
        ...                      [1, 2, 2, 2],
        ...                      [2, 2, 2, 2]])
-       >>> fg_mask = np.array([[True, False, True],
-       ...                     [True, False, True],
-       ...                     [True,  True, True]])
+       >>> fg_mask = np.array([[True, False, True, False],
+       ...                     [True, False, True,  True],
+       ...                     [True,  True, True,  True]])
        >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
        >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
        >>> adj[1]
@@ -251,8 +251,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.array([[True, False, True, False],
-           ...                     [True, False, True, False],
-           ...                     [True,  True, True, False]])
+           ...                     [True, False, True,  True],
+           ...                     [True,  True, True,  True]])
            >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.max_degree
@@ -273,8 +273,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.array([[True, False, True, False],
-           ...                     [True, False, True, False],
-           ...                     [True,  True, True, False]])
+           ...                     [True, False, True,  True],
+           ...                     [True,  True, True,  True]])
            >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_atom_degree(1)
