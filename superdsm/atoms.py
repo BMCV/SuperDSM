@@ -169,7 +169,7 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> seeds = [(0, 0), (2, 1), (0, 2), (1, 3)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_seed(1)
            >>> adj.get_seed(2)
