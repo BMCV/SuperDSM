@@ -34,7 +34,7 @@ def get_output(out=None):
        >>> out3.muted
     """
     kwargs = dict()
-    if isinstance(out, str) and 'out' == 'muted':
+    if isinstance(out, str) and out == 'muted':
         out = None
         kwargs['muted'] = True
     if out is not None:
