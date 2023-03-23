@@ -67,6 +67,8 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
     :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
     :return: The min-weight set-cover :math:`\\mathscr X \\subseteq \\mathscr S`.
     """
+    assert beta >= 0
+    assert 0 < lower_beta_mul < 1
     out = get_output(out)
     solution1 = _solve_minsetcover(objects, beta, merge, out)
     if try_lower_beta > 0 and beta > 0:
@@ -130,7 +132,7 @@ class MinSetCover:
     def solution(self):
         """The optimal minimal-energy family of objects.
 
-        Corresponds to the family :math:`\\mathscr X` of sets of atomic image regions in the paper (see :ref:`Section 2.3 <references>`).
+        Corresponds to an approximation of the min-weight set-cover, which is the family :math:`\\mathscr X` of sets of atomic image regions.
         """
         return sum((list(partial_solution) for partial_solution in self.solution_by_cluster.values()), [])
 
