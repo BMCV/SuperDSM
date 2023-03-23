@@ -102,10 +102,10 @@ class DeferredOutput(superdsm.output.Output):
     
     def forward(self):
         assert self.parent is None
+        for line in self._lines:
+            self.original.write(line)
         if self._intermediate is not None:
-            for line in self._lines:
-                self.original.write(line)
-            self.original.intermediate(self._intermediate)
+            self.original.write(self._intermediate)
 
 
 class SilentOutputContext:
@@ -113,6 +113,7 @@ class SilentOutputContext:
     def __init__(self, out=None, **kwargs):
         out = superdsm.output.get_output(out)
         self.output = DeferredOutput(out, **kwargs)
+        self.output.write('')
 
     def __enter__(self):
         return self.output
