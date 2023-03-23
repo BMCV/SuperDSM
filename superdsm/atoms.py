@@ -20,12 +20,12 @@ class AtomAdjacencyGraph:
 
        >>> import superdsm.atoms
        >>> import numpy as np
-       >>> atoms = np.array([[1, 1, 2],
-       ...                   [1, 3, 2],
-       ...                   [3, 3, 3]])
-       >>> clusters = np.array([[1, 1, 2],
-       ...                      [1, 2, 2],
-       ...                      [2, 2, 2]])
+       >>> atoms = np.array([[1, 1, 2, 4],
+       ...                   [1, 3, 2, 4],
+       ...                   [3, 3, 3, 4]])
+       >>> clusters = np.array([[1, 1, 2, 2],
+       ...                      [1, 2, 2, 2],
+       ...                      [2, 2, 2, 2]])
        >>> fg_mask = np.array([[True, False, True],
        ...                     [True, False, True],
        ...                     [True,  True, True]])
@@ -77,12 +77,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.get_cluster_label(1)
@@ -98,12 +98,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.get_atoms_in_cluster(1)
@@ -119,12 +119,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.cluster_labels
@@ -139,12 +139,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.atom_labels
@@ -160,12 +160,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
            >>> seeds = [(0, 0), (0, 2), (2, 1)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
@@ -175,10 +175,11 @@ class AtomAdjacencyGraph:
         """
         return self._seeds[atom_label - 1]
     
-    def get_edge_lines(self, accept='all'):
+    def get_edge_lines(self, accept='all', reduce=True):
         """Returns a list of lines corresponding to the edges of the graph.
 
-        :param accept: Must be either ``all`` or a callable. If ``all`` is used, all edges of the graph are included. Otherwise, an edge ``(i, j)`` is included if and only if ``accept(i)`` and ``accept(j)`` evaluate to ``True``, where ``i`` and ``j`` are the labels of two adjacent atomic image regions.
+        :param accept: Must be either ``all`` or a callable. If ``all`` is used, all edges of the graph are included. Otherwise, an edge ``(i,j)`` is included only if ``accept(i)`` and ``accept(j)`` evaluate to ``True``, where ``i`` and ``j`` are the labels of two adjacent atomic image regions.
+        :param reduce: If ``True``, then an edge ``(i,j)`` is included only if ``i > j``. Otherwise, both edges ``(i,j)`` and ``(j,i)`` are included.
 
         Each line is a tuple of two seed points, and each seed point is a tuple of coordinates.
 
@@ -186,18 +187,20 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.array([[True, False, True],
            ...                     [True, False, True],
            ...                     [True,  True, True]])
            >>> seeds = [(0, 0), (0, 2), (2, 1)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_edge_lines()
+           >>> adj.get_edge_lines(lambda i: i != 4)
+           >>> adj.get_edge_lines(reduce=False)
         """
         if isinstance(accept, str) and accept == 'all': accept = lambda atom_label: True
         assert callable(accept), f'Not a callable: {str(accept)}'
@@ -208,6 +211,7 @@ class AtomAdjacencyGraph:
             for k in self[l]:
                 seed_k = self.get_seed(k)
                 if not accept(k): continue
+                if reduce and l > k: continue
                 lines.append((seed_l, seed_k))
         return lines
 
@@ -219,12 +223,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.array([[True, False, True],
            ...                     [True, False, True],
            ...                     [True,  True, True]])
@@ -240,12 +244,12 @@ class AtomAdjacencyGraph:
 
            >>> import superdsm.atoms
            >>> import numpy as np
-           >>> atoms = np.array([[1, 1, 2],
-           ...                   [1, 3, 2],
-           ...                   [3, 3, 3]])
-           >>> clusters = np.array([[1, 1, 2],
-           ...                      [1, 2, 2],
-           ...                      [2, 2, 2]])
+           >>> atoms = np.array([[1, 1, 2, 4],
+           ...                   [1, 3, 2, 4],
+           ...                   [3, 3, 3, 4]])
+           >>> clusters = np.array([[1, 1, 2, 2],
+           ...                      [1, 2, 2, 2],
+           ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.array([[True, False, True],
            ...                     [True, False, True],
            ...                     [True,  True, True]])
