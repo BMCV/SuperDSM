@@ -193,9 +193,9 @@ class AtomAdjacencyGraph:
            >>> clusters = np.array([[1, 1, 2, 2],
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
-           >>> fg_mask = np.array([[True, False, True],
-           ...                     [True, False, True],
-           ...                     [True,  True, True]])
+           >>> fg_mask = np.array([[True, False, True, False],
+           ...                     [True, False, True,  True],
+           ...                     [True,  True, True,  True]])
            >>> seeds = [(0, 0), (0, 2), (2, 1)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_edge_lines()
