@@ -72,7 +72,7 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
     if try_lower_beta > 0 and beta > 0:
         new_beta = beta * lower_beta_mul
         out.write(f'MINSETCOVER retry with lower beta: {new_beta:g}')
-        solution2 = solve_minsetcover(objects, new_beta, merge, try_lower_beta - 1, lower_beta_mul, False, out)
+        solution2 = solve_minsetcover(objects, new_beta, merge, try_lower_beta - 1, lower_beta_mul, out)
         solution1_value = sum(c.energy for c in solution1) + beta * len(solution1)
         solution2_value = sum(c.energy for c in solution2) + beta * len(solution2)
         if solution2_value < solution1_value:
