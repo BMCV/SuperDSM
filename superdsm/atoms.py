@@ -14,7 +14,7 @@ class AtomAdjacencyGraph:
     :param clusters: Integer-valued image representing the regions of possibly clustered obejcts. Each region has a unique label, which is the integer value.
     :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \\in \\Omega` is ``True`` if :math:`Y_\\omega|_{\\omega=\\{x\\}} > 0` and ``False`` otherwise.
     :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. The :ref:`pipeline` only uses these for rendering the adjacency graph (see the :py:meth:`~.get_edge_lines` method).
-    :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
+    :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
 
     .. runblock:: pycon
 
@@ -196,7 +196,7 @@ class AtomAdjacencyGraph:
            ...                     [True, False, True],
            ...                     [True,  True, True]])
            >>> seeds = [(0, 0), (0, 2), (2, 1)]
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_edge_lines()
         """
         if isinstance(accept, str) and accept == 'all': accept = lambda atom_label: True

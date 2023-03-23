@@ -251,7 +251,7 @@ def compute_objects(objects, y, atoms, dsm_cfg, log_root_dir, status_line=DEFAUL
     :param dsm_cfg: Dictionary of hyperparameters defined in the :py:class:`~superdsm.dsmcfg.DSM_Config` stage (without the leading ``dsm/`` namespace prefix).
     :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
     :param status_line: Tuple ``(s1, s2)``, where ``s1`` is the line of text to be written while objects are being computed, and ``s2`` is the line of text to be written when finished.
-    :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
+    :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
     """
     out = get_output(out)
     dsm_cfg = copy_dict(dsm_cfg)
