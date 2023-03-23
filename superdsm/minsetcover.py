@@ -97,9 +97,13 @@ class MinSetCover:
 
     where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
 
-    The family of candidate sets :math:`\\mathscr S` contains initially sets of cardinality :math:`\\# X = 1`. Further object prototypes (i.e. sets of atomic image regions) are added to :math:`\\mathscr S` by the :py:meth:`~.update` method. The approximative solution is then updated automatically using the :py:meth:`~.solve_minsetcover` function.
+    The family of candidate sets :math:`\\mathscr S` contains initially sets of cardinality :math:`\\# X = 1`. Further object prototypes (i.e. sets of atomic image regions) are added to :math:`\\mathscr S` by the :py:meth:`~.update` method. The approximative solution is then updated automatically using the :py:meth:`~solve_minsetcover` function.
 
     :param atoms: List of objects corresponding to the atomic image regions (instances of the :py:class:`~.objects.Object` class).
+    :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
+    :param adjacencies: Adjacency graph :math:`\\mathcal G`.
+    :param try_lower_beta: Passed to the :py:meth:`~solve_minsetcover` function.
+    :param lower_beta_mul: Passed to the :py:meth:`~solve_minsetcover` function.
     """
 
     def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
