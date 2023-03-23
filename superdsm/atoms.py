@@ -200,7 +200,7 @@ class AtomAdjacencyGraph:
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_edge_lines()
            >>> adj.get_edge_lines(lambda i: i != 4)
-           >>> adj.get_edge_lines(reduce=False)
+           >>> adj.get_edge_lines(lambda i: i != 4, reduce=False)
         """
         if isinstance(accept, str) and accept == 'all': accept = lambda atom_label: True
         assert callable(accept), f'Not a callable: {str(accept)}'
@@ -229,9 +229,9 @@ class AtomAdjacencyGraph:
            >>> clusters = np.array([[1, 1, 2, 2],
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
-           >>> fg_mask = np.array([[True, False, True],
-           ...                     [True, False, True],
-           ...                     [True,  True, True]])
+           >>> fg_mask = np.array([[True, False, True, False],
+           ...                     [True, False, True, False],
+           ...                     [True,  True, True, False]])
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.max_degree
         """
@@ -250,9 +250,9 @@ class AtomAdjacencyGraph:
            >>> clusters = np.array([[1, 1, 2, 2],
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
-           >>> fg_mask = np.array([[True, False, True],
-           ...                     [True, False, True],
-           ...                     [True,  True, True]])
+           >>> fg_mask = np.array([[True, False, True, False],
+           ...                     [True, False, True, False],
+           ...                     [True,  True, True, False]])
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
            >>> adj.get_atom_degree(1)
            >>> adj.get_atom_degree(2)
