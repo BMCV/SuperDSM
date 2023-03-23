@@ -59,7 +59,7 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
 
     This function implements Algorithm 2 of the :ref:`paper <references>`.
 
-    :param objects: Corresponds to the family of the *candidate* sets :math:`\mathscr S`. Any candidate set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonding to :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
+    :param objects: Corresponds to the family of the *candidate* sets :math:`\\mathscr S`. Any candidate set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonding to :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
     :param merge: The *merge step* of Algorithm 2 will be used only if ``True`` is passed. Defaults to ``True``.
     :param try_lower_beta: The number of *repetitions* to perform after the initial iteration (this is the *max_iter* parameter of Algorithm 2 minus 1). Each additional repetitions uses a more conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced). Defaults to 4.
@@ -93,7 +93,7 @@ class MinSetCover:
 
     .. math:: \\operatorname{MSC}(\\mathscr S) = \\min_{\\mathscr X \\subseteq \\mathscr S} \\sum_{X \\in \\mathscr X} \\beta + \\nu(X) \\enspace\\text{s.t. } \\bigcup \\mathscr S = \\bigcup \\mathscr X,
 
-    where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`_pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
+    where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
     """
 
     def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
