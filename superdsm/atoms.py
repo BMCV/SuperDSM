@@ -15,6 +15,24 @@ class AtomAdjacencyGraph:
     :param fg_mask: Binary image corresponding to a rough representation of the image foreground. This means that an image point :math:`x \\in \\Omega` is ``True`` if :math:`Y_\\omega|_{\\omega=\\{x\\}} > 0` and ``False`` otherwise.
     :param seeds: The seed points which were used to determine the atomic image regions, represented by a list of tuples of coordinates. The :ref:`pipeline` only uses these for rendering the adjacency graph (see the :py:meth:`~.get_edge_lines` method).
     :param out: An output object obtained via :py:meth:`~superdsm.output.get_output`, or ``None`` if the default output should be used.
+
+    .. runblock:: pycon
+
+       >>> import superdsm.atoms
+       >>> import numpy as np
+       >>> atoms = np.array([[1, 1, 2],
+       ...                   [1, 3, 2],
+       ...                   [3, 3, 3]])
+       >>> clusters = np.array([[1, 1, 2],
+       ...                      [1, 2, 2],
+       ...                      [2, 2, 2]])
+       >>> fg_mask = np.array([[True, False, True],
+       ...                     [True, False, True],
+       ...                     [True,  True, True]])
+       >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+       >>> adj[1]
+       >>> adj[2]
+       >>> adj[3]
     """
 
     def __init__(self, atoms, clusters, fg_mask, seeds, out=None):
@@ -54,23 +72,82 @@ class AtomAdjacencyGraph:
     
     def get_cluster_label(self, atom_label):
         """Returns the label of the region of possibly clustered objects, which an atomic image region is a part of.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.ones(atoms.shape, bool)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.get_cluster_label(1)
+           >>> adj.get_cluster_label(2)
+           >>> adj.get_cluster_label(3)
         """
         return self._cluster_by_atom[atom_label]
     
     def get_atoms_in_cluster(self, cluster_label):
         """Returns the set of labels of all atomic image regions, which are part of a region of possibly clustered objects.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.ones(atoms.shape, bool)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.get_atoms_in_cluster(1)
+           >>> adj.get_atoms_in_cluster(2)
         """
         return self._atoms_by_cluster[cluster_label]
     
     @property
     def cluster_labels(self):
         """The set of labels of all regions of possibly clustered objects.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.ones(atoms.shape, bool)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.cluster_labels
         """
         return frozenset(self._atoms_by_cluster.keys())
     
     @property
     def atom_labels(self):
         """The set of labels of all atomic image regions.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.ones(atoms.shape, bool)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.atom_labels
         """
         return frozenset(self._cluster_by_atom.keys())
 
@@ -78,6 +155,22 @@ class AtomAdjacencyGraph:
         """Returns the seed point which was used to determine an atomic image region.
         
         :return: Tuple of the coordinates of the seed point.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.ones(atoms.shape, bool)
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.get_seed(1)
+           >>> adj.get_seed(2)
+           >>> adj.get_seed(3)
         """
         return self._seeds[atom_label - 1]
     
@@ -87,6 +180,23 @@ class AtomAdjacencyGraph:
         :param accept: Must be either ``all`` or a callable. If ``all`` is used, all edges of the graph are included. Otherwise, an edge ``(i, j)`` is included if and only if ``accept(i)`` and ``accept(j)`` evaluate to ``True``, where ``i`` and ``j`` are the labels of two adjacent atomic image regions.
 
         Each line is a tuple of two seed points, and each seed point is a tuple of coordinates.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.array([[True, False, True],
+           ...                     [True, False, True],
+           ...                     [True,  True, True]])
+           >>> seeds = [(0, 0), (0, 2), (2, 1)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds)
+           >>> adj.get_edge_lines()
         """
         if isinstance(accept, str) and accept == 'all': accept = lambda atom_label: True
         assert callable(accept), f'Not a callable: {str(accept)}'
@@ -103,11 +213,45 @@ class AtomAdjacencyGraph:
     @property
     def max_degree(self):
         """The maximum degree of the graph.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.array([[True, False, True],
+           ...                     [True, False, True],
+           ...                     [True,  True, True]])
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.max_degree
         """
         return max(self.get_atom_degree(atom_label) for atom_label in self.atom_labels)
 
     def get_atom_degree(self, atom_label):
         """Returns the number of adjacent atomic image regions.
+
+        .. runblock:: pycon
+
+           >>> import superdsm.atoms
+           >>> import numpy as np
+           >>> atoms = np.array([[1, 1, 2],
+           ...                   [1, 3, 2],
+           ...                   [3, 3, 3]])
+           >>> clusters = np.array([[1, 1, 2],
+           ...                      [1, 2, 2],
+           ...                      [2, 2, 2]])
+           >>> fg_mask = np.array([[True, False, True],
+           ...                     [True, False, True],
+           ...                     [True,  True, True]])
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [])
+           >>> adj.get_atom_degree(1)
+           >>> adj.get_atom_degree(2)
+           >>> adj.get_atom_degree(3)
         """
         return len(self[atom_label])
 
