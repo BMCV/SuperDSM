@@ -144,9 +144,9 @@ class MinSetCover:
 
     @property
     def solution(self):
-        """The min-weight set-cover, i.e. the optimal family of sets of atomic image regions.
+        """The optimal set of objects.
 
-        This is the family :math:`\\mathscr X \\subseteq \\mathscr S` of objects, which is optimal with respect to the objective function
+        This is the family :math:`\\mathscr X \\subseteq \\mathscr S` of sets of atomic image regions, which is optimal with respect to the objective function
 
         .. math:: \\sum_{X \\in \\mathscr X} \\beta + \\nu(X)
 
@@ -156,13 +156,7 @@ class MinSetCover:
 
     @property
     def costs(self):
-        """Returns the value of the min-weight set-cover.
-
-        This is the optimal value of the objective function, i.e.
-
-        .. math:: \\sum_{X \\in \\mathscr X} \\beta + \\nu(X),
-
-        where :math:`\\mathscr X` is the min-weight set-cover.
+        """Returns the value of the min-weight set-cover (the optimal value of the objective function).
         """
         solution = self.solution
         return sum(c.energy for c in solution) + self.beta * len(solution)
