@@ -75,12 +75,12 @@ def without_resource_warnings(test_func):
 class DeferredOutput(superdsm.output.Output):
 
     def __init__(self, original, muted=False, parent=None, margin=0):
-        super(superdsm.output.Output, self).__init__(parent, muted, margin)
+        super(DeferredOutput, self).__init__(parent, muted, margin)
         assert parent is None or isinstance(parent, DeferredOutput)
         self.original = original
         if parent is None:
-            self.intermediate = None
-            self.lines = list()
+            self._intermediate = None
+            self._lines = list()
 
     @property
     def _root(self):
@@ -89,12 +89,12 @@ class DeferredOutput(superdsm.output.Output):
 
     def intermediate(self, line):
         if not self.muted:
-            self._root.intermediate = ' ' * self.margin + line
+            self._root._intermediate = ' ' * self.margin + line
     
     def write(self, line):
         if not self.muted:
-            self._root.intermediate = None
-            self._root.lines.append(' ' * self.margin + line)
+            self._root._intermediate = None
+            self._root._lines.append(' ' * self.margin + line)
     
     def derive(self, muted=False, margin=0):
         assert margin >= 0
@@ -102,17 +102,17 @@ class DeferredOutput(superdsm.output.Output):
     
     def forward(self):
         assert self.parent is None
-        if self.intermediate is not None:
-            for line in self.lines:
+        if self._intermediate is not None:
+            for line in self._lines:
                 self.original.write(line)
-            self.original.intermediate(self.intermediate)
+            self.original.intermediate(self._intermediate)
 
 
 class SilentOutputContext:
 
-    def __init__(self, out, *args, **kwargs):
+    def __init__(self, out=None, **kwargs):
         out = superdsm.output.get_output(out)
-        self.output = DeferredOutput(out, *args, **kwargs)
+        self.output = DeferredOutput(out, **kwargs)
 
     def __enter__(self):
         return self.output
