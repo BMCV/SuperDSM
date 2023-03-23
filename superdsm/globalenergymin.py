@@ -113,7 +113,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
         if universe.energy <= beta + atom_energies_sum:
             trivial_cluster_labels |= {cluster_label}
 
-    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta, lower_beta_mul)
+    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta=try_lower_beta, lower_beta_mul=lower_beta_mul)
     cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')

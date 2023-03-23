@@ -102,22 +102,20 @@ class MinSetCover:
     :param atoms: List of objects corresponding to the atomic image regions (instances of the :py:class:`~.objects.Object` class).
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
     :param adjacencies: Adjacency graph :math:`\\mathcal G`.
-    :param try_lower_beta: Passed to the :py:meth:`~solve_minsetcover` function.
-    :param lower_beta_mul: Passed to the :py:meth:`~solve_minsetcover` function.
+    :param solve_minsetcover_kwargs: Passed to the :py:meth:`~solve_minsetcover` function.
     """
 
-    def __init__(self, atoms, beta, adjacencies, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL):
+    def __init__(self, atoms, beta, adjacencies, **solve_minsetcover_kwargs):
         self.atoms = {_get_atom_label(atom): atom for atom in atoms}
         self.beta  = beta
-        self.adjacencies    = adjacencies
-        self.try_lower_beta = try_lower_beta
-        self.lower_beta_mul = lower_beta_mul
+        self.adjacencies = adjacencies
+        self.solve_minsetcover_kwargs = solve_minsetcover_kwargs
         self. objects_by_cluster = {cluster: [atom for atom in atoms if adjacencies.get_cluster_label(_get_atom_label(atom)) == cluster] for cluster in adjacencies.cluster_labels}
         self.solution_by_cluster = {cluster: self.objects_by_cluster[cluster] for cluster in adjacencies.cluster_labels}
 
     def _update_partial_solution(self, cluster_label, out):
         objects = self.objects_by_cluster[cluster_label]
-        partial_solution = solve_minsetcover(objects, self.beta, try_lower_beta=self.try_lower_beta, lower_beta_mul=self.lower_beta_mul, out=out)
+        partial_solution = solve_minsetcover(objects, self.beta, out=out, **self.solve_minsetcover_kwargs)
         self.solution_by_cluster[cluster_label] = partial_solution
 
     def get_atom(self, atom_label):
