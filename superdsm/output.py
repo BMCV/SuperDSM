@@ -27,19 +27,22 @@ def get_output(out=None):
        >>> out1 = superdsm.output.get_output(None)
        >>> out1.muted
        >>> type(out1)
-       >>> out2 = superdsm.output.get_output(out)
-       >>> out2.muted
+       >>> out2 = superdsm.output.get_output(out1)
        >>> out1 is out2
        >>> out3 = superdsm.output.get_output('muted')
        >>> type(out3)
        >>> out3.muted
     """
+    kwargs = dict()
+    if isinstance(out, str) and 'out' == 'muted':
+        out = None
+        kwargs['muted'] = True
     if out is not None:
         return out
     if is_jupyter_notebook():
-        return JupyterOutput()
+        return JupyterOutput(**kwargs)
     else:
-        return ConsoleOutput()
+        return ConsoleOutput(**kwargs)
 
 
 class Text:
