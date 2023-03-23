@@ -5,6 +5,17 @@ import skimage.morphology as morph
 import skimage.segmentation
 
 
+def _find_seed_of_region(region, seeds):
+    assert isinstance(region, np.ndarray)
+    assert str(region.dtype) == 'bool'
+    candidates = list()
+    for seed in seeds:
+        seed = tuple(seed)
+        if region[seed]: candidates.append(seed)
+    assert len(candidates) == 1, f'There is no (unique) seed. Number of possible seeds: {len(candidates)}'
+    return candidates[0]
+
+
 class AtomAdjacencyGraph:
     """Graph representation of the adjacencies of atomic image regions.
 
@@ -39,10 +50,12 @@ class AtomAdjacencyGraph:
     def __init__(self, atoms, clusters, fg_mask, seeds, out=None):
         out = get_output(out)
         self._adjacencies, se = {atom_label: set() for atom_label in range(1, atoms.max() + 1)}, morph.disk(1)
-        self._atoms_by_cluster, self._cluster_by_atom = {}, {}
-        self._seeds = seeds
+        self._atoms_by_cluster = dict()
+        self._cluster_by_atom  = dict()
+        self._seeds            = dict()
         for l0 in range(1, atoms.max() + 1):
             cc = (atoms == l0)
+            if not cc.any(): continue
             cluster_label = clusters[cc][0]
             cluster_mask  = np.logical_and(fg_mask, clusters == cluster_label)
             cc_dilated = np.logical_and(morph.binary_dilation(cc, se), np.logical_not(cc))
@@ -55,9 +68,9 @@ class AtomAdjacencyGraph:
                 self._adjacencies[l1] |= {l0}
             self._cluster_by_atom[l0] = cluster_label
             self._atoms_by_cluster[cluster_label] |= {l0}
-
+            self._seeds[l0] = _find_seed_of_region(atoms == l0, seeds)
             out.intermediate('Processed atom %d / %d' % (l0, atoms.max()))
-        out.write('Computed atom adjacencies')
+        out.write('Computed adjacency graph')
         assert self._is_symmetric()
     
     def __getitem__(self, atom_label):
@@ -169,14 +182,14 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> seeds = [(0, 0), (2, 1), (0, 2), (1, 3)]
+           >>> seeds = [(0, 0), (1, 3), (0, 2), (2, 1)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_seed(1)
            >>> adj.get_seed(2)
            >>> adj.get_seed(3)
            >>> adj.get_seed(4)
         """
-        return self._seeds[atom_label - 1]
+        return self._seeds[atom_label]
     
     def get_edge_lines(self, accept='all', reduce=True):
         """Returns a list of lines corresponding to the edges of the graph.
