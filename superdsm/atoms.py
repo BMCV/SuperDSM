@@ -40,7 +40,8 @@ class AtomAdjacencyGraph:
        >>> fg_mask = np.array([[True, False, True],
        ...                     [True, False, True],
        ...                     [True,  True, True]])
-       >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+       >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+       >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
        >>> adj[1]
        >>> adj[2]
        >>> adj[3]
@@ -98,7 +99,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_cluster_label(1)
            >>> adj.get_cluster_label(2)
            >>> adj.get_cluster_label(3)
@@ -120,7 +122,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_atoms_in_cluster(1)
            >>> adj.get_atoms_in_cluster(2)
         """
@@ -141,7 +144,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.cluster_labels
         """
         return frozenset(self._atoms_by_cluster.keys())
@@ -161,7 +165,8 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.atom_labels
         """
         return frozenset(self._cluster_by_atom.keys())
@@ -182,7 +187,7 @@ class AtomAdjacencyGraph:
            ...                      [1, 2, 2, 2],
            ...                      [2, 2, 2, 2]])
            >>> fg_mask = np.ones(atoms.shape, bool)
-           >>> seeds = [(0, 0), (1, 3), (0, 2), (2, 1)]
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
            >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_seed(1)
            >>> adj.get_seed(2)
@@ -248,7 +253,8 @@ class AtomAdjacencyGraph:
            >>> fg_mask = np.array([[True, False, True, False],
            ...                     [True, False, True, False],
            ...                     [True,  True, True, False]])
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.max_degree
         """
         return max(self.get_atom_degree(atom_label) for atom_label in self.atom_labels)
@@ -269,7 +275,8 @@ class AtomAdjacencyGraph:
            >>> fg_mask = np.array([[True, False, True, False],
            ...                     [True, False, True, False],
            ...                     [True,  True, True, False]])
-           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, [], 'muted')
+           >>> seeds = [(0, 0), (0, 2), (2, 1), (1, 3)]
+           >>> adj = superdsm.atoms.AtomAdjacencyGraph(atoms, clusters, fg_mask, seeds, 'muted')
            >>> adj.get_atom_degree(1)
            >>> adj.get_atom_degree(2)
            >>> adj.get_atom_degree(3)

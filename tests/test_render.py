@@ -16,12 +16,13 @@ class render(unittest.TestCase):
     @testsuite.without_resource_warnings
     def setUpClass(self):
         ray.init(num_cpus=4, log_to_driver=False, logging_level=ray.logging.ERROR)
-        data_path = testsuite.require_data('bbbc033', 'C2.tif')
-        img_3d = superdsm.io.imread(data_path)
-        img = img_3d[28]
-        pipeline = superdsm.pipeline.create_default_pipeline()
-        self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img)
-        establish_deterministic_object_order(self.data)
+        with testsuite.SilentOutputContext() as out:
+            data_path = testsuite.require_data('bbbc033', 'C2.tif')
+            img_3d = superdsm.io.imread(data_path)
+            img = img_3d[28]
+            pipeline = superdsm.pipeline.create_default_pipeline()
+            self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img, out=out)
+            establish_deterministic_object_order(self.data)
 
     @classmethod
     @testsuite.without_resource_warnings
