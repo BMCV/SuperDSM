@@ -33,6 +33,7 @@ class AtomAdjacencyGraph:
        >>> adj[1]
        >>> adj[2]
        >>> adj[3]
+       >>> adj[4]
     """
 
     def __init__(self, atoms, clusters, fg_mask, seeds, out=None):
@@ -88,6 +89,7 @@ class AtomAdjacencyGraph:
            >>> adj.get_cluster_label(1)
            >>> adj.get_cluster_label(2)
            >>> adj.get_cluster_label(3)
+           >>> adj.get_cluster_label(4)
         """
         return self._cluster_by_atom[atom_label]
     
@@ -172,6 +174,7 @@ class AtomAdjacencyGraph:
            >>> adj.get_seed(1)
            >>> adj.get_seed(2)
            >>> adj.get_seed(3)
+           >>> adj.get_seed(4)
         """
         return self._seeds[atom_label - 1]
     
@@ -257,6 +260,7 @@ class AtomAdjacencyGraph:
            >>> adj.get_atom_degree(1)
            >>> adj.get_atom_degree(2)
            >>> adj.get_atom_degree(3)
+           >>> adj.get_atom_degree(4)
         """
         return len(self[atom_label])
 
