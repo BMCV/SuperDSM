@@ -15,7 +15,7 @@ class Config:
     
        cfg = superdsm.config.Config()
        cfg['global-energy-minimization/beta'] = 1000
-       cfg['global-energy-minimization/try_lower_beta'] = False
+       cfg['global-energy-minimization/max_iter'] = 5
 
     A dictionary can be wrapped into a :py:class:`Config` object by passing it to the constructor (no copying occurs). If another :py:class:`Config` object is passed to the constructor, a deep copy is created.
     """

@@ -2,7 +2,7 @@ from .pipeline import Stage
 from ._aux import join_path, mkdir, get_discarded_workload, copy_dict
 from .output import get_output, Text
 from .objects import compute_objects, Object
-from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_BETA, DEFAULT_GAMMA
+from .minsetcover import MinSetCover, DEFAULT_MAX_ITER, DEFAULT_GAMMA
 from .maxsetpack import solve_maxsetpack
 from .image import Image
 
@@ -36,7 +36,7 @@ class GlobalEnergyMinimization(Stage):
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
-    ``global-energy-minimization/try_lower_beta``
+    ``global-energy-minimization/max_iter``
         tbd.
 
     ``global-energy-minimization/gamma``
@@ -62,7 +62,7 @@ class GlobalEnergyMinimization(Stage):
         adjacencies       = input_data['adjacencies']
         conservative      = cfg.get(     'conservative', True)
         beta              = cfg.get(             'beta', 0)
-        try_lower_beta    = cfg.get(   'try_lower_beta', DEFAULT_TRY_LOWER_BETA)
+        max_iter          = cfg.get(         'max_iter', DEFAULT_MAX_ITER)
         gamma             = cfg.get(            'gamma', DEFAULT_GAMMA)
         max_seed_distance = cfg.get('max_seed_distance', np.inf)
         max_work_amount   = cfg.get(  'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
@@ -71,7 +71,7 @@ class GlobalEnergyMinimization(Stage):
 
         mode  = 'conservative' if conservative else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, try_lower_beta, gamma, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_img':    y_img,
@@ -87,7 +87,7 @@ class GlobalEnergyMinimization(Stage):
         }
 
 
-def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = get_output(out)
 
@@ -113,7 +113,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
         if universe.energy <= beta + atom_energies_sum:
             trivial_cluster_labels |= {cluster_label}
 
-    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta=try_lower_beta, gamma=gamma)
+    cover = MinSetCover(atoms, beta, adjacencies, max_iter=max_iter, gamma=gamma)
     cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')

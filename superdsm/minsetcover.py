@@ -50,11 +50,11 @@ def _solve_minsetcover(objects, beta, merge=True, out=None):
     return accepted_objects
 
 
-DEFAULT_TRY_LOWER_BETA = 4
-DEFAULT_GAMMA          = 0.8
+DEFAULT_MAX_ITER = 5
+DEFAULT_GAMMA    = 0.8
 
 
-def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWER_BETA, gamma=DEFAULT_GAMMA, out=None):
+def solve_minsetcover(objects, beta, merge=True, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, out=None):
     """Computs an approximative min-weight set-cover.
 
     This function implements Algorithm 2 of the :ref:`paper <references>`.
@@ -62,8 +62,8 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
     :param objects: Corresponds to the family of the *candidate* sets :math:`\\mathscr S`. Any set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonds to the value of the set energy function :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
     :param merge: The *merge step* of Algorithm 2 will be used only if ``True`` is passed.
-    :param try_lower_beta: The number of *repetitions* to perform after the initial iteration (this is the *max_iter* parameter of Algorithm 2 minus 1). Each additional repetitions uses a more conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced).
-    :param gamma: The factor used to reduce the sparsity parameter :math:`\\beta` in each repetition (this is the parameter :math:`\\gamma` of Algorithm 2, where :math:`0 < \\gamma < 1`).
+    :param max_iter: The number of iterations to perform. Subsequent iterations use an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced).
+    :param gamma: The factor used to reduce the sparsity parameter :math:`\\beta` after the first iteration (this is the parameter :math:`\\gamma` of Algorithm 2, where :math:`0 < \\gamma < 1`).
     :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
     :return: The min-weight set-cover :math:`\\mathscr X \\subseteq \\mathscr S`.
     """
@@ -71,10 +71,10 @@ def solve_minsetcover(objects, beta, merge=True, try_lower_beta=DEFAULT_TRY_LOWE
     assert 0 < gamma < 1
     out = get_output(out)
     solution1 = _solve_minsetcover(objects, beta, merge, out)
-    if try_lower_beta > 0 and beta > 0:
+    if max_iter > 1 and beta > 0:
         new_beta = beta * gamma
         out.write(f'MINSETCOVER retry with lower beta: {new_beta:g}')
-        solution2 = solve_minsetcover(objects, new_beta, merge, try_lower_beta - 1, gamma, out)
+        solution2 = solve_minsetcover(objects, new_beta, merge, max_iter - 1, gamma, out)
         solution1_value = sum(c.energy for c in solution1) + beta * len(solution1)
         solution2_value = sum(c.energy for c in solution2) + beta * len(solution2)
         if solution2_value < solution1_value:
