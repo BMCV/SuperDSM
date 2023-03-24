@@ -37,10 +37,10 @@ class GlobalEnergyMinimization(Stage):
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
     ``global-energy-minimization/max_iter``
-        tbd.
+        The number of iterations to perform for solving the *min-weight set-cover* (see :py:meth:`~minsetcover.solve_minsetcover` and Algorithm 2 in the :ref:`paper <references>`). Subsequent iterations use an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced). Defaults to 5.
 
     ``global-energy-minimization/gamma``
-        tbd.
+        The factor used to reduce the sparsity parameter :math:`\\beta` after the first iteration (this is the parameter :math:`\\gamma` of Algorithm 2in the :ref:`paper <references>`, where :math:`0 < \\gamma < 1`). Defaults to 0.8.
 
     ``global-energy-minimization/max_seed_distance``
         Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object (cf. :ref:`pipeline_theory_c2freganal`). This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge. Defaults to infinity, or to ``AF_max_seed_distance × diameter`` if configured automatically (and ``AF_max_seed_distance`` defaults to infinity).
