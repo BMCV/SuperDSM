@@ -31,7 +31,17 @@ class GlobalEnergyMinimization(Stage):
     The following hyperparameters can be used to control this pipeline stage:
 
     ``global-energy-minimization/strict``
-        tbd. Defaults to ``True``.
+        Controls the definition of the upper bound :math:`c_{\\text{max}}` in Algorithm 1. If set to ``True``, then the original definition from the paper is used,
+
+        .. math:: c_{\\text{max}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
+
+        which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. If set to ``False``, then 
+
+        max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
+
+        .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
+        
+        which yields a more *greedy* behaviour of the algorithm. Defaults to ``True``.
 
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
@@ -225,14 +235,14 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
 
         remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_object_footprint
         min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
+        new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
+        min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
         if mode == 'strict':
             max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
         elif mode == 'fast':
-            max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
+            max_new_object_costs = min_new_object_costs + cover.beta
         else:
             raise ValueError(f'unknown mode "{mode}"')
-        new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
-        min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
         if max_new_object_costs < min_new_object_costs:
             discarded += 1
         else:
