@@ -25,23 +25,25 @@ class GlobalEnergyMinimization(Stage):
 
     This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
+    For Algorithm 1, there are two behaviours implemented which differ in the definition of the upper bound :math:`c_{\\text{max}}`. In *strict* mode, the original definition from the paper is used,
+
+    .. math:: c_{\\text{max}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
+
+    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, the experimental
+
+    max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
+
+    .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
+    
+    yields a more *greedy* behaviour of the algorithm.
+
     Hyperparameters
     ---------------
 
     The following hyperparameters can be used to control this pipeline stage:
 
     ``global-energy-minimization/strict``
-        Controls the definition of the upper bound :math:`c_{\\text{max}}` in Algorithm 1. If set to ``True``, then the original definition from the paper is used,
-
-        .. math:: c_{\\text{max}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
-
-        which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. If set to ``False``, then 
-
-        max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
-
-        .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
-        
-        which yields a more *greedy* behaviour of the algorithm. Defaults to ``True``.
+        Controls whether Algorithm 1 operates in *strict* mode (if set to ``True``) or in *greedy* mode (otherwise). Defaults to ``True``.
 
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
