@@ -33,7 +33,7 @@ class GlobalEnergyMinimization(Stage):
 
     .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
     
-    yields a more *greedy* behaviour of the algorithm.
+    yields a more *greedy* behaviour of the algorithm, which is faster.
 
     Hyperparameters
     ---------------
@@ -41,7 +41,7 @@ class GlobalEnergyMinimization(Stage):
     The following hyperparameters can be used to control this pipeline stage:
 
     ``global-energy-minimization/strict``
-        Controls whether Algorithm 1 operates in *strict* mode (if set to ``True``) or in *greedy* mode (otherwise). Defaults to ``True``.
+        Algorithm 1 operates in *strict* mode if set to ``True``, and in *greedy* mode otherwise. Defaults to ``True``.
 
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
