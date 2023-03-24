@@ -2,7 +2,7 @@ from .pipeline import Stage
 from ._aux import join_path, mkdir, get_discarded_workload, copy_dict
 from .output import get_output, Text
 from .objects import compute_objects, Object
-from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL, DEFAULT_TRY_LOWER_BETA, DEFAULT_LOWER_BETA_MUL
+from .minsetcover import MinSetCover, DEFAULT_TRY_LOWER_BETA, DEFAULT_GAMMA
 from .maxsetpack import solve_maxsetpack
 from .image import Image
 
@@ -39,7 +39,7 @@ class GlobalEnergyMinimization(Stage):
     ``global-energy-minimization/try_lower_beta``
         tbd.
 
-    ``global-energy-minimization/lower_beta_mul``
+    ``global-energy-minimization/gamma``
         tbd.
 
     ``global-energy-minimization/max_seed_distance``
@@ -63,15 +63,15 @@ class GlobalEnergyMinimization(Stage):
         conservative      = cfg.get(     'conservative', True)
         beta              = cfg.get(             'beta', 0)
         try_lower_beta    = cfg.get(   'try_lower_beta', DEFAULT_TRY_LOWER_BETA)
-        lower_beta_mul    = cfg.get(   'lower_beta_mul', DEFAULT_LOWER_BETA_MUL)
+        gamma             = cfg.get(            'gamma', DEFAULT_GAMMA)
         max_seed_distance = cfg.get('max_seed_distance', np.inf)
         max_work_amount   = cfg.get(  'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
 
-        assert 0 < lower_beta_mul < 1
+        assert 0 < gamma < 1
 
         mode  = 'conservative' if conservative else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, try_lower_beta, lower_beta_mul, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, try_lower_beta, gamma, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_img':    y_img,
@@ -87,7 +87,7 @@ class GlobalEnergyMinimization(Stage):
         }
 
 
-def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, lower_beta_mul=DEFAULT_LOWER_BETA_MUL, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, try_lower_beta=DEFAULT_TRY_LOWER_BETA, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     assert mode != 'bruteforce', 'mode "bruteforce" not supported anymore'
     out = get_output(out)
 
@@ -113,7 +113,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
         if universe.energy <= beta + atom_energies_sum:
             trivial_cluster_labels |= {cluster_label}
 
-    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta=try_lower_beta, lower_beta_mul=lower_beta_mul)
+    cover = MinSetCover(atoms, beta, adjacencies, try_lower_beta=try_lower_beta, gamma=gamma)
     cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
