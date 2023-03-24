@@ -62,7 +62,7 @@ def solve_minsetcover(objects, beta, merge=True, max_iter=DEFAULT_MAX_ITER, gamm
     :param objects: Corresponds to the family of the *candidate* sets :math:`\\mathscr S`. Any set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonds to the value of the set energy function :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
     :param merge: The *merge step* of Algorithm 2 will be used only if ``True`` is passed.
-    :param max_iter: The number of iterations to perform. Subsequent iterations use an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced).
+    :param max_iter: The number of iterations using an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced).
     :param gamma: The factor used to reduce the sparsity parameter :math:`\\beta` after the first iteration (this is the parameter :math:`\\gamma` of Algorithm 2, where :math:`0 < \\gamma < 1`).
     :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
     :return: The min-weight set-cover :math:`\\mathscr X \\subseteq \\mathscr S`.
