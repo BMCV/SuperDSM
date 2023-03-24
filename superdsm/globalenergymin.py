@@ -31,8 +31,6 @@ class GlobalEnergyMinimization(Stage):
 
     which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, the experimental
 
-    max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
-
     .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
     
     yields a more *greedy* behaviour of the algorithm.
