@@ -30,6 +30,9 @@ class GlobalEnergyMinimization(Stage):
 
     The following hyperparameters can be used to control this pipeline stage:
 
+    ``global-energy-minimization/strict``
+        tbd. Defaults to ``True``.
+
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
@@ -57,6 +60,7 @@ class GlobalEnergyMinimization(Stage):
         y_img             = Image.create_from_array(input_data['y'], normalize=False, mask=input_data['y_mask'])
         atoms             = input_data['atoms']
         adjacencies       = input_data['adjacencies']
+        strict            = cfg.get(           'strict', True)
         beta              = cfg.get(             'beta', 0)
         max_iter          = cfg.get(         'max_iter', DEFAULT_MAX_ITER)
         gamma             = cfg.get(            'gamma', DEFAULT_GAMMA)
@@ -65,8 +69,9 @@ class GlobalEnergyMinimization(Stage):
 
         assert 0 < gamma < 1
 
+        mode  = 'strict' if strict else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
 
         return {
             'y_img':    y_img,
@@ -82,7 +87,7 @@ class GlobalEnergyMinimization(Stage):
         }
 
 
-def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, dsm_cfg, beta=np.nan, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     out = get_output(out)
 
     atoms = []
@@ -136,7 +141,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, dsm_cfg, b
                 progress_text = f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {Text.style(progress_text, Text.BOLD)}')
             
-            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), trivial_cluster_labels, out)
+            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
             objects += new_objects
@@ -204,9 +209,9 @@ def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=D
     return finished_amount, remaining_amount
 
 
-def _process_generation(cover, objects, previous_generation, y, atoms_map, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, ignored_cluster_labels, out):
+def _process_generation(cover, objects, previous_generation, y, atoms_map, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
     new_objects = []
-    new_objects_thresholds = []
+    new_objects_energy_thresholds = []
     discarded = 0
     current_cluster_label = None
     for object, new_object_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, ignored_cluster_labels, skip_last=True):
@@ -220,20 +225,25 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
 
         remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_object_footprint
         min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
-        max_new_object_energy = current_cluster_costs - cover.beta - min_remaining_atom_costs
+        if mode == 'strict':
+            max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
+        elif mode == 'fast':
+            max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
+        else:
+            raise ValueError(f'unknown mode "{mode}"')
         new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
-        min_new_object_energy = max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
-        if max_new_object_energy < min_new_object_energy:
+        min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
+        if max_new_object_costs < min_new_object_costs:
             discarded += 1
         else:
-            new_objects_thresholds.append(max_new_object_energy)
+            new_objects_energy_thresholds.append(max_new_object_costs - cover.beta)
             new_objects.append(new_object)
 
     compute_objects(new_objects, y, atoms_map, dsm_cfg, log_root_dir, out=out)
 
     next_generation = []
     for new_object_idx, new_object in enumerate(new_objects):
-        if new_object.energy < new_objects_thresholds[new_object_idx]:
+        if new_object.energy < new_objects_energy_thresholds[new_object_idx]:
             next_generation.append(new_object)
         else:
             discarded += 1
