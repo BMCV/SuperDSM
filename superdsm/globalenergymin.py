@@ -79,7 +79,7 @@ class GlobalEnergyMinimization(Stage):
 
         assert 0 < gamma < 1
 
-        mode  = 'strict' if strict else 'fast'
+        mode = 'strict' if strict else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
         cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
 
