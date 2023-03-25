@@ -224,7 +224,6 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
     new_objects_energy_thresholds = []
     discarded = 0
     current_cluster_label = None
-    out.intermediate(f'Computing bounds ({mode} mode)')
     for object, new_object_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, ignored_cluster_labels, skip_last=True):
         cluster_label = adjacencies.get_cluster_label(list(object.footprint)[0])
         if current_cluster_label != cluster_label:
@@ -260,5 +259,5 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
             discarded += 1
             new_object.fg_fragment = None ## save memory, we will only only need the footprint and the energy of the object
         new_object.cidx = new_object_idx ## for debugging purposes
-    out.write(f'Next iteration: {len(next_generation)} (discarded: {discarded})')
+    out.write(f'Next iteration: {len(next_generation)} ({discarded} discarded, {mode} mode)')
     return next_generation, new_objects
