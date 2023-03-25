@@ -259,5 +259,5 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
             discarded += 1
             new_object.fg_fragment = None ## save memory, we will only only need the footprint and the energy of the object
         new_object.cidx = new_object_idx ## for debugging purposes
-    out.write(f'Next generation: {len(next_generation)} (discarded: {discarded})')
+    out.write(f'Next iteration: {len(next_generation)} (discarded: {discarded})')
     return next_generation, new_objects
