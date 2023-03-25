@@ -237,12 +237,13 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
         min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
         new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
         min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
+        max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
         if mode == 'strict':
-            max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
+            pass
         elif mode == 'fast':
-            max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
+            max_new_object_costs = min((max_new_object_costs, object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta))
         else:
-            raise ValueError(f'unknown mode "{mode}"')
+            raise ValueError(f'Unknown mode "{mode}"')
         if max_new_object_costs < min_new_object_costs:
             discarded += 1
         else:
