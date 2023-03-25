@@ -224,6 +224,7 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
     new_objects_energy_thresholds = []
     discarded = 0
     current_cluster_label = None
+    out.intermediate(f'Computing bounds ({mode} mode)')
     for object, new_object_footprint, new_atom_label in _iterate_generation(previous_generation, adjacencies, max_seed_distance, lambda c: c.footprint, ignored_cluster_labels, skip_last=True):
         cluster_label = adjacencies.get_cluster_label(list(object.footprint)[0])
         if current_cluster_label != cluster_label:
@@ -240,7 +241,7 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
         if mode == 'strict':
             max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
         elif mode == 'fast':
-            max_new_object_costs = min_new_object_costs + cover.beta
+            max_new_object_costs = object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta
         else:
             raise ValueError(f'unknown mode "{mode}"')
         if max_new_object_costs < min_new_object_costs:
