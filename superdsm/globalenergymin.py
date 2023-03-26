@@ -29,9 +29,9 @@ class GlobalEnergyMinimization(Stage):
 
     .. math:: c_{\\text{max}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
 
-    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, the experimental
+    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, given a previously considered set :math:`X \subset U` and a newly added atomic image region :math:`u \in U`, using the upper bound
 
-    .. math:: c_{\\text{max}} = c_{\\text{min}} + \\beta,
+    .. math:: \\min\\{ c_{\\text{max}}, \\nu(X) + \\nu(\\{u\\}) + \\beta \\}
     
     yields a more *greedy* behaviour of the algorithm, which is faster.
 
