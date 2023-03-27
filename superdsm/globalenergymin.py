@@ -33,8 +33,6 @@ class PerformanceReport:
     :ivar nontrivial_computed_object_count: The overall number of computed objects (except for *trivial* regions of possibly clustered objects).
 
     For regions of possibly clustered objects, for which the cardinality :math:`\\# U` of the universe :math:`U` is 1 or 2, always all possible objects must be computed. Since only 3 objects are possible at most (the region of possbily clustered objects either corresponds to two objects or to a single object), such regions are called *trivial*.
-
-    :cvar attributes: List of supported keyword arguments and attributes.
     """
 
     attributes = [
@@ -47,6 +45,8 @@ class PerformanceReport:
         'nontrivial_object_count',
         'nontrivial_computed_object_count',
     ]
+    """List of supported keyword arguments and attributes.
+    """
     
     def __init__(self, **kwargs):
         for key in PerformanceReport.attributes:
