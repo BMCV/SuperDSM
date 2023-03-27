@@ -26,18 +26,18 @@ class PerformanceReport:
     :ivar trivial_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
     :ivar trivial_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).
     :ivar iterative_object_count: The number of objects which would be computed if bruteforce was used instead of Algorithm 1.
-    :ivar iterative_considered_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
+    :ivar iterative_computed_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
     :ivar overall_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
-    :ivar overall_considered_object_count: The overall number of computed objects.
+    :ivar overall_computed_object_count: The overall number of computed objects.
     """
 
     attributes = [
         'trivial_solution_trial_count',
         'trivial_solution_success_count',
         'iterative_object_count',
-        'iterative_considered_object_count',
+        'iterative_computed_object_count',
         'overall_object_count',
-        'overall_considered_object_count',
+        'overall_computed_object_count',
     ]
     
     def __init__(self, **kwargs):
@@ -56,14 +56,14 @@ class PerformanceReport:
         """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1.
         """
         if self.iterative_object_count == 0: return np.nan
-        else: return 1 - self.iterative_considered_object_count / self.iterative_object_count
+        else: return 1 - self.iterative_computed_object_count / self.iterative_object_count
     
     @property
     def overall_pruning_success(self):
         """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
         """
         if self.overall_object_count == 0: return np.nan
-        else: return 1 - self.overall_considered_object_count / self.overall_object_count
+        else: return 1 - self.overall_computed_object_count / self.overall_object_count
     
     def __iadd__(self, other):
         for key in PerformanceReport.attributes:
@@ -186,7 +186,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
     assert len(objects) == len([frozenset(obj.footprint) for obj in objects])
     performance.  overall_object_count = __estimate_progress(skip_last=True)[1] + len(objects)
     performance.iterative_object_count = __estimate_progress(skip_last=True, ignored_cluster_labels=trivial_cluster_labels)[1]
-    performance.overall_considered_object_count = len(objects)
+    performance.overall_computed_object_count = len(objects)
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -206,15 +206,15 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             if len(new_generation) == 0: break
             generations.append(new_generation)
             objects += new_objects
-            performance.iterative_considered_object_count += len(new_objects)
-            performance.  overall_considered_object_count += len(new_objects)
+            performance.iterative_computed_object_count += len(new_objects)
+            performance.  overall_computed_object_count += len(new_objects)
 
             cover.update(new_generation, out.derive(muted=True))
             costs.append(cover.costs)
             out.write(f'Solution costs: {costs[-1]:,g}')
 
     out.write('')
-    out.write(f'Pruning success: {100 * performance.overall_pruning_success:.1f}%')
+    out.write(f'Pruning success: {100 * performance.overall_pruning_success:.1f}% ({performance.overall_computed_object_count} computed out of {performance.overall_object_count})')
     return generations, costs, cover, objects, performance
 
 
