@@ -149,8 +149,8 @@ Pipeline stages require different inputs and produce different outputs. These ar
 ``objects``
     List of all computed objects :math:`\mathscr U_{\# U}`, each represented by the :py:class:`~.objects.Object` class. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
-``workload``
-    An upper bound of the number of objects which need to be computed. The upper bound is the cardinality of the set of all possible objects :math:`\mathbb P(U)`. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
+``performance``
+    An object of the :py:class:`~.globalenergymin.PerformanceReport` class which carries values indicating the performance of the algorithms used by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage. Provided by the :py:class:`~.globalenergymin.GlobalEnergyMinimization` stage.
 
 ``postprocessed_objects``
     List of post-processed objects, each represented by the :py:class:`~.postprocess.PostprocessedObject` class. Provided by the :py:class:`~.postprocess.Postprocessing` stage.

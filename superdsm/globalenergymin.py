@@ -1,5 +1,5 @@
 from .pipeline import Stage
-from ._aux import join_path, mkdir, get_discarded_workload, copy_dict
+from ._aux import join_path, mkdir, copy_dict
 from .output import get_output, Text
 from .objects import compute_objects, Object
 from .minsetcover import MinSetCover, DEFAULT_MAX_ITER, DEFAULT_GAMMA
@@ -20,10 +20,60 @@ def _get_generation_log_dir(log_root_dir, generation_number):
     return result
 
 
+class PerformanceReport:
+    """Reports the performance of the global energy minimization.
+
+    :ivar trivial_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
+    :ivar trivial_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).
+    :ivar iterative_object_count: The number of objects which would be computed if bruteforce was used instead of Algorithm 1.
+    :ivar iterative_considered_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
+    :ivar overall_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+    :ivar overall_considered_objects: The overall number of computed objects.
+    """
+
+    attributes = [
+        'trivial_solution_trial_count',
+        'trivial_solution_success_count',
+        'iterative_object_count',
+        'iterative_considered_object_count',
+        'overall_object_count',
+        'overall_considered_objects',
+    ]
+    
+    def __init__(self, **kwargs):
+        for key in PerformanceReport.attributes:
+            setattr(self, key, kwargs.get(key, 0))
+
+    @property
+    def trivial_solution_success(self):
+        """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated.
+        """
+        if self.trivial_solution_trial_count == 0: return np.nan
+        else: return self.trivial_solution_success_count / self.trivial_solution_trial_count
+    
+    @property
+    def iterative_pruning_success(self):
+        """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1.
+        """
+        if self.iterative_object_count == 0: return np.nan
+        else: return 1 - self.iterative_considered_object_count / self.iterative_object_count
+    
+    @property
+    def overall_pruning_success(self):
+        """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+        """
+        if self.overall_object_count == 0: return np.nan
+        else: return 1 - self.overall_considered_objects / self.overall_object_count
+    
+    def __iadd__(self, other):
+        for key in PerformanceReport.attributes:
+            setattr(self, key, getattr(self, key) + getattr(other, key))
+
+
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
-    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``workload`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``performance`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     For Algorithm 1, there are two behaviours implemented which differ in the definition of the upper bound :math:`c_{\\text{max}}`. In *strict* mode, the original definition from the paper is used,
 
@@ -64,7 +114,7 @@ class GlobalEnergyMinimization(Stage):
     def __init__(self):
         super(GlobalEnergyMinimization, self).__init__('global-energy-minimization',
                                                        inputs  = ['y', 'y_mask', 'atoms', 'adjacencies', 'dsm_cfg'],
-                                                       outputs = ['y_img', 'cover', 'objects', 'workload'])
+                                                       outputs = ['y_img', 'cover', 'objects', 'performance'])
 
     def process(self, input_data, cfg, out, log_root_dir):
         y_img             = Image.create_from_array(input_data['y'], normalize=False, mask=input_data['y_mask'])
@@ -81,13 +131,13 @@ class GlobalEnergyMinimization(Stage):
 
         mode = 'strict' if strict else 'fast'
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, workload = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, performance = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
 
         return {
-            'y_img':    y_img,
-            'cover':    cover,
-            'objects':  objects,
-            'workload': workload,
+            'y_img':       y_img,
+            'cover':       cover,
+            'objects':     objects,
+            'performance': performance,
         }
 
     def configure_ex(self, scale, radius, diameter):
@@ -127,15 +177,14 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
     out.write(f'Clusters solved trivially: {len(trivial_cluster_labels)} / {len(adjacencies.cluster_labels)}')
+    performance = PerformanceReport(trivial_solution_trial_count=len(adjacencies.cluster_labels), trivial_solution_success_count=len(trivial_cluster_labels))
     
-    if max_work_amount is None:
-        __estimate_progress = lambda *args, **kwargs: (np.nan, np.nan)
-    else:
-        __estimate_progress = lambda *args, **kwargs: _estimate_progress(*args, max_amount=max_work_amount, **kwargs)
+    __estimate_progress = lambda **kwargs: _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, **kwargs)
 
     generations = [atoms]
     objects     =  atoms + universes
-    total_workload = len(objects) + __estimate_progress(generations, adjacencies, max_seed_distance, skip_last=False)[1]
+    performance.  overall_object_count = __estimate_progress(skip_last=True)[1] + len(objects)
+    performance.iterative_object_count = __estimate_progress(skip_last=True, ignored_cluster_labels=trivial_cluster_labels)[1]
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -144,7 +193,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             out.write('')
             out.intermediate(f'{generation_label}...')
 
-            finished_amount, remaining_amount = __estimate_progress(generations, adjacencies, max_seed_distance, ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
+            finished_amount, remaining_amount = __estimate_progress(ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
             if np.isnan(finished_amount) or np.isnan(remaining_amount): progress_text = 'progress unknown'
             else:
                 progress = finished_amount / (remaining_amount + finished_amount)
@@ -155,16 +204,15 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             if len(new_generation) == 0: break
             generations.append(new_generation)
             objects += new_objects
+            performance.iterative_considered_object_count += len(new_objects)
 
             cover.update(new_generation, out.derive(muted=True))
             costs.append(cover.costs)
             out.write(f'Solution costs: {costs[-1]:,g}')
 
-    if np.isnan(total_workload): discarded_workload = np.nan
-    else: discarded_workload = get_discarded_workload(len(objects), total_workload)
     out.write('')
-    out.write(f'Discarded workload: {100 * discarded_workload:.1f}%')
-    return generations, costs, cover, objects, total_workload
+    out.write(f'Pruning success: {100 * performance.overall_pruning_success:.1f}%')
+    return generations, costs, cover, objects, performance
 
 
 def _get_max_distance(footprint, new_atom_label, adjacencies):

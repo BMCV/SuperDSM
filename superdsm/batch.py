@@ -1,11 +1,12 @@
 from .pipeline import create_default_pipeline
 from .objects import _compute_objects
-from ._aux import mkdir, get_discarded_workload, is_subpath, copy_dict
+from ._aux import mkdir, is_subpath, copy_dict
 from .output import get_output, Text
 from .io import imread, imwrite
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
 from .config import Config
+from .globalenergymin import PerformanceReport
 
 import sys, os, pathlib, json, gzip, dill, tempfile, subprocess, skimage, warnings, csv, tarfile, shutil, time, itertools, re
 import ray
@@ -132,6 +133,23 @@ def _compress_logs(log_dir):
     shutil.rmtree(str(log_dir))
 
 
+def _write_performance_report(task_path, performance_path, data, overall_performance):
+    file_ids = data.keys()
+    properties = ['trivial_solution_success', 'iterative_pruning_success', 'overall_pruning_success']
+    fields = PerformanceReport.attributes + properties
+    rows = [[str(task_path)], ['ID'] + fields]
+    get_row = lambda prefix, performance: [prefix] + [getattr(performance, field) for field in fields]
+    for file_id in file_ids:
+        row = get_row(str(file_id), data[file_id]['performance'])
+        rows.append(row)
+    footer_row = get_row('', overall_performance)
+    rows.append(footer_row)
+    with open(str(performance_path), 'w', newline='') as fout:
+        csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for row in rows:
+            csv_writer.writerow(row)
+
+
 DATA_DILL_GZ_FILENAME = 'data.dill.gz'
 
 
@@ -171,8 +189,8 @@ class Task:
             self.    cfg_pathpattern = path / self.data.entries.get(    'cfg_pathpattern', None)
             self.overlay_pathpattern = path / self.data.entries.get('overlay_pathpattern', None)
             self.        result_path = path / DATA_DILL_GZ_FILENAME
-            self.         study_path = path / 'study.csv'
             self.       timings_path = path / 'timings.csv'
+            self.   performance_path = path / 'performance.csv'
             self.  timings_json_path = path / '.timings.json'
             self.        digest_path = path / '.digest'
             self.    digest_cfg_path = path / '.digest.cfg.json'
@@ -276,7 +294,7 @@ class Task:
             first_stage, data = self.find_first_stage_name(pipeline, dry, pickup, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             timings = self._load_timings()
-            discarded_workloads = []
+            overall_performance = PerformanceReport()
             for file_idx, file_id in enumerate(self.file_ids):
                 img_filepath = str(self.img_pathpattern) % file_id
                 progress    = file_idx / len(self.file_ids)
@@ -298,13 +316,12 @@ class Task:
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
-                if not dry and 'objects' in data[file_id]:
-                    discarded_workload = get_discarded_workload(data[file_id])
-                    if not np.isnan(discarded_workload): discarded_workloads.append(discarded_workload)
+                if not dry and 'performance' in data[file_id]:
+                    overall_performance += data[file_id]['performance']
             out2.write('')
             if report is not None: report.update(self, 'active')
-            if not dry and len(discarded_workloads) > 0:
-                out2.write(Text.style('Discarded workload: ', Text.BOLD) + f'{100 * min(discarded_workloads):.1f}% – {100 * max(discarded_workloads):.1f}% (avg {100 * np.mean(discarded_workloads):.1f}% ±{100 * np.std(discarded_workloads):.1f})')
+            if not dry and not np.isnan(overall_performance.overall_pruning_success):
+                out2.write(Text.style('Pruning success: ', Text.BOLD) + f'{100 * overall_performance.overall_pruning_success:.1f}%')
             
             skip_writing_results_conditions = [
                 one_shot,
@@ -321,6 +338,7 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         self.config.dump_json(fout)
+                    _write_performance_report(self.path, self.performance_path, data, overall_performance)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):

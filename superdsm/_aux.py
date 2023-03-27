@@ -105,18 +105,4 @@ class SystemMutex:
     def __exit__(self, _type, value, tb):
         fcntl.flock(self.fp.fileno(), fcntl.LOCK_UN)
         self.fp.close()
-
-
-def get_discarded_workload(*args):
-    if len(args) == 1:
-        data = args[0]
-        computed_objects_num = len(data['objects'])
-        total_workload = data['workload']
-    elif len(args) == 2:
-        computed_objects_num = args[0]
-        total_workload = args[1]
-    else:
-        raise ValueError('unknown arguments')
-    if np.isnan(total_workload): return np.nan
-    assert computed_objects_num <= total_workload, f'{computed_objects_num} <= {total_workload}'
-    return 1 - (computed_objects_num / total_workload if total_workload > 0 else 1)
+        
