@@ -338,7 +338,7 @@ class Task:
                         dill.dump(data, fout, byref=True)
                     with self.digest_cfg_path.open('w') as fout:
                         self.config.dump_json(fout)
-                    _write_performance_report(self.path, self.performance_path, data, overall_performance)
+                    _write_performance_report(self.path, self.performance_path, data, performance)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):
