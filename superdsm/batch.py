@@ -135,7 +135,7 @@ def _compress_logs(log_dir):
 
 def _write_performance_report(task_path, performance_path, data, overall_performance):
     file_ids = data.keys()
-    properties = ['trivial_solution_success', 'iterative_pruning_success', 'overall_pruning_success']
+    properties = ['direct_solution_success', 'iterative_pruning_success', 'overall_pruning_success', 'nontrivial_pruning_success']
     fields = PerformanceReport.attributes + properties
     rows = [[str(task_path)], ['ID'] + fields]
     get_row = lambda prefix, performance: [prefix] + [getattr(performance, field) for field in fields]

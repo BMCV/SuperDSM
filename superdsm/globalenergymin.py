@@ -23,21 +23,27 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 class PerformanceReport:
     """Reports the performance of the global energy minimization.
 
-    :ivar trivial_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
-    :ivar trivial_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).
+    :ivar direct_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
+    :ivar direct_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).
     :ivar iterative_object_count: The number of objects which would be computed if bruteforce was used instead of Algorithm 1.
     :ivar iterative_computed_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
     :ivar overall_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
     :ivar overall_computed_object_count: The overall number of computed objects.
+    :ivar nontrivial_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used (except for *trivial* regions of possibly clustered objects).
+    :ivar nontrivial_computed_object_count: The overall number of computed objects (except for *trivial* regions of possibly clustered objects).
+
+    For regions of possibly clustered objects, for which the cardinality :math:`\\# U` of the universe :math:`U` is 1 or 2, always all possible objects must be computed. Since only 3 objects are possible at most (the region of possbily clustered objects either corresponds to two objects or to a single object), such regions are called *trivial*.
     """
 
     attributes = [
-        'trivial_solution_trial_count',
-        'trivial_solution_success_count',
+        'direct_solution_trial_count',
+        'direct_solution_success_count',
         'iterative_object_count',
         'iterative_computed_object_count',
         'overall_object_count',
         'overall_computed_object_count',
+        'nontrivial_object_count',
+        'nontrivial_computed_object_count',
     ]
     
     def __init__(self, **kwargs):
@@ -45,11 +51,11 @@ class PerformanceReport:
             setattr(self, key, kwargs.get(key, 0))
 
     @property
-    def trivial_solution_success(self):
+    def direct_solution_success(self):
         """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated.
         """
-        if self.trivial_solution_trial_count == 0: return np.nan
-        else: return self.trivial_solution_success_count / self.trivial_solution_trial_count
+        if self.direct_solution_trial_count == 0: return np.nan
+        else: return self.direct_solution_success_count / self.direct_solution_trial_count
     
     @property
     def iterative_pruning_success(self):
@@ -61,6 +67,15 @@ class PerformanceReport:
     @property
     def overall_pruning_success(self):
         """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+        """
+        if self.overall_object_count == 0: return np.nan
+        else: return 1 - self.overall_computed_object_count / self.overall_object_count
+    
+    @property
+    def nontrivial_pruning_success(self):
+        """The number of pruned objects within non-trivial regions of possibly clustered objects, normalized by the number of objects in those regions which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+
+        This is the key performance indicator for the overall pruning performance.
         """
         if self.overall_object_count == 0: return np.nan
         else: return 1 - self.overall_computed_object_count / self.overall_object_count
@@ -165,30 +180,33 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
         universe.footprint = adjacencies.get_atoms_in_cluster(cluster_label)
         universes.append(universe)
     compute_objects(universes, y_img, atoms_map, dsm_cfg, _get_generation_log_dir(log_root_dir, 0), ('Computing universe costs', 'Universe costs computed'), out=out)
-    trivial_cluster_labels = set()
+    directly_solved_cluster_labels = set() ## solved using closed-form solution
+    trivial_cluster_labels         = set() ## universe cardinality 1 or 2
     for cluster_label, universe in zip(adjacencies.cluster_labels, universes):
+        if len(universe.footprint) <= 2: trivial_cluster_labels |= {cluster_label}
         atoms_in_cluster = [atoms[atom_label - 1] for atom_label in adjacencies.get_atoms_in_cluster(cluster_label)]
         if not all(atom.is_optimal for atom in atoms_in_cluster): continue
         atom_energies_sum = sum(atom.energy for atom in atoms_in_cluster)
         if universe.energy <= beta + atom_energies_sum:
-            trivial_cluster_labels |= {cluster_label}
+            directly_solved_cluster_labels |= {cluster_label}
 
     cover = MinSetCover(atoms, beta, adjacencies, max_iter=max_iter, gamma=gamma)
     cover.update(universes, out.derive(muted=True))
     costs = [cover.costs]
     out.write(f'Solution costs: {costs[-1]:,g}')
-    out.write(f'Clusters solved trivially: {len(trivial_cluster_labels)} / {len(adjacencies.cluster_labels)}')
-    performance = PerformanceReport(trivial_solution_trial_count=len(adjacencies.cluster_labels), trivial_solution_success_count=len(trivial_cluster_labels))
+    out.write(f'Clusters solved directly: {len(directly_solved_cluster_labels)} / {len(adjacencies.cluster_labels)}')
+    performance = PerformanceReport(direct_solution_trial_count=len(adjacencies.cluster_labels), direct_solution_success_count=len(directly_solved_cluster_labels))
     
-    __estimate_progress = lambda **kwargs: _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, **kwargs)
+    __estimate_progress = lambda **kwargs: _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=max_work_amount, skip_last=True, **kwargs)
 
     generations = [atoms]
     objects     =  atoms + universes
     assert len(objects) == len([frozenset(obj.footprint) for obj in objects])
-    performance.  overall_object_count = __estimate_progress(skip_last=True)[1] + len(objects)
-    performance.iterative_object_count = __estimate_progress(skip_last=True, ignored_cluster_labels=trivial_cluster_labels)[1]
+    performance.nontrivial_object_count = __estimate_progress()[1]
+    performance.   overall_object_count = performance.nontrivial_object_count + len(objects)
+    performance. iterative_object_count = __estimate_progress(ignored_cluster_labels=directly_solved_cluster_labels)[1]
     performance.overall_computed_object_count = len(objects)
-    if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
+    if len(directly_solved_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
             generation_number = 1 + len(generations)
@@ -196,19 +214,20 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             out.write('')
             out.intermediate(f'{generation_label}...')
 
-            finished_amount, remaining_amount = __estimate_progress(ignored_cluster_labels=trivial_cluster_labels, skip_last=True)
+            finished_amount, remaining_amount = __estimate_progress(ignored_cluster_labels=directly_solved_cluster_labels)
             if np.isnan(finished_amount) or np.isnan(remaining_amount): progress_text = 'progress unknown'
             else:
                 progress = finished_amount / (remaining_amount + finished_amount)
                 progress_text = f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {Text.style(progress_text, Text.BOLD)}')
             
-            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, trivial_cluster_labels, out)
+            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, directly_solved_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
             objects += new_objects
-            performance.iterative_computed_object_count += len(new_objects)
-            performance.  overall_computed_object_count += len(new_objects)
+            performance.nontrivial_computed_object_count += len(new_objects)
+            performance.   overall_computed_object_count += len(new_objects)
+            performance. iterative_computed_object_count += len(new_objects)
 
             cover.update(new_generation, out.derive(muted=True))
             costs.append(cover.costs)
