@@ -33,6 +33,8 @@ class PerformanceReport:
     :ivar nontrivial_computed_object_count: The overall number of computed objects (except for *trivial* regions of possibly clustered objects).
 
     For regions of possibly clustered objects, for which the cardinality :math:`\\# U` of the universe :math:`U` is 1 or 2, always all possible objects must be computed. Since only 3 objects are possible at most (the region of possbily clustered objects either corresponds to two objects or to a single object), such regions are called *trivial*.
+
+    :cvar attributes: List of supported keyword arguments and attributes.
     """
 
     attributes = [
@@ -52,28 +54,28 @@ class PerformanceReport:
 
     @property
     def direct_solution_success(self):
-        """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated.
+        """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
         """
         if self.direct_solution_trial_count == 0: return np.nan
         else: return self.direct_solution_success_count / self.direct_solution_trial_count
     
     @property
     def iterative_pruning_success(self):
-        """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1.
+        """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1 (see the :ref:`paper <references>`).
         """
         if self.iterative_object_count == 0: return np.nan
         else: return 1 - self.iterative_computed_object_count / self.iterative_object_count
     
     @property
     def overall_pruning_success(self):
-        """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+        """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used (see the :ref:`paper <references>`).
         """
         if self.overall_object_count == 0: return np.nan
         else: return 1 - self.overall_computed_object_count / self.overall_object_count
     
     @property
     def nontrivial_pruning_success(self):
-        """The number of pruned objects within non-trivial regions of possibly clustered objects, normalized by the number of objects in those regions which would be computed if neither Algorithm 1 nor Criterion 2 was used.
+        """The number of pruned objects within non-trivial regions of possibly clustered objects, normalized by the number of objects in those regions which would be computed if neither Algorithm 1 nor Criterion 2 was used (see the :ref:`paper <references>`).
 
         This is the key performance indicator for the overall pruning performance.
         """
