@@ -56,7 +56,7 @@ class GlobalEnergyMinimization(Stage):
         Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object (cf. :ref:`pipeline_theory_c2freganal`). This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge. Defaults to infinity, or to ``AF_max_seed_distance × diameter`` if configured automatically (and ``AF_max_seed_distance`` defaults to infinity).
 
     ``global-energy-minimization/max_work_amount``
-        Threshold used to recognize a computationally intractable amount of objects due to misconfigured hyperparameters a priori. If the number of objects *could* exceed this threshold, a ``ValueError`` is raised. The number of objects is estimated based on the structure of the adjacency graph of the atomic image regions (see :ref:`pipeline_theory_c2freganal`). Defaults to 10e6.
+        Threshold used to recognize a computationally intractable amount of objects due to misconfigured hyperparameters. If the number of objects *could* exceed this threshold, a ``ValueError`` is raised. The number of objects is estimated based on the structure of the adjacency graph of the atomic image regions (see :ref:`pipeline_theory_c2freganal`). Defaults to 10e6.
     """
 
     ENABLED_BY_DEFAULT = True
