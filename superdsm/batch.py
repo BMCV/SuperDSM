@@ -297,7 +297,7 @@ class Task:
             overall_performance = PerformanceReport()
             for file_idx, file_id in enumerate(self.file_ids):
                 img_filepath = str(self.img_pathpattern) % file_id
-                progress    = file_idx / len(self.file_ids)
+                progress = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {img_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict(    img_filepath = img_filepath,
@@ -321,7 +321,7 @@ class Task:
             out2.write('')
             if report is not None: report.update(self, 'active')
             if not dry and not np.isnan(overall_performance.overall_pruning_success):
-                out2.write(Text.style('Pruning success: ', Text.BOLD) + f'{100 * overall_performance.overall_pruning_success:.1f}%')
+                out2.write(Text.style('Pruning success: ', Text.BOLD) + f'{100 * overall_performance.overall_pruning_success:.1f}% (computed {overall_performance.overall_computed_object_count} / {overall_performance.overall_object_count})')
             
             skip_writing_results_conditions = [
                 one_shot,

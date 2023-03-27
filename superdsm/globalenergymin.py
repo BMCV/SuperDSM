@@ -68,6 +68,7 @@ class PerformanceReport:
     def __iadd__(self, other):
         for key in PerformanceReport.attributes:
             setattr(self, key, getattr(self, key) + getattr(other, key))
+        return self
 
 
 class GlobalEnergyMinimization(Stage):
@@ -214,7 +215,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             out.write(f'Solution costs: {costs[-1]:,g}')
 
     out.write('')
-    out.write(f'Pruning success: {100 * performance.overall_pruning_success:.1f}% ({performance.overall_computed_object_count} computed out of {performance.overall_object_count})')
+    out.write(f'Pruning success: {100 * performance.overall_pruning_success:.1f}% (computed {performance.overall_computed_object_count} / {performance.overall_object_count})')
     return generations, costs, cover, objects, performance
 
 
