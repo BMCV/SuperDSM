@@ -28,7 +28,7 @@ class PerformanceReport:
     :ivar iterative_object_count: The number of objects which would be computed if bruteforce was used instead of Algorithm 1.
     :ivar iterative_considered_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
     :ivar overall_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
-    :ivar overall_considered_objects: The overall number of computed objects.
+    :ivar overall_considered_object_count: The overall number of computed objects.
     """
 
     attributes = [
@@ -37,7 +37,7 @@ class PerformanceReport:
         'iterative_object_count',
         'iterative_considered_object_count',
         'overall_object_count',
-        'overall_considered_objects',
+        'overall_considered_object_count',
     ]
     
     def __init__(self, **kwargs):
@@ -63,7 +63,7 @@ class PerformanceReport:
         """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
         """
         if self.overall_object_count == 0: return np.nan
-        else: return 1 - self.overall_considered_objects / self.overall_object_count
+        else: return 1 - self.overall_considered_object_count / self.overall_object_count
     
     def __iadd__(self, other):
         for key in PerformanceReport.attributes:
@@ -183,8 +183,10 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
 
     generations = [atoms]
     objects     =  atoms + universes
+    assert len(objects) == len(frozenset(obj.footprint) for obj in objects)
     performance.  overall_object_count = __estimate_progress(skip_last=True)[1] + len(objects)
     performance.iterative_object_count = __estimate_progress(skip_last=True, ignored_cluster_labels=trivial_cluster_labels)[1]
+    performance.overall_considered_object_count = len(objects)
     if len(trivial_cluster_labels) < len(adjacencies.cluster_labels):
 
         while True:
@@ -205,6 +207,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             generations.append(new_generation)
             objects += new_objects
             performance.iterative_considered_object_count += len(new_objects)
+            performance.  overall_considered_object_count += len(new_objects)
 
             cover.update(new_generation, out.derive(muted=True))
             costs.append(cover.costs)
