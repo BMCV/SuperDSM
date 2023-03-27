@@ -79,7 +79,7 @@ class GlobalEnergyMinimization(Stage):
 
     .. math:: c_{\\text{max}} = c_{\\text{max}}^{\\text{strict}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
 
-    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, given a previously considered set :math:`X \\subset U` and a newly added atomic image region :math:`u \in U`, using the upper bound
+    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, given a previously considered set :math:`X \\subset U` and a newly added atomic image region :math:`u \\in U`, using the upper bound
 
     .. math:: c_{\\text{max}} = \\min\\{ c_{\\text{max}}^{\\text{strict}}, c_{\\text{max}}^{\\text{greedy}} \\}, \\quad c_{\\text{max}}^{\\text{greedy}} = \\nu(X) + \\nu(\\{u\\}) + 2\\beta
     
