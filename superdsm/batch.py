@@ -294,7 +294,7 @@ class Task:
             first_stage, data = self.find_first_stage_name(pipeline, dry, pickup, out=out2)
             out3 = out2.derive(margin=2, muted = (verbosity <= -int(not dry)))
             timings = self._load_timings()
-            overall_performance = PerformanceReport()
+            performance = PerformanceReport()
             for file_idx, file_id in enumerate(self.file_ids):
                 img_filepath = str(self.img_pathpattern) % file_id
                 progress = file_idx / len(self.file_ids)
@@ -317,11 +317,11 @@ class Task:
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
                 if not dry and 'performance' in data[file_id]:
-                    overall_performance += data[file_id]['performance']
+                    performance += data[file_id]['performance']
             out2.write('')
             if report is not None: report.update(self, 'active')
-            if not dry and not np.isnan(overall_performance.overall_pruning_success):
-                out2.write(Text.style('Pruning success: ', Text.BOLD) + f'{100 * overall_performance.overall_pruning_success:.1f}% (computed {overall_performance.overall_computed_object_count} / {overall_performance.overall_object_count})')
+            if not dry and not np.isnan(performance.nontrivial_pruning_success):
+                out2.write(Text.style('Non-trivial pruning: ', Text.BOLD) + f'{100 * performance.nontrivial_pruning_success:.1f}% (computed {performance.nontrivial_computed_object_count} / {performance.nontrivial_object_count})')
             
             skip_writing_results_conditions = [
                 one_shot,
