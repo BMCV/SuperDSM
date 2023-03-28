@@ -226,7 +226,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, directly_solved_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
-            assert set([frozenset(obj.footprint) for obj in objects]) & set([frozenset(obj.footprint) for obj in objects]) == 0
+            assert set([frozenset(obj.footprint) for obj in objects]) & set([frozenset(obj.footprint) for obj in new_objects]) == 0
             objects += new_objects
             performance.nontrivial_computed_object_count += len(new_objects)
             performance.   overall_computed_object_count += len(new_objects)
