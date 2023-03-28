@@ -86,6 +86,12 @@ class PerformanceReport:
         for key in PerformanceReport.attributes:
             setattr(self, key, getattr(self, key) + getattr(other, key))
         return self
+    
+    def _assert_integrity(self):
+        assert np.isnan(   self.direct_solution_success) or (0 <= self.direct_solution_success    <= 1), f'{self.   direct_solution_success_count} / {self.direct_solution_trial_count}'
+        assert np.isnan( self.iterative_pruning_success) or (0 <= self.iterative_pruning_success  <= 1), f'{self. iterative_computed_object_count} / {self.     iterative_object_count}'
+        assert np.isnan(self.nontrivial_pruning_success) or (0 <= self.nontrivial_pruning_success <= 1), f'{self.nontrivial_computed_object_count} / {self.    nontrivial_object_count}'
+        assert np.isnan(   self.overall_pruning_success) or (0 <= self.overall_pruning_success    <= 1), f'{self.   overall_computed_object_count} / {self.       overall_object_count}'
 
 
 class GlobalEnergyMinimization(Stage):
@@ -226,7 +232,6 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, directly_solved_cluster_labels, out)
             if len(new_generation) == 0: break
             generations.append(new_generation)
-            assert set([frozenset(obj.footprint) for obj in objects]) & set([frozenset(obj.footprint) for obj in new_objects]) == 0
             objects += new_objects
             performance.nontrivial_computed_object_count += len(new_objects)
             performance.   overall_computed_object_count += len(new_objects)
@@ -238,10 +243,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
 
     out.write('')
     out.write(f'Non-trivial pruning: {100 * performance.nontrivial_pruning_success:.1f}% (computed {performance.nontrivial_computed_object_count} / {performance.nontrivial_object_count})')
-    assert 0 <= performance.direct_solution_success    <= 1, f'{performance.   direct_solution_success_count} / {performance.direct_solution_trial_count}'
-    assert 0 <= performance.iterative_pruning_success  <= 1, f'{performance. iterative_computed_object_count} / {performance.     iterative_object_count}'
-    assert 0 <= performance.nontrivial_pruning_success <= 1, f'{performance.nontrivial_computed_object_count} / {performance.    nontrivial_object_count}'
-    assert 0 <= performance.overall_pruning_success    <= 1, f'{performance.   overall_computed_object_count} / {performance.       overall_object_count}'
+    performance._assert_integrity()
     return generations, costs, cover, objects, performance
 
 
