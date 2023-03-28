@@ -204,7 +204,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
     generations = [atoms]
     objects     =  atoms + universes
     assert len(objects) == len([frozenset(obj.footprint) for obj in objects])
-    performance.nontrivial_object_count = __estimate_progress()[1]
+    performance.nontrivial_object_count = __estimate_progress(ignored_clsuter_labels=trivial_cluster_labels)[1]
     performance.   overall_object_count = performance.nontrivial_object_count + len(objects)
     performance. iterative_object_count = __estimate_progress(ignored_cluster_labels=directly_solved_cluster_labels)[1]
     performance.overall_computed_object_count = len(objects)
