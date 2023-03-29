@@ -38,7 +38,7 @@ class DSM_Config(Stage):
         The test function to be used for cache testing. If ``None``, then ``numpy.array_equal`` will be used. Using other functions like ``numpy.allclose`` has shown to introduce numerical instabilities. Defaults to ``None``.
 
     ``dsm/sparsity_tol``
-        Absolute values less than or equal to this threshold will be treated as zeros during optimization. Defaults to 0.
+        Absolute values below this threshold will be treated as zeros during optimization. Defaults to 0.
 
     ``dsm/init``
         Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of the :ref:`paper <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
@@ -71,7 +71,7 @@ class DSM_Config(Stage):
         Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). Defaults to 20, or to ``AF_background_margin × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_background_margin`` defaults to 0.4).
 
     ``dsm/cp_timeout``
-        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). If this is set to ``None``, the maximum run time is not limited. Defaults to 300 (i.e. 5 minutes).
+        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). If this is set to ``None``, the run time is not limited. Defaults to 300 (i.e. 5 minutes).
     """
 
     ENABLED_BY_DEFAULT = True

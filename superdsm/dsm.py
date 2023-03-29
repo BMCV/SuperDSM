@@ -200,6 +200,15 @@ def _compute_polynomial_derivatives(self, x_map):
 
 class Energy:
     """Represents the convex energy function :math:`\\psi` for deformable shape models.
+
+    Instances of this class can be used as functions (e.g., ``energy(params)`` computes the value :math:`\\psi_\\omega(\\theta, \\xi)` of the convex energy function :math:`\\psi` so that ``params[:6]`` corresponds to the polynomial parameters :math:`\\theta` and ``params[6:]`` corresponds to the deformation parameters :math:`\\xi`).
+
+    :param roi: An image region represented by an instance of the :py:class:`~superdsm.image.Image` class.
+    :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`).
+    :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
+    :param smooth_matrix_factory: An object with a ``get`` method which yields the smoothing matrix :math:`G_\\omega` for any image region :math:`\\omega` (represented as a binary masked and passed as a parameter).
+    :param sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the gradient.
+    :param hessian_sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the Hessian.
     """
 
     def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0):
@@ -371,11 +380,11 @@ class CP:
     """Represents the convex problem of minimizing a convex energy function :math:`\\psi`.
 
     :param energy: The convex energy function to be minimized, so that ``energy(p)`` corresponds to the value of :math:`\\psi(p)`, ``energy.grad(p)`` corresponds to the gradient vector :math:`\\nabla\\psi(p)`, and ``energy.hessian(p)`` corresponds to the Hessian matrix :math:`\\nabla^2 \\psi(p)`.
-    :param params0: Parameters vector used as the initialization of the numerical method.
+    :param params0: Parameters vector used for initialization.
     :param scale: Fixed factor used to slightly improve numerical stabilities.
     :param cachesize: The maximum number of entries used for caching the values of the ``energy`` function, the gradient, and the Hessian.
     :param cachetest: The test function to be used for cache testing. If ``None``, then ``numpy.array_equal`` will be used.
-    :param timeout: The maximum run time of the :py:meth:`~.solve` method (in seconds). Convex programming will be interrupted by raising a :py:class:`~TimeoutError` if it takes longer than that. If this is set to ``None``, the maximum run time is not limited.
+    :param timeout: The maximum run time of the :py:meth:`~.solve` method (in seconds). Convex programming will be interrupted by raising a :py:class:`~TimeoutError` if it takes longer than that. If this is set to ``None``, the run time is not limited.
     """
 
     CHECK_NUMBERS = False
@@ -416,6 +425,8 @@ class CP:
     
     def solve(self, **options):
         """Performs convex programming.
+
+        :param options: Currently not used.
         """
         alarm_set = False
         if self.timeout is not None and self.timeout > 0:
