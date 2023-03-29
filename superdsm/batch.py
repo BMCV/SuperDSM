@@ -142,6 +142,9 @@ def _write_performance_report(task_path, performance_path, data, overall_perform
     for file_id in file_ids:
         row = get_row(str(file_id), data[file_id]['performance'])
         rows.append(row)
+        out.write(f'** debug 1 ** overall_pruning_success: {data[file_id]["performance"].overall_pruning_success}')
+        out.write(f'** debug 2 ** overall_pruning_success: {getattr(data[file_id]["performance"], "overall_pruning_success")}')
+        out.write(f'** debug 3 ** row: {str(row)}')
     footer_row = get_row('', overall_performance)
     rows.append(footer_row)
     with open(str(performance_path), 'w', newline='') as fout:

@@ -246,7 +246,6 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
 
     out.write('')
     out.write(f'Non-trivial pruning: {100 * performance.nontrivial_pruning_success:.1f}% (computed {performance.nontrivial_computed_object_count} / {performance.nontrivial_object_count})')
-    out.write(f'** debug ** overall_pruning_success: {performance.overall_pruning_success}')
     return generations, costs, cover, objects, performance
 
 
