@@ -58,7 +58,7 @@ class DeformableShapeModel:
         return svec.reshape(x.shape[-xdim:]) if isinstance(x, np.ndarray) else svec
     
     @staticmethod
-    def create_ellipsoid(ξ, center, halfaxis1_len, halfaxis2_len, U=None):
+    def create_ellipse(ξ, center, halfaxis1_len, halfaxis2_len, U=None):
         ev = lambda half_length: (1. / np.square(half_length))
         if U is None: U = orth(np.random.randn(2, 2)) # random rotation matrix
         A  = U.dot(np.diag((ev(halfaxis1_len), ev(halfaxis2_len)))).dot(U.T)

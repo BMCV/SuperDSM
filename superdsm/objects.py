@@ -293,7 +293,7 @@ def _estimate_initialization(region):
     fg_center = roi_xmap[:, fg_center[0], fg_center[1]]
     halfaxes_lengths = (roi_xmap[:, fg] - fg_center[:, None]).std(axis=1)
     halfaxes_lengths = np.max([halfaxes_lengths, np.full(halfaxes_lengths.shape, 1e-8)], axis=0)
-    return DeformableShapeModel.create_ellipsoid(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
+    return DeformableShapeModel.create_ellipse(np.empty(0), fg_center, *halfaxes_lengths, np.eye(2))
 
 
 def _print_cvxopt_solution(solution):
