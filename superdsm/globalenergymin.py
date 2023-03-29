@@ -231,9 +231,7 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             
             new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, directly_solved_cluster_labels, out)
             objects += new_objects
-            performance.nontrivial_computed_object_count += len(new_objects)
-            performance.   overall_computed_object_count += len(new_objects)
-            performance. iterative_computed_object_count += len(new_objects)
+            performance.iterative_computed_object_count += len(new_objects)
 
             if len(new_generation) == 0: break
             generations.append(new_generation)
@@ -242,9 +240,13 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
             costs.append(cover.costs)
             out.write(f'Solution costs: {costs[-1]:,g}')
 
+    performance.nontrivial_computed_object_count += performance.iterative_computed_object_count
+    performance.   overall_computed_object_count += performance.iterative_computed_object_count
+    performance._assert_integrity()
+
     out.write('')
     out.write(f'Non-trivial pruning: {100 * performance.nontrivial_pruning_success:.1f}% (computed {performance.nontrivial_computed_object_count} / {performance.nontrivial_object_count})')
-    performance._assert_integrity()
+    out.write(f'** debug ** overall_pruning_success: {performance.overall_pruning_success}')
     return generations, costs, cover, objects, performance
 
 
