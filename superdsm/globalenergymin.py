@@ -21,7 +21,7 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 
 
 class PerformanceReport:
-    """Reports the performance of the global energy minimization.
+    """Reports the pruning performance of the global energy minimization method.
 
     :ivar direct_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
     :ivar direct_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).

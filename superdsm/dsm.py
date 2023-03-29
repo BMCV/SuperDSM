@@ -19,27 +19,7 @@ def _fast_dot(A, B):
     return mkl_dot(A, B)
 
 
-class PolynomialModelType:
-    
-    def get_model(self, params):
-        model = params if isinstance(params, DeformableShapeModel) else DeformableShapeModel(params)
-        assert not np.isnan(model.array).any()
-        return model
-    
-    def compute_derivatives(self, x_map):
-        derivatives = [None] * 6
-        derivatives[0] = np.square(x_map[0])
-        derivatives[1] = np.square(x_map[1])
-        derivatives[2] = 2 * np.prod([x_map[i] for i in range(2)], axis=0)
-        derivatives[3] = 2 * x_map[0]
-        derivatives[4] = 2 * x_map[1]
-        derivatives[5] = 1
-        return derivatives
-
-
 class DeformableShapeModel:
-    
-    TYPE = PolynomialModelType()
     
     def __init__(self, *args):
         if len(args) == 1 and len(args[0]) >= 6:
@@ -57,6 +37,12 @@ class DeformableShapeModel:
             self.array = np.concatenate([self.a, self.b, np.array([self.c]), self.ξ])
         else:
             raise ValueError('Initialization failed')
+    
+    @staticmethod
+    def get_model(self, params):
+        model = params if isinstance(params, DeformableShapeModel) else DeformableShapeModel(params)
+        assert not np.isnan(model.array).any()
+        return model
 
     def copy(self):
         return DeformableShapeModel(self.array.copy())
@@ -199,11 +185,24 @@ class SmoothMatrixFactory:
         return mat
     
 SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
+    
+
+def _compute_polynomial_derivatives(self, x_map):
+    derivatives = [None] * 6
+    derivatives[0] = np.square(x_map[0])
+    derivatives[1] = np.square(x_map[1])
+    derivatives[2] = 2 * np.prod([x_map[i] for i in range(2)], axis=0)
+    derivatives[3] = 2 * x_map[0]
+    derivatives[4] = 2 * x_map[1]
+    derivatives[5] = 1
+    return derivatives
 
 
 class Energy:
+    """Represents the convex energy function :math:`\\psi` for deformable shape models.
+    """
 
-    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0, model_type=DeformableShapeModel.TYPE):
+    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0):
         self.roi = roi
         self.p   = None
 
@@ -226,10 +225,9 @@ class Energy:
         self.hessian_sparsity_tol = hessian_sparsity_tol
 
         # pre-compute common terms occuring in the computation of the derivatives
-        self.model_type = model_type
-        self.q = model_type.compute_derivatives(self.x)
+        self.q = _compute_polynomial_derivatives(self.x)
     
-    def update_maps(self, params):
+    def _update_maps(self, params):
         if self.p is not None and all(self.p.array == params.array): return
         s = params.s(self.x, self.smooth_mat)
         self.p     = params
@@ -244,15 +242,19 @@ class Energy:
             self.term3 = np.square(params.ξ)
             self.term2 = np.sqrt(self.term3 + self.epsilon)
     
-    def update_theta(self):
+    def _update_theta(self):
         if self.theta is None:
             valid_h_mask = ~np.isnan(self.h)
             self.theta = np.ones_like(self.t)
             self.theta[valid_h_mask] = self.h[valid_h_mask] / (1 + self.h[valid_h_mask])
     
     def __call__(self, params):
-        params = self.model_type.get_model(params)
-        self.update_maps(params)
+        """Computes the value :math:`\\psi_\\omega(\\theta, \\xi)` of the convex energy function.
+
+        The parameters are represented by ``params`` so that ``params[:6]`` corresponds to the polynomial parameters :math:`\\theta` and ``params[6:]`` corresponds to the deformation parameters :math:`\\xi`.
+        """
+        params = DeformableShapeModel.get_model(params)
+        self._update_maps(params)
         valid_h_mask = ~np.isnan(self.h)
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
@@ -271,9 +273,13 @@ class Energy:
         return objective1 + objective2
     
     def grad(self, params):
-        params = self.model_type.get_model(params)
-        self.update_maps(params)
-        self.update_theta()
+        """Computes the gradient vector :math:`\\nabla \\psi_\\omega(\\theta, \\xi)`.
+
+        The parameters are represented by ``params`` so that ``params[:6]`` corresponds to the polynomial parameters :math:`\\theta` and ``params[6:]`` corresponds to the deformation parameters :math:`\\xi`.
+        """
+        params = DeformableShapeModel.get_model(params)
+        self._update_maps(params)
+        self._update_theta()
         term1 = -self.y * self.theta
         grad = np.asarray([term1 * q for q in self.q]) @ self.w
         term1[abs(term1) < self.sparsity_tol] = 0
@@ -285,13 +291,17 @@ class Energy:
         return grad
     
     def hessian(self, params):
-        params = self.model_type.get_model(params)
-        self.update_maps(params)
-        self.update_theta()
-        gamma = self.theta - np.square(self.theta)
-        gamma[gamma < self.sparsity_tol] = 0
-        pixelmask = (gamma != 0)
-        term4 = np.sqrt(gamma[pixelmask] * self.w[pixelmask])[None, :]
+        """Computes the Hessian matrix :math:`\\nabla^2 \\psi_\\omega(\\theta, \\xi)`.
+
+        The parameters are represented by ``params`` so that ``params[:6]`` corresponds to the polynomial parameters :math:`\\theta` and ``params[6:]`` corresponds to the deformation parameters :math:`\\xi`. The Hessian matrix is returned as a sparse block matrix.
+        """
+        params = DeformableShapeModel.get_model(params)
+        self._update_maps(params)
+        self._update_theta()
+        kappa = self.theta - np.square(self.theta)
+        kappa[kappa < self.sparsity_tol] = 0
+        pixelmask = (kappa != 0)
+        term4 = np.sqrt(kappa[pixelmask] * self.w[pixelmask])[None, :]
         D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask] * term4
         D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T.multiply(term4).tocsr()
         if self.smooth_mat.shape[1] > 0:
