@@ -65,22 +65,6 @@ class DeformableShapeModel:
         b  = A.dot(center)
         c  = np.inner(center, b) - 1
         return DeformableShapeModel(ξ, -A, b, -c)
-
-    def is_measurable(self):
-        return (np.linalg.eigvalsh(self.A) < 0).all()
-    
-    def measure(self):
-        """Returns the center `b` and halfaxes `H` of an ellipse-shaped model.
-        
-        The matrix `H` consists of two rows, which correspond to the two
-        halfaxes. Thus, the two halfaxes can be accessed as `H[0]` and `H[1]`.
-        """
-        b = -np.linalg.inv(self.A + 1e-12 * np.eye(self.A.ndim)).dot(self.b)
-        c = self.c - np.inner(b, self.A.dot(b))
-        d,U = np.linalg.eigh(self.A)
-        l = np.sqrt(np.max((np.zeros_like(d), -c / d), axis=0))
-        L = U.dot(np.diag(l))
-        return b, L.T
     
     def map_to_image_pixels(self, g, roi, pad=0):
         assert pad >= 0 and isinstance(pad, int)
@@ -206,7 +190,7 @@ class Energy:
     :param roi: An image region represented by an instance of the :py:class:`~superdsm.image.Image` class.
     :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
-    :param smooth_matrix_factory: An object with a ``get`` method which yields the smoothing matrix :math:`G_\\omega` for any image region :math:`\\omega` (represented as a binary masked and passed as a parameter).
+    :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`G_\\omega` for any image region :math:`\\omega` (represented as a binary masked and passed as a parameter).
     :param sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the gradient.
     :param hessian_sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the Hessian.
     """
