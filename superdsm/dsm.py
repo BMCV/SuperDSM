@@ -367,7 +367,7 @@ def _cp_timeout_handler(*args):
 
 class CP:
 
-    CHECK_NUMBERS = True
+    CHECK_NUMBERS = False
 
     def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None, timeout=None):
         self.params0  = params0
