@@ -71,7 +71,7 @@ class DSM_Config(Stage):
         Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). Defaults to 20, or to ``AF_background_margin × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_background_margin`` defaults to 0.4).
 
     ``dsm/cp_timeout``
-        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). Defaults to 300 (i.e. 5 minutes).
+        The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). If this is set to ``None``, the maximum run time is not limited. Defaults to 300 (i.e. 5 minutes).
     """
 
     ENABLED_BY_DEFAULT = True

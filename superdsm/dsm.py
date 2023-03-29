@@ -358,6 +358,8 @@ class _Cache:
 
 
 class TimeoutError(Exception):
+    """Indicates that an operation has timed out.
+    """
     pass
 
 
@@ -366,8 +368,19 @@ def _cp_timeout_handler(*args):
 
 
 class CP:
+    """Represents the convex problem of minimizing a convex energy function :math:`\\psi`.
+
+    :param energy: The convex energy function to be minimized, so that ``energy(p)`` corresponds to the value of :math:`\\psi(p)`, ``energy.grad(p)`` corresponds to the gradient vector :math:`\\nabla\\psi(p)`, and ``energy.hessian(p)`` corresponds to the Hessian matrix :math:`\\nabla^2 \\psi(p)`.
+    :param params0: Parameters vector used as the initialization of the numerical method.
+    :param scale: Fixed factor used to slightly improve numerical stabilities.
+    :param cachesize: The maximum number of entries used for caching the values of the ``energy`` function, the gradient, and the Hessian.
+    :param cachetest: The test function to be used for cache testing. If ``None``, then ``numpy.array_equal`` will be used.
+    :param timeout: The maximum run time of the :py:meth:`~.solve` method (in seconds). Convex programming will be interrupted by raising a :py:class:`~TimeoutError` if it takes longer than that. If this is set to ``None``, the maximum run time is not limited.
+    """
 
     CHECK_NUMBERS = False
+    """Performs additional assertions when set to ``True`` which are useful for debugging but might increase the overall run time (sparse matrices need to be converted to dense).
+    """
 
     def __init__(self, energy, params0, scale=1, cachesize=0, cachetest=None, timeout=None):
         self.params0  = params0
@@ -402,6 +415,8 @@ class CP:
                 return l, Dl, H
     
     def solve(self, **options):
+        """Performs convex programming.
+        """
         alarm_set = False
         if self.timeout is not None and self.timeout > 0:
             signal.signal(signal.SIGALRM, _cp_timeout_handler)
