@@ -78,7 +78,7 @@ class DeformableShapeModel:
         return np.array([self.a[0], self.a[2], self.a[2], self.a[1]]).reshape((2, 2))
     
     def s(self, x, smooth_mat):
-        """Computes the deformable surface :math:`S_\omega(x; \theta, \xi)` as described in :ref:`pipeline_theory_dsm`.
+        """Computes the deformable surface :math:`S_\omega(x; \\theta, \\xi)` as described in :ref:`pipeline_theory_dsm`.
         """
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
