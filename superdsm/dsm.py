@@ -66,7 +66,7 @@ class DeformableShapeModel:
     def get_model(self, params):
         """Returns an :py:class:`DeformableShapeModel` object.
         
-        If ``params``is a :py:class:`DeformableShapeModel` object, then ``params`` is returned. Otherwise, the a new :py:class:`DeformableShapeModel` object is instantiated using the given parameters.
+        If ``params`` is a :py:class:`DeformableShapeModel` object, then ``params`` is returned. Otherwise, the a new :py:class:`DeformableShapeModel` object is instantiated using the given parameters.
         """
         model = params if isinstance(params, DeformableShapeModel) else DeformableShapeModel(params)
         assert not np.isnan(model.array).any()
@@ -84,7 +84,9 @@ class DeformableShapeModel:
         return np.array([self.a[0], self.a[2], self.a[2], self.a[1]]).reshape((2, 2))
     
     def s(self, x, smooth_mat):
-        """Computes the deformable surface :math:`S_\omega(x; \\theta, \\xi)` as described in :ref:`pipeline_theory_dsm`.
+        """Computes the deformable surface :math:`S_\omega(\\theta, \\xi)` as described in :ref:`pipeline_theory_dsm`.
+
+        :param x: Either a list of coordinates of those image points for which the values of the deformable surface are to be computed, or a stack of two 2D arrays corresponding to the pixel coordinates.
         """
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
@@ -99,7 +101,7 @@ class DeformableShapeModel:
         :param center: The coordinates of the center of the ellipse.
         :param halfaxis1_len: The length of the first half axis.
         :param halfaxis2_len: The length of the second half axis.
-        :param U: An orthonormal matrix whose eigenvectors define the rotation of the ellipse, or `None` if a random rotation should be used.
+        :param U: An orthonormal matrix whose eigenvectors define the rotation of the ellipse, or ``None`` if a random rotation should be used.
         """
         ev = lambda half_length: (1. / np.square(half_length))
         if U is None: U = orth(np.random.randn(2, 2)) # random rotation matrix
