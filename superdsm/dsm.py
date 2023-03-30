@@ -64,7 +64,7 @@ class DeformableShapeModel:
     
     @staticmethod
     def get_model(self, params):
-        """Returns an :py:class:`DeformableShapeModel` object.
+        """Returns a :py:class:`DeformableShapeModel` object.
         
         If ``params`` is a :py:class:`DeformableShapeModel` object, then ``params`` is returned. Otherwise, the a new :py:class:`DeformableShapeModel` object is instantiated using the given parameters.
         """

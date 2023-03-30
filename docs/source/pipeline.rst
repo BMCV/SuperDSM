@@ -41,7 +41,7 @@ where :math:`\ell(\theta, \xi)` is a *convex* loss function defined by
 
 .. math:: \ell(\theta, \xi) = \mathbb 1^\top_{\#\omega} \ln(1 + \exp(-Y_\omega \cdot S_\omega(\theta, \xi)))
 
-and :math:`\alpha` is a regularization parameter which governs the regularization of the deformations. See Section 2.2 of the paper for more details.
+and :math:`\alpha` is a regularization parameter which governs the regularization of the deformations. This is implemented in the :py:mod:`superdsm.dsm` module. See Section 2.2 of the paper for more details.
 
 The vector :math:`Y_\omega` corresponds to the image intensities, shifted by the intensity offsets :math:`\tau_{x^{(1)}}, \dots, \tau_{x^{(\#\omega)}}`. These offsets are chosen so that they *roughly* separate image foreground and image background, in the sense that image foreground *rather* corresponds to positive components of the vector
 
