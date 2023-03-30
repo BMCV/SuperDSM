@@ -379,7 +379,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
     J = Energy(region, epsilon, alpha, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
-    print(f'region: {str(region.shape)}, offset: {str(region.offset)}')
+    print(f'region: {str(region.model.shape)}, offset: {str(region.offset)}')
     status = None
     if callable(init):
         params = init(J.smooth_mat.shape[1])
