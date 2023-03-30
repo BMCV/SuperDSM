@@ -20,19 +20,19 @@ def _fast_dot(A, B):
 
 
 class DeformableShapeModel:
-    """An object of this class corresponds to a deformable shape model, defined by a set of *fixed* parameters.
+    """Represents a deformable shape model, defined by a set of *fixed* parameters.
 
-    Each deformable shape model is defined by the polynomial parameters :math:`\\theta` and the deformation parameters :math:`\\xi` (see :ref:`pipeline_theory_dsm` for details). The polynomial parameters define the polynomial surface
+    Each deformable shape model is defined by the polynomial parameters :math:`\\theta` and the deformation parameters :math:`\\xi` (see :ref:`details <pipeline_theory_dsm>`). The polynomial parameters define the polynomial surface :math:`f_x^\\top \\theta`, where :math:`f_x` is a second-order polynomial basis function expansion of the image point :math:`x`,
+
+    .. math:: f_x = (x_1^2, x_2^2, 2 x_1 x_2, x_1, x_2, 1).
     
-    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = F_\\omega^\\top \\theta,
+    Using :math:`\\theta = (a_1, a_2, a_3, b_1, b_2, c)` the polynomial surface can be written
     
-    and using :math:`\\theta = (a_1, a_2, a_3, b_1, b_2, c)` this can be written
-    
-    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = x_1^2 a_1 + x_2^2 a_2 + 2 x_1 x_2 a_3 + x_1 b_1 + x_2 b_2 + c,
+    .. math:: f_x^\\top \\theta = x_1^2 a_1 + x_2^2 a_2 + 2 x_1 x_2 a_3 + x_1 b_1 + x_2 b_2 + c,
 
     or equivalently,
     
-    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = x^\\top A x + b^\\top x + c,
+    .. math:: f_x^\\top \\theta = x^\\top A x + b^\\top x + c,
 
     where
     

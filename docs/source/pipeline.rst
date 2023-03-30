@@ -20,7 +20,7 @@ Deformable shape models
 Let :math:`\omega \subseteq \Omega` be any image region, that is a non-empty subset of the image points :math:`\Omega` in an arbitrary but fixed order :math:`\omega = \left\{ x_1, \dots, x_{\#\omega} \right\}`. Then, a
 *deformable shape model* within this image region is defined as the zero-level set of the deformable surface
 
-.. math:: S_\omega(x; \theta, \xi) = F_\omega^\top \theta + G_\omega \xi,
+.. math:: S_\omega(\theta, \xi) = F_\omega^\top \theta + G_\omega \xi,
 
 where
 
