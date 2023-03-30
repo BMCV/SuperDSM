@@ -37,6 +37,12 @@ class DeformableShapeModel:
     where
     
     .. math:: A = \\begin{bmatrix} a_1 & a_3 \\\\ a_3 & a_2 \\end{bmatrix}, \\qquad b = \\begin{bmatrix} b_1 \\\\ b_2 \\end{bmatrix}.
+
+    :ivar array: The vector of polynomial and deformation parameters of this model.
+    :ivar a: The vector :math:`\\theta_{1:3} = (a_1, a_2, a_3)` corresponding to this model.
+    :ivar b: The vector :math:`\\theta_{4:5} = b = (b_1, b_2)` corresponding to this model.
+    :ivar c: The parameter :math:`\\theta_{6} = c` of this model.
+    :ivar ξ: The deformation parameters :math:`\\xi` of this model.
     """
     
     def __init__(self, *args):
@@ -87,6 +93,14 @@ class DeformableShapeModel:
     
     @staticmethod
     def create_ellipse(ξ, center, halfaxis1_len, halfaxis2_len, U=None):
+        """Creates a deformable shape model corresponding to an ellipse, possibly deformbed.
+
+        :param ξ: The deformation parameters.
+        :param center: The coordinates of the center of the ellipse.
+        :param halfaxis1_len: The length of the first half axis.
+        :param halfaxis2_len: The length of the second half axis.
+        :param U: An orthonormal matrix whose eigenvectors define the rotation of the ellipse, or `None` if a random rotation should be used.
+        """
         ev = lambda half_length: (1. / np.square(half_length))
         if U is None: U = orth(np.random.randn(2, 2)) # random rotation matrix
         A  = U.dot(np.diag((ev(halfaxis1_len), ev(halfaxis2_len)))).dot(U.T)
