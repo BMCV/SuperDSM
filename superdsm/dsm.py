@@ -200,7 +200,7 @@ class SmoothMatrixFactory:
 
     The matrix :math:`\\tilde G_\\omega` is the sub-sampled variant of the :math:`G_\\omega` matrix.
 
-    :param smooth_amount: Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`.
+    :param smooth_amount: This is :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`.
     :param shape_multiplier: The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`).
     :param smooth_subsample: Corresponds to the amount of sub-sampling used (see Section 3.3 in the :ref:`paper <references>`).
     :param lock: A critical section lock used for allocation of the matrix.
