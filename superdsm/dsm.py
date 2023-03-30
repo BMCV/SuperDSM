@@ -111,6 +111,13 @@ class DeformableShapeModel:
         return DeformableShapeModel(ξ, -A, b, -c)
     
     def map_to_image_pixels(self, g, roi, pad=0):
+        """Transforms the model from the coordinate system of an image region into the coordinate system of the whole image.
+
+        :param g: An :py:class:`~superdsm.image.Image` object corresponding to the whole image.
+        :param roi: An :py:class:`~superdsm.image.Image` object corresponding to the image region.
+        :param pad: The number of pixels by which the coordinate system of the whole image is padded (once in each direction, i.e. twice along each axis). Using a value larger than 0 yields the same result as using an image ``g`` padded by the same value.
+        :return: The transformed deformable shape model.
+        """
         assert pad >= 0 and isinstance(pad, int)
         g_max_coord, roi_max_coord = 2 * pad + np.array(g.model.shape) - 1., np.array(roi.model.shape) - 1.
         G = np.diag(1. / roi_max_coord)
