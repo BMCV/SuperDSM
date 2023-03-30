@@ -20,6 +20,24 @@ def _fast_dot(A, B):
 
 
 class DeformableShapeModel:
+    """An object of this class corresponds to a deformable shape model, defined by a set of *fixed* parameters.
+
+    Each deformable shape model is defined by the polynomial parameters :math:`\\theta` and the deformation parameters :math:`\\xi` (see :ref:`pipeline_theory_dsm` for details). The polynomial parameters define the polynomial surface
+    
+    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = F_\\omega^\\top \\theta,
+    
+    and using :math:`\\theta = (a_1, a_2, a_3, b_1, b_2, c)` this can be written
+    
+    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = x_1^2 a_1 + x_2^2 a_2 + 2 x_1 x_2 a_3 + x_1 b_1 + x_2 b_2 + c,
+
+    or equivalently,
+    
+    .. math:: S_\\omega(x; \\theta, \\mathbb 0) = x^\\top A x + b^\\top x + c,
+
+    where
+    
+    .. math:: A = \\begin{bmatrix} a_1 & a_3 \\\\ a_3 & a_2 \\end{bmatrix}, \\qquad b = \\begin{bmatrix} b_1 \\\\ b_2 \\end{bmatrix}.
+    """
     
     def __init__(self, *args):
         if len(args) == 1 and len(args[0]) >= 6:
@@ -40,18 +58,28 @@ class DeformableShapeModel:
     
     @staticmethod
     def get_model(self, params):
+        """Returns an :py:class:`DeformableShapeModel` object.
+        
+        If ``params``is a :py:class:`DeformableShapeModel` object, then ``params`` is returned. Otherwise, the a new :py:class:`DeformableShapeModel` object is instantiated using the given parameters.
+        """
         model = params if isinstance(params, DeformableShapeModel) else DeformableShapeModel(params)
         assert not np.isnan(model.array).any()
         return model
 
     def copy(self):
+        """Returns a deep copy.
+        """
         return DeformableShapeModel(self.array.copy())
     
     @property
     def A(self):
+        """Returns the matrix :math:`A` corresponding to this model.
+        """
         return np.array([self.a[0], self.a[2], self.a[2], self.a[1]]).reshape((2, 2))
     
     def s(self, x, smooth_mat):
+        """Computes the deformable surface :math:`S_\omega(x; \theta, \xi)` as described in :ref:`pipeline_theory_dsm`.
+        """
         xdim = x.ndim - 1 if isinstance(x, np.ndarray) else 0
         xvec = np.array(x).reshape((2, -1))
         svec = _diagquad(self.A, xvec) + 2 * np.inner(xvec.T, self.b) + self.c + _fast_dot(smooth_mat, self.ξ)
