@@ -196,7 +196,9 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1, lock=None):
 
 
 class SmoothMatrixFactory:
-    """Instantiates the matrix :math:`\\tilde G_\\sigma` for any image region :math:`\\omega`.
+    """Instantiates the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega`.
+
+    The matrix :math:`\\tilde G_\\omega` is the sub-sampled variant of the :math:`G_\\omega` matrix.
 
     :param smooth_amount: Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`.
     :param shape_multiplier: The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`).
