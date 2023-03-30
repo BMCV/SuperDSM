@@ -18,10 +18,11 @@ class render(unittest.TestCase):
         ray.init(num_cpus=4, log_to_driver=False, logging_level=ray.logging.ERROR)
         with testsuite.SilentOutputContext() as out:
             data_path = testsuite.require_data('bbbc033', 'C2.tif')
+            log_root_dir = testsuite.get_log_root_dir(__file__)
             img_3d = superdsm.io.imread(data_path)
             img = img_3d[28]
             pipeline = superdsm.pipeline.create_default_pipeline()
-            self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img, out=out)
+            self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img, log_root_dir=log_root_dir, out=out)
             establish_deterministic_object_order(self.data)
 
     @classmethod

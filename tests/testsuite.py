@@ -43,6 +43,12 @@ def require_data(data_id, filename=None):
     return data_path if filename is None else data_path / filename
 
 
+def get_log_root_dir(filepath):
+    log_root_dir = root_dir / 'logs' / os.path.basename(filepath)
+    log_root_dir.mkdir(parents=True, exist_ok=True)
+    return str(log_root_dir)
+
+
 def normalize_image(img):
     if str(img.dtype).startswith('float'):
         img = (img - img.min()) / (img.max() - img.min()) 
