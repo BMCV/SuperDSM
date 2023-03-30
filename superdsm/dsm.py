@@ -215,7 +215,7 @@ class SmoothMatrixFactory:
 SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
     
 
-def _compute_polynomial_derivatives(self, x_map):
+def _compute_polynomial_derivatives(x_map):
     derivatives = [None] * 6
     derivatives[0] = np.square(x_map[0])
     derivatives[1] = np.square(x_map[1])
