@@ -196,6 +196,14 @@ def _create_masked_smooth_matrix(kernel, mask, subsample=1, lock=None):
 
 
 class SmoothMatrixFactory:
+    """Instantiates the matrix :math:`\\tilde G_\\sigma` for any image region :math:`\\omega`.
+
+    :param smooth_amount: Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`.
+    :param shape_multiplier: The Gaussian function with standard deviation :math:`\\sigma_G` used to construct the block Toeplitz matrix :math:`G_\\omega` is cut off after :math:`4 \\sigma_G` multiplied by this value (see :ref:`pipeline_theory_dsm`).
+    :param smooth_subsample: Corresponds to the amount of sub-sampling used (see Section 3.3 in the :ref:`paper <references>`).
+    :param lock: A critical section lock used for allocation of the matrix.
+    :param dtype: The data type used for the matrix.
+    """
 
     def __init__(self, smooth_amount, shape_multiplier, smooth_subsample, lock=None, dtype='float32'):
         self.smooth_amount    = smooth_amount
@@ -205,6 +213,11 @@ class SmoothMatrixFactory:
         self.dtype            = dtype
 
     def get(self, mask, uplift=False):
+        """Yields the matrix :math:`\\tilde G_\\omega` for an image region :math:`\\omega`.
+        
+        :param mask: The image region :math:`\\omega` represented as a binary mask.
+        :param uplift: Currently not used.
+        """
         print('-- smooth matrix computation starting --')
         mat = None
         if self.smooth_amount < np.inf:
@@ -220,6 +233,8 @@ class SmoothMatrixFactory:
         return mat
     
 SmoothMatrixFactory.NULL_FACTORY = SmoothMatrixFactory(np.inf, np.nan, np.nan)
+"""Instantiates the matrix :math:`\\tilde G_\\sigma` as a matrix with zero columns (i.e. deformations are not permitted).
+"""
     
 
 def _compute_polynomial_derivatives(x_map):
@@ -241,7 +256,7 @@ class Energy:
     :param roi: An image region represented by an instance of the :py:class:`~superdsm.image.Image` class.
     :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
-    :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`G_\\omega` for any image region :math:`\\omega` (represented as a binary masked and passed as a parameter).
+    :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega` (represented as a binary mask and passed as a parameter).
     :param sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the gradient.
     :param hessian_sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the Hessian.
     """
