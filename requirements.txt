@@ -1,7 +1,7 @@
 numpy~=1.18
 scipy~=1.6.3
 scikit-image~=0.18.1
-ipython~=7.18.1
+ipython>=7.31.1
 dill~=0.3.2
 ray~=0.8.7
 posix_ipc~=1.0.4
