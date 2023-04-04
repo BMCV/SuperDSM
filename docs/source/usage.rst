@@ -44,7 +44,7 @@ To use SuperDSM interactively, i.e. programatically as opposed to batch processi
 .. code-block:: python
 
    import ray
-   ray.init(num_cpus=16, log_to_driver=False, logging_level=ray.logging.ERROR)
+   ray.init(num_cpus=16, log_to_driver=False, logging_level='error')
 
 After this initialization routine, SuperDSM is ready to use:
 
