@@ -17,7 +17,7 @@ data_dir = root_dir / 'data'
 def load_data(url, datasets, **kwargs):
     archive_suffix = ''.join(pathlib.Path(url).suffixes)
     with tempfile.NamedTemporaryFile('wb', suffix=archive_suffix) as archive_file:
-        print(f'Downloading archive: {url}')
+        print(f'\nDownloading archive: {url}')
         with requests.get(url, stream=True, **kwargs) as req:
             req.raise_for_status()
             for chunk in req.iter_content(chunk_size=10 * 1024 ** 2):
@@ -113,6 +113,13 @@ class DeferredOutput(superdsm.output.Output):
         if self._intermediate is not None:
             self.original.write(self._intermediate)
 
+    def write_to_file(self, file):
+        if hasattr(file, 'write'):
+            file.write('\n'.join(self._lines))
+        else:
+            with open(str(file), 'w') as fout:
+                self.write_to_file(fout)
+
 
 class SilentOutputContext:
 
@@ -127,3 +134,4 @@ class SilentOutputContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             self.output.forward()
+    

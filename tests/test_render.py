@@ -15,7 +15,7 @@ class render(unittest.TestCase):
     @classmethod
     @testsuite.without_resource_warnings
     def setUpClass(self):
-        ray.init(num_cpus=4, log_to_driver=False, logging_level=ray.logging.ERROR)
+        ray.init(num_cpus=4, log_to_driver=False, logging_level='error')
         with testsuite.SilentOutputContext() as out:
             data_path = testsuite.require_data('bbbc033', 'C2.tif')
             log_root_dir = testsuite.get_log_root_dir(__file__)
@@ -24,6 +24,7 @@ class render(unittest.TestCase):
             pipeline = superdsm.pipeline.create_default_pipeline()
             self.data, _, _ = superdsm.automation.process_image(pipeline, superdsm.config.Config(), img, log_root_dir=log_root_dir, out=out)
             establish_deterministic_object_order(self.data)
+            out.write_to_file(log_root_dir + '/stdout.txt')
 
     @classmethod
     @testsuite.without_resource_warnings
