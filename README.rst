@@ -7,12 +7,12 @@ The documentation is available here: https://superdsm.readthedocs.io
 
 Use ``python -m unittest`` in the root directory to run the test suite.
 
-For the full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environemnt.
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environemnt.
 
 Publications:
 
-`L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 45(3), pp. 3831–3847, 2023.
-<https://doi.org/10.1109/TPAMI.2022.3185583>`_
+* `L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 45(3), pp. 3831–3847, 2023.
+  <https://doi.org/10.1109/TPAMI.2022.3185583>`_
 
 ----
 
