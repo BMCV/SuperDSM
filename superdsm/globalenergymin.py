@@ -97,7 +97,7 @@ class PerformanceReport:
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
-    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms`, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``performance`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms``, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``performance`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
     For Algorithm 1, there are two behaviours implemented which differ in the definition of the upper bound :math:`c_{\\text{max}}`. In *strict* mode, the original definition from the paper is used,
 
