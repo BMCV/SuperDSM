@@ -1,5 +1,17 @@
 SuperDSM
-==========
+========
+
+.. image:: https://img.shields.io/badge/Install%20with-conda-%2387c305
+   :target: https://anaconda.org/bioconda/superdsm
+
+.. image:: https://img.shields.io/conda/v/bioconda/superdsm.svg?label=Version
+   :target: https://anaconda.org/bioconda/superdsm
+
+.. image:: https://img.shields.io/conda/dn/bioconda/superdsm.svg?label=Downloads
+   :target: https://anaconda.org/bioconda/superdsm
+    
+.. image:: https://readthedocs.org/projects/superdsm/badge/?version=latest
+   :target: https://superdsm.readthedocs.io/en/latest/?badge=latest
 
 SuperDSM is a globally optimal segmentation method based on superadditivity and deformable shape models for cell nuclei in fluorescence microscopy images and beyond.
 
