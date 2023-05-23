@@ -153,7 +153,7 @@ class GlobalEnergyMinimization(Stage):
 
         assert 0 < gamma < 1
 
-        mode = 'strict' if strict else 'fast'
+        mode = 'strict' if strict else ('fast2' if cfg.get('fast2', False) else 'fast')
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
         cover, objects, performance = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
 
@@ -315,22 +315,26 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
         new_object = Object()
         new_object.footprint = new_object_footprint
 
-        remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_object_footprint
-        min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
-        new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
-        min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
-        max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
-        if mode == 'strict':
-            pass
-        elif mode == 'fast':
-            max_new_object_costs = min((max_new_object_costs, object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta))
+        if mode in ('strict', 'fast'):
+            remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_object_footprint
+            min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
+            new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
+            min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
+            max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
+            if mode == 'strict':
+                pass
+            elif mode == 'fast':
+                max_new_object_costs = min((max_new_object_costs, object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta))
+            if max_new_object_costs < min_new_object_costs:
+                discarded += 1
+            else:
+                new_objects_energy_thresholds.append(max_new_object_costs - cover.beta)
+                new_objects.append(new_object)
+        elif mode == 'fast2':
+            new_objects_energy_thresholds.append(object.energy + cover.get_atom(new_atom_label).energy + cover.beta)
+            new_objects.append(new_object)
         else:
             raise ValueError(f'Unknown mode "{mode}"')
-        if max_new_object_costs < min_new_object_costs:
-            discarded += 1
-        else:
-            new_objects_energy_thresholds.append(max_new_object_costs - cover.beta)
-            new_objects.append(new_object)
 
     compute_objects(new_objects, y, atoms_map, dsm_cfg, log_root_dir, out=out)
 
