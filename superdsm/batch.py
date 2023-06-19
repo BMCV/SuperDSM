@@ -250,7 +250,7 @@ class Task:
     def _initialize(self):
         for key, val in self.environ.items():
             os.environ[key] = str(val)
-        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
+        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level='error')
         _pipeline = create_default_pipeline()
         return _pipeline
 
