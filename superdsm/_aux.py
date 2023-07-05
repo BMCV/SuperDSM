@@ -3,8 +3,6 @@ import scipy.sparse
 import warnings
 import pathlib
 import ray
-import fcntl, hashlib
-import posix_ipc
 
 
 def copy_dict(d):
@@ -58,51 +56,59 @@ def render_objects_foregrounds(shape, objects):
         foreground[sel].fill(False)
 
 
-class SystemSemaphore:
-    def __init__(self, name, limit):
-        self.name  = name
-        self.limit = limit
+try:
 
-    @staticmethod
-    def get_lock(lock):
-        class NullLock:
-            def __enter__(self): pass
-            def __exit__ (self, _type, value, tb): pass
-        if lock is None: return NullLock()
-        else: return lock
+    import posix_ipc
 
-    def __enter__(self):
-        if np.isinf(self.limit):
-            create_lock = lambda flags: None
-        else:
-            create_lock = lambda flags: posix_ipc.Semaphore(f'/{self.name}', flags, mode=384, initial_value=self.limit)
-        self._lock = create_lock(posix_ipc.O_CREAT | posix_ipc.O_EXCL)
-        class Lock:
-            def __init__(self, create_lock):
-                self._create_lock = create_lock
+    class SystemSemaphore:
+        def __init__(self, name, limit):
+            self.name  = name
+            self.limit = limit
 
-            def __enter__(self):
-                self._lock = self._create_lock(posix_ipc.O_CREAT)
-                if self._lock is not None: self._lock.acquire()
+        @staticmethod
+        def get_lock(lock):
+            class NullLock:
+                def __enter__(self): pass
+                def __exit__ (self, _type, value, tb): pass
+            if lock is None: return NullLock()
+            else: return lock
 
-            def __exit__(self, _type, value, tb):
-                if self._lock is not None: self._lock.release()
-        return Lock(create_lock)
+        def __enter__(self):
+            if np.isinf(self.limit):
+                create_lock = lambda flags: None
+            else:
+                create_lock = lambda flags: posix_ipc.Semaphore(f'/{self.name}', flags, mode=384, initial_value=self.limit)
+            self._lock = create_lock(posix_ipc.O_CREAT | posix_ipc.O_EXCL)
+            class Lock:
+                def __init__(self, create_lock):
+                    self._create_lock = create_lock
 
-    def __exit__(self, _type, value, tb):
-        if self._lock is not None: self._lock.unlink()
+                def __enter__(self):
+                    self._lock = self._create_lock(posix_ipc.O_CREAT)
+                    if self._lock is not None: self._lock.acquire()
 
+                def __exit__(self, _type, value, tb):
+                    if self._lock is not None: self._lock.release()
+            return Lock(create_lock)
 
-class SystemMutex:
-    def __init__(self, name):
-        self.name = name
+        def __exit__(self, _type, value, tb):
+            if self._lock is not None: self._lock.unlink()
 
-    def __enter__(self):
-        lock_id = hashlib.md5(self.name.encode('utf8')).hexdigest()
-        self.fp = open(f'/tmp/.lock-{lock_id}.lck', 'wb')
-        fcntl.flock(self.fp.fileno(), fcntl.LOCK_EX)
-
-    def __exit__(self, _type, value, tb):
-        fcntl.flock(self.fp.fileno(), fcntl.LOCK_UN)
-        self.fp.close()
+except ModuleNotFoundError:
         
+    class SystemSemaphore:
+        def __init__(self, name, limit):
+            assert np.isinf(limit), 'required package: posix_ipc >=1.0.4,<2.0'
+
+        @staticmethod
+        def get_lock(lock):
+            class NullLock:
+                def __enter__(self): pass
+                def __exit__ (self, _type, value, tb): pass
+            return NullLock()
+
+        def __enter__(self):
+            return SystemSemaphore.get_lock(None)
+
+        def __exit__(self, _type, value, tb):
+            pass
