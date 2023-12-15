@@ -9,3 +9,4 @@ cvxpy~=1.1.13
 matplotlib>=3.0
 mkl>=2020.0
 sphinx-autorun>=1.1.1
+sphinx-rtd-theme
