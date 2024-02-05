@@ -93,7 +93,7 @@ class C2F_RegionAnalysis(Stage):
         Image points which are adjacent to each other are *not* to determine the atomic image regions. Adjacency of such image points is determined using either 4-connectivity or 8-connectivity. Must be either 4 or 8. Defaults to 8.
 
     ``c2f-region-analysis/min_atom_radius``
-        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Defaults to 15, or to ``AF_min_atom_radius × radius`` if configured automatically (and ``AF_min_atom_radius`` defaults to 0.33).
+        No region determined by the :ref:`pipeline_theory_c2freganal` scheme is smaller than a circle of this radius (in terms of the surface area). Corresponds to *min_region_radius* in the :ref:`paper <references>` (Supplemental Materials 5 and 8). Defaults to 15, or to ``AF_min_atom_radius × radius`` if configured automatically (and ``AF_min_atom_radius`` defaults to 0.33).
 
     ``c2f-region-analysis/max_atom_norm_energy``
         No atomic image region :math:`\\omega` determined by the :ref:`pipeline_theory_c2freganal` has a normalized energy :math:`r(\\omega)` smaller than this value. Corresponds to *max_norm_energy1* in the :ref:`paper <references>` (Supplemental Materials 5 and 8). Defaults to 0.05.

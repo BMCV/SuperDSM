@@ -183,11 +183,13 @@ class Task:
             assert self.file_ids        is not None
             assert self.img_pathpattern is not None
 
-            self.    seg_pathpattern = path / self.data.entries.get(    'seg_pathpattern', None)
-            self.    adj_pathpattern = path / self.data.entries.get(    'adj_pathpattern', None)
-            self.    log_pathpattern = path / self.data.entries.get(    'log_pathpattern', None)
-            self.    cfg_pathpattern = path / self.data.entries.get(    'cfg_pathpattern', None)
-            self.overlay_pathpattern = path / self.data.entries.get('overlay_pathpattern', None)
+            concat = lambda p1, p2: (p1 / p2) if p2 is not None else None
+
+            self.    seg_pathpattern = concat(path, self.data.entries.get(    'seg_pathpattern', None))
+            self.    adj_pathpattern = concat(path, self.data.entries.get(    'adj_pathpattern', None))
+            self.    log_pathpattern = concat(path, self.data.entries.get(    'log_pathpattern', None))
+            self.    cfg_pathpattern = concat(path, self.data.entries.get(    'cfg_pathpattern', None))
+            self.overlay_pathpattern = concat(path, self.data.entries.get('overlay_pathpattern', None))
             self.        result_path = path / DATA_DILL_GZ_FILENAME
             self.       timings_path = path / 'timings.csv'
             self.   performance_path = path / 'performance.csv'
@@ -248,7 +250,7 @@ class Task:
     def _initialize(self):
         for key, val in self.environ.items():
             os.environ[key] = str(val)
-        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level=ray.logging.ERROR)
+        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level='error')
         _pipeline = create_default_pipeline()
         return _pipeline
 
