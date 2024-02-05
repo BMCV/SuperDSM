@@ -97,25 +97,21 @@ class PerformanceReport:
 class GlobalEnergyMinimization(Stage):
     """Implements the global energy minimization (see :ref:`pipeline_theory_jointsegandclustersplit`).
 
-    This stage implements Algorithm 1 and Criterion 2 of the :ref:`paper <references>`. The stage requires ``y``, ``y_mask``, ``atoms``, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``performance`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
+    This stage implements Algorithm 1 and Criterion 2 from :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`. The stage requires ``y``, ``y_mask``, ``atoms``, ``adjacencies``, ``dsm_cfg`` for input and produces ``y_img``, ``cover``, ``objects``, ``performance`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
-    For Algorithm 1, there are two behaviours implemented which differ in the definition of the upper bound :math:`c_{\\text{max}}`. In *strict* mode, the original definition from the paper is used,
+    For Algorithm 1, there are two behaviours implemented which differ in the definition of the upper bound :math:`c_{\\text{max}}`. In *exact* pruning mode, the original definition from the paper is used,
 
-    .. math:: c_{\\text{max}} = c_{\\text{max}}^{\\text{strict}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
+    .. math:: c_{\\text{max}} = \\operatorname{MSC}(\\mathscr U) - \\sum_{u \\in U \\setminus X} \\nu(\\{u\\}),
 
-    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, given a previously considered set :math:`X \\subset U` and a newly added atomic image region :math:`u \\in U`, using the upper bound
-
-    .. math:: c_{\\text{max}} = \\min\\{ c_{\\text{max}}^{\\text{strict}}, c_{\\text{max}}^{\\text{greedy}} \\}, \\quad c_{\\text{max}}^{\\text{greedy}} = \\nu(X) + \\nu(\\{u\\}) + 2\\beta
-    
-    yields a more *greedy* behaviour of the algorithm, which is faster.
+    which guarantees that :math:`\\operatorname{MSC}(\\mathscr U_{\\# U}) = \\operatorname{MSC}(\\mathbb P(U))`. On the other hand, the *isbi24* pruning mode corresponds to the algorithm described in :ref:`Kostrykin and Rohr (ISBI 2024) <references>`, which yields a more *greedy* behaviour. Depending on the data, this can be significantly faster, without degrading the segmentation or cluster splitting performance.
 
     Hyperparameters
     ---------------
 
     The following hyperparameters can be used to control this pipeline stage:
 
-    ``global-energy-minimization/strict``
-        Operates in *strict* mode if set to ``True``, and in *greedy* mode otherwise. Defaults to ``True``.
+    ``global-energy-minimization/pruning``
+        Mist be either ``exact`` or ``isbi24``, as described above. Defaults to ``exact``.
 
     ``global-energy-minimization/beta``
         Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
@@ -144,18 +140,31 @@ class GlobalEnergyMinimization(Stage):
         y_img             = Image.create_from_array(input_data['y'], normalize=False, mask=input_data['y_mask'])
         atoms             = input_data['atoms']
         adjacencies       = input_data['adjacencies']
-        strict            = cfg.get(           'strict', True)
-        beta              = cfg.get(             'beta', 0)
-        max_iter          = cfg.get(         'max_iter', DEFAULT_MAX_ITER)
-        gamma             = cfg.get(            'gamma', DEFAULT_GAMMA)
-        max_seed_distance = cfg.get('max_seed_distance', np.inf)
-        max_work_amount   = cfg.get(  'max_work_amount', DEFAULT_MAX_WORK_AMOUNT)
+        pruning           = cfg.get(          'pruning', 'exact')
+        beta              = cfg.get(             'beta',  0)
+        max_iter          = cfg.get(         'max_iter',  DEFAULT_MAX_ITER)
+        gamma             = cfg.get(            'gamma',  DEFAULT_GAMMA)
+        max_seed_distance = cfg.get('max_seed_distance',  np.inf)
+        max_work_amount   = cfg.get(  'max_work_amount',  DEFAULT_MAX_WORK_AMOUNT)
 
         assert 0 < gamma < 1
+        assert pruning in ('exact', 'isbi24')
 
-        mode = 'strict' if strict else ('fast2' if cfg.get('fast2', False) else 'fast')
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
-        cover, objects, performance = _compute_generations(adjacencies, y_img, atoms, log_root_dir, mode, dsm_cfg, beta, max_iter, gamma, max_seed_distance, max_work_amount, out)[2:]
+        cover, objects, performance = _compute_generations(
+            adjacencies,
+            y_img,
+            atoms,
+            log_root_dir,
+            pruning,
+            dsm_cfg,
+            beta,
+            max_iter,
+            gamma,
+            max_seed_distance,
+            max_work_amount,
+            out,
+        )[2:]
 
         return {
             'y_img':       y_img,
@@ -171,7 +180,7 @@ class GlobalEnergyMinimization(Stage):
         }
 
 
-def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_cfg, beta=np.nan, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
+def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, pruning, dsm_cfg, beta=np.nan, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, max_seed_distance=np.inf, max_work_amount=DEFAULT_MAX_WORK_AMOUNT, out=None):
     out = get_output(out)
 
     atoms = []
@@ -229,7 +238,20 @@ def _compute_generations(adjacencies, y_img, atoms_map, log_root_dir, mode, dsm_
                 progress_text = f'(finished {100 * progress:.0f}% or more)'
             out.write(f'{generation_label}: {Text.style(progress_text, Text.BOLD)}')
             
-            new_generation, new_objects = _process_generation(cover, objects, generations[-1], y_img, atoms_map, adjacencies, dsm_cfg, max_seed_distance, _get_generation_log_dir(log_root_dir, generation_number), mode, directly_solved_cluster_labels, out)
+            new_generation, new_objects = _process_generation(
+                cover,
+                objects,
+                generations[-1],
+                y_img,
+                atoms_map,
+                adjacencies,
+                dsm_cfg,
+                max_seed_distance,
+                _get_generation_log_dir(log_root_dir, generation_number),
+                pruning,
+                directly_solved_cluster_labels,
+                out,
+            )
             objects += new_objects
             performance.iterative_computed_object_count += len(new_objects)
 
@@ -301,7 +323,7 @@ def _estimate_progress(generations, adjacencies, max_seed_distance, max_amount=D
     return finished_amount, remaining_amount
 
 
-def _process_generation(cover, objects, previous_generation, y, atoms_map, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, mode, ignored_cluster_labels, out):
+def _process_generation(cover, objects, previous_generation, y, atoms_map, adjacencies, dsm_cfg, max_seed_distance, log_root_dir, pruning, ignored_cluster_labels, out):
     new_objects = []
     new_objects_energy_thresholds = []
     discarded = 0
@@ -315,26 +337,22 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
         new_object = Object()
         new_object.footprint = new_object_footprint
 
-        if mode in ('strict', 'fast'):
+        if pruning == 'exact':
             remaining_atoms = adjacencies.get_atoms_in_cluster(cluster_label) - new_object_footprint
             min_remaining_atom_costs = sum(cover.get_atom(atom_label).energy for atom_label in remaining_atoms)
             new_object_maxsetpack = sum(c.energy for c in solve_maxsetpack([c for c in objects if c.is_optimal and c.footprint.issubset(new_object.footprint)], out=out.derive(muted=True)))
             min_new_object_costs = cover.beta + max((object.energy + cover.get_atom(new_atom_label).energy, new_object_maxsetpack))
             max_new_object_costs = current_cluster_costs - min_remaining_atom_costs
-            if mode == 'strict':
-                pass
-            elif mode == 'fast':
-                max_new_object_costs = min((max_new_object_costs, object.energy + cover.get_atom(new_atom_label).energy + 2 * cover.beta))
             if max_new_object_costs < min_new_object_costs:
                 discarded += 1
             else:
                 new_objects_energy_thresholds.append(max_new_object_costs - cover.beta)
                 new_objects.append(new_object)
-        elif mode == 'fast2':
+        elif pruning == 'isbi24':
             new_objects_energy_thresholds.append(object.energy + cover.get_atom(new_atom_label).energy + cover.beta)
             new_objects.append(new_object)
         else:
-            raise ValueError(f'Unknown mode "{mode}"')
+            raise ValueError(f'Unknown pruning mode "{pruning}"')
 
     compute_objects(new_objects, y, atoms_map, dsm_cfg, log_root_dir, out=out)
 
@@ -346,5 +364,5 @@ def _process_generation(cover, objects, previous_generation, y, atoms_map, adjac
             discarded += 1
             new_object.fg_fragment = None ## save memory, we will only only need the footprint and the energy of the object
         new_object.cidx = new_object_idx ## for debugging purposes
-    out.write(f'Next iteration: {len(next_generation)} ({discarded} discarded, {mode} mode)')
+    out.write(f'Next iteration: {len(next_generation)} ({discarded} discarded, {pruning} pruning)')
     return next_generation, new_objects
