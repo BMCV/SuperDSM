@@ -12,7 +12,7 @@ import numpy as np
 
 
 class Postprocessing(Stage):
-    """Discards spurious objects and refines the segmentation masks as described in Section 3.4 and Supplemental Material 7 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`).
+    """Discards spurious objects and refines the segmentation masks as described in Section 3.4 and Supplemental Material 7 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`.
 
     This stage requires ``g_raw``, ``cover``, ``y_img`, ``atoms``, ``dsm_cfg`` for input and produces ``postprocessed_objects`` for output. Refer to :ref:`pipeline_inputs_and_outputs` for more information on the available inputs and outputs.
 
@@ -25,7 +25,7 @@ class Postprocessing(Stage):
     ^^^^^^^^^^^^^^^^^^^^^^
 
     ``postprocess/max_norm_energy``
-        Objects with a normalized energy larger than this value are discarded. Corresponds to *max_norm_energy2* in the :ref:`paper <references>` (Supplemental Material 8, also incorrectly referred to as *min_norm_energy2* in Supplemental Material 7 due to a typo). Defaults to 0.2.
+        Objects with a normalized energy larger than this value are discarded. Corresponds to *max_norm_energy2* in :ref:`Kostrykin and Rohr (TPAMI 2023 <references>`, Supplemental Material 8, also incorrectly referred to as *min_norm_energy2* in Supplemental Material 7 due to a typo). Defaults to 0.2.
 
     ``postprocess/discard_image_boundary``
         Objects located directly on the image border are discarded if this is set to ``True``. Defaults to ``False``.
@@ -61,7 +61,7 @@ class Postprocessing(Stage):
         Corresponds to the thickness of the *inner* margin of image points within the exterior neighborhood which are weighted by 1. Increasing this value increases the importance of image points closest to the segmentation mask. Defaults to 5.
 
     ``postprocess/min_contrast``
-        A segmented object is discarded, if the contrast as defined above is below this threshold. See Supplemental Materials 7 and 8 in the :ref:`paper <references>`. Defaults to 1.35.
+        A segmented object is discarded, if the contrast as defined above is below this threshold. See Supplemental Materials 7 and 8 in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`. Defaults to 1.35.
 
     ``postprocess/contrast_epsilon``
         This constant is added to both the nominator and the denominator of the fraction which defines the contrast (see above). Defaults to 1e-4.
