@@ -80,7 +80,7 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=N
 def create_config(pipeline, base_cfg, img):
     """Automatically configures hyperparameters based on the scale of objects in an image. 
 
-    The scale of the objects is estimated automatically as described in Section 3.1 of the paper (:ref:`Kostrykin and Rohr, 2023 <references>`). The current implementation determines values corresponding to object radii between 20 and 200 pixels. If, however, the hyperparameter ``AF_scale`` is set, then the scale :math:`\sigma` is forced to its value and the automatic scale detection is not used. The hyperparameter ``AF_scale`` is not set by default.
+    The scale of the objects is estimated automatically as described in Section 3.1 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`. The current implementation determines values corresponding to object radii between 20 and 200 pixels. If, however, the hyperparameter ``AF_scale`` is set, then the scale :math:`\sigma` is forced to its value and the automatic scale detection is not used. The hyperparameter ``AF_scale`` is not set by default.
 
     .. runblock:: pycon
 
