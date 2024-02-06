@@ -41,19 +41,19 @@ class DSM_Config(Stage):
         Absolute values below this threshold will be treated as zeros during optimization. Defaults to 0.
 
     ``dsm/init``
-        Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of the :ref:`paper <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
+        Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
 
     ``dsm/smooth_amount``
         Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`. Defaults to 10, or to ``AF_smooth_amount × scale`` if computed automatically (forced to :math:`\\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
 
     ``dsm/smooth_subsample``
-        Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\\tilde G_\\omega` in the :ref:`paper <references>` (Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
+        Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\\tilde G_\\omega` in :ref:`Kostrykin and Rohr (TPAMI 2023 <references>`, Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
     ``dsm/epsilon``
-        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of the :ref:`paper <references>`). Defaults to 1.
+        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`). Defaults to 1.
 
     ``dsm/alpha``
-        Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in the :ref:`paper <references>` and defaults to 5e-4).
+        Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>` and defaults to 5e-4).
 
     ``dsm/scale``
         Fixed factor used during convex programming to slightly improve numerical stabilities. Defaults to 1000.
@@ -65,10 +65,10 @@ class DSM_Config(Stage):
         A string indicating the data type used for the matrix :math:`G_\\omega`. Defaults to ``float32``.
 
     ``dsm/smooth_mat_max_allocations``
-        Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of the :ref:`paper <references>`, each allocation might require a considerable amount of system memory).
+        Maximum number of simultaneous allocation of the matrix :math:`\\tilde G_\\omega` during parallel processing (see Section 3.3 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`, each allocation might require a considerable amount of system memory).
 
     ``dsm/background_margin``
-        Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of the :ref:`paper <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). Defaults to 20, or to ``AF_background_margin × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_background_margin`` defaults to 0.4).
+        Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels). See Supplemental Material 6 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>` for details, however, due to a transmission error, the threshold :math:`\\sigma_G` in Eq. (S11) was misstated by a factor of 2 (the correct threshold is :math:`2\\sigma_G`). Defaults to 20, or to ``AF_background_margin × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_background_margin`` defaults to 0.4).
 
     ``dsm/cp_timeout``
         The maximum run time of convex programming for each object (in seconds). The convex optimization will be interrupted if it takes longer than that (the :py:meth:`~superdsm.objects.cvxprog` function will report the status ``fallback`` in this case). If this is set to ``None``, the run time is not limited. Defaults to 300 (i.e. 5 minutes).
