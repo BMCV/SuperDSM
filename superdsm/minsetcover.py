@@ -57,7 +57,7 @@ DEFAULT_GAMMA    = 0.8
 def solve_minsetcover(objects, beta, merge=True, max_iter=DEFAULT_MAX_ITER, gamma=DEFAULT_GAMMA, out=None):
     """Computs an approximative min-weight set-cover.
 
-    This function implements Algorithm 2 of the :ref:`paper <references>`.
+    This function implements Algorithm 2 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`.
 
     :param objects: Corresponds to the family of the *candidate* sets :math:`\\mathscr S`. Any set :math:`X \\in \\mathscr S` is either included in :math:`\\mathscr X` or not. Must be a list of objects, so that ``c.energy`` correspsonds to the value of the set energy function :math:`c(X)` and ``c`` is of the class :py:class:`~.objects.Object`.
     :param beta: The sparsity parameter :math:`\\beta \\geq 0`.
@@ -95,7 +95,7 @@ class MinSetCover:
 
     .. math:: \\operatorname{MSC}(\\mathscr S) = \\min_{\\mathscr X \\subseteq \\mathscr S} \\sum_{X \\in \\mathscr X} \\beta + \\nu(X) \\enspace\\text{s.t. } \\bigcup \\mathscr S = \\bigcup \\mathscr X,
 
-    where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in the :ref:`paper <references>` for details.
+    where the sparse minimal-energy family :math:`\\mathscr X` is a *min-weight set-cover*. See :ref:`pipeline_theory_jointsegandclustersplit` and Section 2.3.2 in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>` for details.
 
     The family of candidate sets :math:`\\mathscr S` initially contains sets of cardinality :math:`\\# X = 1`. Further object prototypes (i.e. sets of atomic image regions) are added to :math:`\\mathscr S` by the :py:meth:`~.update` method. The approximative solution is then updated automatically using the :py:meth:`~solve_minsetcover` function.
 
