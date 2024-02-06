@@ -41,7 +41,7 @@ class DSM_Config(Stage):
         Absolute values below this threshold will be treated as zeros during optimization. Defaults to 0.
 
     ``dsm/init``
-        Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
+        Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
 
     ``dsm/smooth_amount``
         Corresponds to :math:`\\sigma_G` described in :ref:`pipeline_theory_dsm`. Defaults to 10, or to ``AF_smooth_amount × scale`` if computed automatically (forced to :math:`\\geq 4` and ``AF_smooth_amount`` defaults to 0.2).
@@ -50,10 +50,10 @@ class DSM_Config(Stage):
         Corresponds to the amount of sub-sampling used to obtain the matrix :math:`\\tilde G_\\omega` in :ref:`Kostrykin and Rohr (TPAMI 2023 <references>`, Section 3.3). Defaults to 20, or to ``AF_smooth_subsample × scale`` if computed automatically (forced to :math:`\\geq 8` and ``AF_smooth_subsample`` defaults to 0.4).
 
     ``dsm/epsilon``
-        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`). Defaults to 1.
+        Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`). Defaults to 1.
 
     ``dsm/alpha``
-        Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>` and defaults to 5e-4).
+        Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result. Defaults to 0.5, or to ``AF_alpha × scale^2`` if computed automatically (where ``AF_alpha`` corresponds to :math:`\\alpha_\\text{factor}` in :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`, and defaults to 5e-4).
 
     ``dsm/scale``
         Fixed factor used during convex programming to slightly improve numerical stabilities. Defaults to 1000.
