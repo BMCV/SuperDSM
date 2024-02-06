@@ -27,7 +27,7 @@ Dependency Version Considerations:
 
 The file *superdsm.yml* specifies the Conda environment required to accurately reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using different versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned.
 
-Most importantly, this accounts for BLAS, which is pinned to ``blas==1.0``. Analogously to the Conda environment, *requirements.txt* specifies the required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
+This also accounts for BLAS, which is pinned to ``blas==1.0``. Analogously to the Conda environment, *requirements.txt* specifies the required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
 
 Note that our Conda package from Bioconda allows different dependency versions, because otherwise it would not be possible to use the package with newer versions of Python. Thus, when using our Conda package, keep in mind that sticking to the versions of the dependencies specified in *superdsm.yml* is recommended.
 
