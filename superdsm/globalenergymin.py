@@ -23,10 +23,10 @@ def _get_generation_log_dir(log_root_dir, generation_number):
 class PerformanceReport:
     """Reports the pruning performance of the global energy minimization method.
 
-    :ivar direct_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
-    :ivar direct_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see the :ref:`paper <references>`).
+    :ivar direct_solution_trial_count: The number of cases in which Criterion 2 was evaluated (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
+    :ivar direct_solution_success_count: The number of cases in which Criterion 2 yielded a closed-form solution (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :ivar iterative_object_count: The number of objects which would be computed if bruteforce was used instead of Algorithm 1.
-    :ivar iterative_computed_object_count: The number of objects computed by Algorithm 1 (see the :ref:`paper <references>`).
+    :ivar iterative_computed_object_count: The number of objects computed by Algorithm 1 (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :ivar overall_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used.
     :ivar overall_computed_object_count: The overall number of computed objects.
     :ivar nontrivial_object_count: The overall number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used (except for *trivial* regions of possibly clustered objects).
@@ -54,28 +54,28 @@ class PerformanceReport:
 
     @property
     def direct_solution_success(self):
-        """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated (see the :ref:`paper <references>`).
+        """The number of cases in which Criterion 2 yielded a closed-form solution, normalized by the number of cases in which Criterion 2 was evaluated (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
         """
         if self.direct_solution_trial_count == 0: return np.nan
         else: return self.direct_solution_success_count / self.direct_solution_trial_count
     
     @property
     def iterative_pruning_success(self):
-        """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1 (see the :ref:`paper <references>`).
+        """The number of objects pruned by Algorithm 1, normalized by the number of objects which would be computed if bruteforce was used instead of Algorithm 1 (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
         """
         if self.iterative_object_count == 0: return np.nan
         else: return 1 - self.iterative_computed_object_count / self.iterative_object_count
     
     @property
     def overall_pruning_success(self):
-        """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used (see the :ref:`paper <references>`).
+        """The number of pruned objects, normalized by the number of objects which would be computed if neither Algorithm 1 nor Criterion 2 was used (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
         """
         if self.overall_object_count == 0: return np.nan
         else: return 1 - self.overall_computed_object_count / self.overall_object_count
     
     @property
     def nontrivial_pruning_success(self):
-        """The number of pruned objects within non-trivial regions of possibly clustered objects, normalized by the number of objects in those regions which would be computed if neither Algorithm 1 nor Criterion 2 was used (see the :ref:`paper <references>`).
+        """The number of pruned objects within non-trivial regions of possibly clustered objects, normalized by the number of objects in those regions which would be computed if neither Algorithm 1 nor Criterion 2 was used (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
 
         This is the key performance indicator for the overall pruning performance.
         """
@@ -114,13 +114,13 @@ class GlobalEnergyMinimization(Stage):
         Mist be either ``exact`` or ``isbi24``, as described above. Defaults to ``exact``.
 
     ``global-energy-minimization/beta``
-        Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in the :ref:`paper <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
+        Corresponds to the sparsity parameter :math:`\\beta` described in :ref:`pipeline_theory_jointsegandclustersplit`. Defaults to 0, or to ``AF_beta × scale^2`` if configured automatically, where ``AF_beta`` corresponds to :math:`\\beta_\\text{factor}` in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>` and defaults to 0.66. Due to a transmission error, the values reported for ``AF_beta`` in the paper were misstated by a factor of 2 (Section 3.3, Supplemental Material 8).
 
     ``global-energy-minimization/max_iter``
-        The number of iterations to perform for solving the *min-weight set-cover* (see :py:meth:`~superdsm.minsetcover.solve_minsetcover` and Algorithm 2 in the :ref:`paper <references>`). Iterations use an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced). Defaults to 5.
+        The number of iterations to perform for solving the *min-weight set-cover* (see :py:meth:`~superdsm.minsetcover.solve_minsetcover` and Algorithm 2 in :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`). Iterations use an increasingly conservative merging strategy (i.e. the sparsity parameter :math:`\\beta` is reduced). Defaults to 5.
 
     ``global-energy-minimization/gamma``
-        The factor used to reduce the sparsity parameter :math:`\\beta` after the first iteration (this is the parameter :math:`\\gamma` of Algorithm 2in the :ref:`paper <references>`, where :math:`0 < \\gamma < 1`). Defaults to 0.8.
+        The factor used to reduce the sparsity parameter :math:`\\beta` after the first iteration (this is the parameter :math:`\\gamma` of Algorithm 2 in :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`, where :math:`0 < \\gamma < 1`). Defaults to 0.8.
 
     ``global-energy-minimization/max_seed_distance``
         Maximum distance allowed between two seed points of atomic image regions which are grouped into an image region corresponding to single object (cf. :ref:`pipeline_theory_c2freganal`). This can be used to enforce that the segmented objects will be of a maximum size, and thus to limit the computational cost by using prior knowledge. Defaults to infinity, or to ``AF_max_seed_distance × diameter`` if configured automatically (and ``AF_max_seed_distance`` defaults to infinity).
