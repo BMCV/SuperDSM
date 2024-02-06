@@ -26,7 +26,7 @@ def load_data(url, datasets, **kwargs):
             src_root = pathlib.Path(archive_dirpath)
             for src, dst in datasets:
                 print(f'Populating {data_dir / dst}')
-                dst.mkdir(parents=True, exists_ok=True)
+                pathlib.Path(dst).mkdir(parents=True, exist_ok=True)
                 shutil.move(str(src_root / src), str(data_dir / dst))
 
 load_data(
@@ -47,13 +47,20 @@ load_data(
 load_data(
     'https://bmcv.github.io/SuperDSM/fibroblast-prolif.tar.bz2',
     [
-        ('fibroblast-prolif/prolif', 'fibroblast/prolif')
+        ('fibroblast-prolif/prolif', 'fibroblast/prolif'),
     ]
 )
 
 load_data(
     'https://bmcv.github.io/SuperDSM/fibroblast-ss.tar.bz2',
     [
-        ('fibroblast-ss/ss', 'fibroblast/ss')
+        ('fibroblast-ss/ss', 'fibroblast/ss'),
+    ]
+)
+
+load_data(
+    'https://data.broadinstitute.org/bbbc/BBBC039/images.zip',
+    [
+        ('images', 'BBBC039'),
     ]
 )

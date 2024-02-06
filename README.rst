@@ -1,5 +1,5 @@
-SuperDSM
-========
+`SuperDSM <https://github.com/BMCV/SuperDSM>`_
+==============================================
 
 .. image:: https://img.shields.io/badge/Install%20with-conda-%2387c305
    :target: https://anaconda.org/bioconda/superdsm
@@ -22,16 +22,35 @@ The documentation is available here: https://superdsm.readthedocs.io
 
 Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 
-For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment.
+Dependency Version Considerations:
+""""""""""""""""""""""""""""""""""
+
+The file *superdsm.yml* specifies the Conda environment required to accurately reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using different versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned.
+
+This also concerns BLAS, which is pinned to ``blas==1.0``. As an alternative to using Conda, *requirements.txt* specifies the required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
+
+Note that our Conda package from Bioconda allows different dependency versions, because otherwise it would not be possible to use the package with newer versions of Python. Thus, when using our Conda package, keep in mind that sticking to the versions of the dependencies specified in *superdsm.yml* is recommended.
+
+Performance Considerations:
+"""""""""""""""""""""""""""
+
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas=1.0=mkl`` to the Conda environment (or ``blas=*=mkl`` to allow different versions).
+
+To take advantage of the acceleration provided by MKL on AMD CPUs, the MKL version must be pinned to ``2020.0``. Both specifications are included in the Conda environment specified in *superdsm.yml*. In addition, the environment variable ``MKL_DEBUG_CPU_TYPE=5`` must be set.
+
+Later versions of MKL do not support ``MKL_DEBUG_CPU_TYPE=5``, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
 
 Publications:
+"""""""""""""
 
-* `L. Kostrykin and K. Rohr, "Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models," in IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 45(3), pp. 3831–3847, 2023.
-  <https://doi.org/10.1109/TPAMI.2022.3185583>`_
+* L\. Kostrykin and K\. Rohr, *"Robust Graph Pruning for Efficient Segmentation and Cluster Splitting of Cell Nuclei using Deformable Shape Models,"* accepted for presentation at *IEEE International Symposium on Biomedical Imaging (ISBI)*, Athens, Greece, May 27–30, 2024.
+
+* L\. Kostrykin and K\. Rohr, *"Superadditivity and Convex Optimization for Globally Optimal Cell Segmentation Using Deformable Shape Models,"* in *IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)*, vol. 45(3), pp. 3831–3847, 2023.
+  `[doi] <https://doi.org/10.1109/TPAMI.2022.3185583>`_
 
 ----
 
-Copyright (c) 2017-2023 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
+Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
 
 This work is licensed under the terms of the MIT license.
 For a copy, see `LICENSE </LICENSE>`_.

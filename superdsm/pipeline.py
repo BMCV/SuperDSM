@@ -87,7 +87,7 @@ class Stage(object):
         :param scale: The average scale of objects in the image.
         :return: See :py:meth:`~.configure_ex`.
         
-        The parameter ``scale`` corresponds to :math:`\sigma` in the :ref:`paper <references>`. Delegates to the :py:meth:`~.configure_ex` method, using :math:`\sqrt{2} \cdot \sigma` for ``radius`` and :math:`\sqrt{8} \cdot \sigma` for ``diameter``.
+        The parameter ``scale`` corresponds to :math:`\sigma` in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`. Delegates to the :py:meth:`~.configure_ex` method, using :math:`\sqrt{2} \cdot \sigma` for ``radius`` and :math:`\sqrt{8} \cdot \sigma` for ``diameter``.
 
         .. runblock:: pycon
 

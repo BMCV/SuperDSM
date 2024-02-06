@@ -53,7 +53,7 @@ class BaseObject:
 class Object(BaseObject):
     """Each object of this class represents a set of atomic image regions.
 
-    Each object corresponds to a realization of the set :math:`X` in the paper (see :ref:`Section 3 <references>`). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
+    Each object corresponds to a realization of the set :math:`X` in :ref:`Kostrykin and Rohr (TPAMI 2023 <references>`, Section 3). It also represents a segmented object after it has been passed to the :py:meth:`compute_objects` function.
 
     :ivar footprint: Set of integer labels that identify the atomic image regions, which the object represents.
     :ivar energy: The value of the set energy function :math:`\\nu(X)` (see :ref:`pipeline_theory_jointsegandclustersplit`).
@@ -77,7 +77,7 @@ class Object(BaseObject):
         """Returns binary image corresponding to the union of the represented set of atomic image regions.
 
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
-        :return: Binary image corresponding to :math:`\\tilde\\omega(X) = \\bigcup X` in the paper, where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`).
+        :return: Binary image corresponding to :math:`\\tilde\\omega(X) = \\bigcup X` in the paper, where each object of this class is a realization of the set :math:`X` (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`, Section 3).
 
         .. runblock:: pycon
 
@@ -98,7 +98,7 @@ class Object(BaseObject):
         :param y: Object of :py:class:`~.image.Image` class, corresponding to the offset image intensities.
         :param atoms: Integer-valued image representing the universe of atomic image regions (each atomic image region has a unique label, which is the integer value).
         :param background_margin: Governs the amount of image background included in the obtained image region. This is the width of the "stripe" of background retained around each connected foreground region (in pixels, intersected with the image region determined by the :py:meth:`~.get_mask` method).
-        :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in the paper (see :ref:`Supplemental Material 6 <references>`), where each object of this class is a realization of the set :math:`X` (see :ref:`Section 3 <references>`). The image region is represented by an object of :py:class:`~.image.Image` type.
+        :return: Image region corresponds to :math:`\\tilde\\omega'(X)` in :ref:`Kostrykin and Rohr (TPAMI 2023 <references>`) see Supplemental Material 6), where each object of this class is a realization of the set :math:`X` (see :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`, Section 3). The image region is represented by an object of :py:class:`~.image.Image` type.
 
         .. runblock:: pycon
 
