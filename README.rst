@@ -1,5 +1,5 @@
-SuperDSM
-========
+`SuperDSM <https://github.com/BMCV/SuperDSM>`_
+==============================================
 
 .. image:: https://img.shields.io/badge/Install%20with-conda-%2387c305
    :target: https://anaconda.org/bioconda/superdsm
@@ -22,9 +22,22 @@ The documentation is available here: https://superdsm.readthedocs.io
 
 Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 
-For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment and pinning the MKL version to ``2020.0`` (which apparently has been removed from PyPI and is thus not pinned in requirements.txt by default, but it is still available on Conda).
+Dependency Version Considerations:
+""""""""""""""""""""""""""""""""""
 
-**Publications:**
+The versions of the dependencies specified in *requirements.txt* correspond to the versions required to reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using newer versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned in *requirements.txt*.
+
+On the other hand, the Conda package from Bioconda allows different versions, because otherwise it would not be possible to use the package with newer versions of Python. When using the Conda package, keep in mind that sticking to the versions of the dependencies specified in *requirements.txt* is recommended.
+
+Performance Considerations:
+"""""""""""""""""""""""""""
+
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `this <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_ for details). When using Conda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment. In addition, on AMD CPUs, the MKL version must be pinned to ``2020.0``.
+
+Later versions of MKL do not support AMD CPUs, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
+
+Publications:
+"""""""""""""
 
 * L\. Kostrykin and K\. Rohr, *"Robust Graph Pruning for Efficient Segmentation and Cluster Splitting of Cell Nuclei using Deformable Shape Models,"* accepted for presentation at *IEEE International Symposium on Biomedical Imaging (ISBI)*, Athens, Greece, May 27–30, 2024.
 
