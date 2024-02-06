@@ -14,3 +14,6 @@ python:
     - requirements: requirements.txt
     - method: pip
       path: .
+    - extra_requirements:
+        - sphinx-autorun>=1.1.1
+        - sphinx-rtd-theme
