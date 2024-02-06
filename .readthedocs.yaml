@@ -12,8 +12,6 @@ python:
   # Install our python package before building the docs
   install:
     - requirements: requirements.txt
+    - requirements: docs/requirements.txt
     - method: pip
       path: .
-      extra_requirements:
-        - sphinx-autorun>=1.1.1
-        - sphinx-rtd-theme
