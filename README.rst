@@ -25,14 +25,16 @@ Use ``python -m unittest`` in the root directory of the repository to run the te
 Dependency Version Considerations:
 """"""""""""""""""""""""""""""""""
 
-The versions of the dependencies specified in *requirements.txt* correspond to the versions required to reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using newer versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned in *requirements.txt*.
+The file *superdsm.yml* specifies the Conda environment required to accurately reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using different versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned.
 
-On the other hand, the Conda package from Bioconda allows different versions, because otherwise it would not be possible to use the package with newer versions of Python. When using the Conda package, keep in mind that sticking to the versions of the dependencies specified in *requirements.txt* is recommended.
+Most importantly, this accounts for BLAS, which is pinned to ``blas==1.0``. Analogously to the Conda environment, *requirements.txt* specifies the required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
+
+Note that our Conda package from Bioconda allows different dependency versions, because otherwise it would not be possible to use the package with newer versions of Python. Thus, when using our Conda package, keep in mind that sticking to the versions of the dependencies specified in *superdsm.yml* is recommended.
 
 Performance Considerations:
 """""""""""""""""""""""""""
 
-For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment. In addition, the MKL version must be pinned to ``2020.0`` on AMD CPUs.
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas==1.0=mkl`` to the Conda environment (or better: ``blas==*=mkl`` to allow different versions). In addition, the MKL version must be pinned to ``2020.0`` on AMD CPUs. Both specifications are included in the Conda environment specified in *superdsm.yml*.
 
 Later versions of MKL do not support AMD CPUs, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
 
