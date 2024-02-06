@@ -10,7 +10,7 @@ Refer to the :py:mod:`.pipeline` module for a general overview of the pipeline c
 Theory
 ------
 
-This is an overview of the fundamental concepts described in (:ref:`Kostrykin and Rohr (TPAMI 2023) <references>`).
+This is an overview of the fundamental concepts described in :ref:`Kostrykin and Rohr (TPAMI 2023) <references>`.
 
 .. _pipeline_theory_dsm:
 
