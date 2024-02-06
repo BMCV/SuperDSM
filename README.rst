@@ -22,7 +22,7 @@ The documentation is available here: https://superdsm.readthedocs.io
 
 Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 
-For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment.
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default). When using the source tree instead of the Conda package from Bioconda, this can be ensured by adding the dependency ``blas =*=mkl`` to your Conda environment and pinning the MKL version to ``2020.0`` (which apparently has been removed from PyPI and is thus not pinned in requirements.txt by default, but it is still available on Conda).
 
 **Publications:**
 
