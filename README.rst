@@ -34,7 +34,7 @@ Note that our Conda package from Bioconda allows different dependency versions, 
 Performance Considerations:
 """""""""""""""""""""""""""
 
-For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas==1.0=mkl`` to the Conda environment (or ``blas==*=mkl`` to allow different versions). In addition, the MKL version must be pinned to ``2020.0`` on AMD CPUs. Both specifications are included in the Conda environment specified in *superdsm.yml*.
+For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas=1.0=mkl`` to the Conda environment (or ``blas=*=mkl`` to allow different versions). In addition, the MKL version must be pinned to ``2020.0`` on AMD CPUs. Both specifications are included in the Conda environment specified in *superdsm.yml*.
 
 Later versions of MKL do not support AMD CPUs, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
 
