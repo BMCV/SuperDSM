@@ -21,28 +21,11 @@ jobs:
 
       - name: Aggregate results
         run: |
-          mkdir -p results/U2OS/default/adapted/isbi24
-          mkdir -p results/NIH3T3/default/adapted/isbi24
-          mkdir -p results/GOWT1-1/default/adapted/isbi24
-          mkdir -p results/GOWT1-2/default/adapted/isbi24
-          mkdir -p results/BBBC039/isbi24
-          for taskdir in \
-            "U2OS/default" \
-            "U2OS/default/adapted" \
-            "U2OS/default/adapted/isbi24" \
-            "NIH3T3/default" \
-            "NIH3T3/default/adapted" \
-            "NIH3T3/default/adapted/isbi24" \
-            "GOWT1-1/default" \
-            "GOWT1-1/default/adapted" \
-            "GOWT1-1/default/adapted/isbi24" \
-            "GOWT1-2/default" \
-            "GOWT1-2/default/adapted" \
-            "GOWT1-2/default/adapted/isbi24" \
-            "BBBC039" \
-            "BBBC039/isbi24"
+          rm -rf examples/fibroblast
+          for taskdir in $(cd examples && find . -name 'seg')
           do
-            mv "examples/$taskdir/seg/*.png" "results/$taskdir/"
+            mkdir -p "results/$taskdir"
+            mv examples/$taskdir/*.png "results/$taskdir/"
           done
 
       - name: Upload results artifact
@@ -74,4 +57,4 @@ jobs:
       - name: Run tests
         run: |
           mkdir actual_csv
-          python tests/regression/test.py results/${{ matrix.taskdir }} actual_csv tests/regression/expected/${{ matrix.taskdir }}
+          python tests/regression/test.py results/${{ matrix.taskdir }}/seg actual_csv tests/regression/expected/${{ matrix.taskdir }}
