@@ -5,6 +5,7 @@ import pathlib
 import skimage.io
 import csv
 import scipy.ndimage as ndi
+import shutil
 
 
 parser = argparse.ArgumentParser(prog='Regression testing')
@@ -12,6 +13,7 @@ parser = argparse.ArgumentParser(prog='Regression testing')
 parser.add_argument(  'actual_seg', help='Directory containing the actual label maps.')
 parser.add_argument(  'actual_csv', help='Directory where the actual CSV should be written.')
 parser.add_argument('expected_csv', help='Directory containing the expected CSV.')
+parser.add_argument('--update-expected', help='Update the expected CSV.', action='store_true')
 
 args = parser.parse_args()
 
@@ -43,6 +45,12 @@ for filepath in glob.glob(str(actual_seg_path / '*.png')):
     sys.stdout.flush()
 
 sys.stdout.write('\n')
+
+
+if args.update_expected:
+    for filename in actual_csv_rows_by_filename.keys():
+        csv_filename = filename + '.csv'
+        shutil.move(str(actual_csv_path / csv_filename), str(expected_csv_path / csv_filename))
 
 
 errors = list()
