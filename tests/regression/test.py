@@ -75,7 +75,7 @@ for remaining_filename in actual_csv_rows_by_filename.keys():
     errors.append(f'Spurious label map: "{remaining_filename}"')
 
 
-if img is None:  ## an additional error check to prevent passing tests due to wrongs paths
+if 'img' not in locals():  ## an additional error check to prevent passing tests due to wrongs paths
     errors.append('No label maps found')
 
 if len(errors) == 0:
