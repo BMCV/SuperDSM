@@ -9,6 +9,9 @@ jobs:
   compute_seg_masks:
     name: Compute results
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -el {0}
 
     steps:
 
