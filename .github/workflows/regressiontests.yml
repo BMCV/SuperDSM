@@ -7,9 +7,10 @@ on:
 jobs:
 
   compute_seg_masks:
+    name: Compute results
     runs-on: self-hosted
     container:
-      image: node:20
+      image: ubuntu-20.04
 
     steps:
 
@@ -38,6 +39,7 @@ jobs:
           path: results
 
   validate_results:
+    name: Validate results
     runs-on: ubuntu-latest
     needs: ['compute_seg_masks']
     strategy:
