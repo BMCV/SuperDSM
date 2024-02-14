@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Download image data
+        run: cd examples && python load_data.py
+
       - name: Run SuperDSM
         run: python -m "superdsm.batch" examples --task-dir "U2OS" --task-dir "NIH3T3" --task-dir "BBBC039" --task-dir "GOWT1-1" --task-dir "GOWT1-2" --run
 
