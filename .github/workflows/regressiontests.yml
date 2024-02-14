@@ -1,0 +1,77 @@
+name: Regression tests
+
+on:
+  pull_request:
+    branches: ['develop']
+
+jobs:
+
+  compute_seg_masks:
+    runs-on: self-hosted
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run SuperDSM
+        run: python -m "superdsm.batch" examples --task-dir "U2OS" --task-dir "NIH3T3" --task-dir "BBBC039" --task-dir "GOWT1-1" --task-dir "GOWT1-2" --run
+
+      - name: Aggregate results
+        run: |
+          mkdir -p results/U2OS/default/adapted/isbi24
+          mkdir -p results/NIH3T3/default/adapted/isbi24
+          mkdir -p results/GOWT1-1/default/adapted/isbi24
+          mkdir -p results/GOWT1-2/default/adapted/isbi24
+          mkdir -p results/BBBC039/isbi24
+          for taskdir in \
+            "U2OS/default" \
+            "U2OS/default/adapted" \
+            "U2OS/default/adapted/isbi24" \
+            "NIH3T3/default" \
+            "NIH3T3/default/adapted" \
+            "NIH3T3/default/adapted/isbi24" \
+            "GOWT1-1/default" \
+            "GOWT1-1/default/adapted" \
+            "GOWT1-1/default/adapted/isbi24" \
+            "GOWT1-2/default" \
+            "GOWT1-2/default/adapted" \
+            "GOWT1-2/default/adapted/isbi24" \
+            "BBBC039" \
+            "BBBC039/isbi24"
+          do
+            mv "examples/$taskdir/seg/*.png" "results/$taskdir/"
+          done
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: seg_masks
+          path: results
+
+  validate_results:
+    runs-on: ubuntu-latest
+    needs: ['compute_seg_masks']
+    strategy:
+      matrix:
+        taskdir:
+          - U2OS/default
+          - U2OS/default/adapted
+          - U2OS/default/adapted/isbi24
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: pip install -r tests/regression/requirements.txt
+
+      - name: Download results artifact
+        uses: actions/download-artifact@v3
+
+      - name: Run tests
+        run: |
+          mkdir actual_csv
+          python tests/regression/test.py results/${{ matrix.taskdir }} actual_csv tests/regression/expected/${{ matrix.taskdir }}
