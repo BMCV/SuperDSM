@@ -36,6 +36,9 @@ jobs:
 
       - name: Run SuperDSM
         run: python -m "superdsm.batch" examples --task-dir "U2OS" --task-dir "NIH3T3" --task-dir "BBBC039" --task-dir "GOWT1-1" --task-dir "GOWT1-2" --run
+        env:
+          SUPERDSM_INTERMEDIATE_OUTPUT: false
+          MKL_DEBUG_CPU_TYPE: 5
 
       - name: Aggregate results
         run: |
