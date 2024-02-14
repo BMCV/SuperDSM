@@ -9,8 +9,6 @@ jobs:
   compute_seg_masks:
     name: Compute results
     runs-on: self-hosted
-    container:
-       image: ubuntu:20.04
 
     steps:
 
