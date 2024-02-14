@@ -9,7 +9,7 @@ jobs:
   compute_seg_masks:
     runs-on: self-hosted
     container:
-      image: ubuntu:20.04
+      image: node:18 
 
     steps:
 
