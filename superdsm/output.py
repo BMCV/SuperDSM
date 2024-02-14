@@ -1,5 +1,7 @@
 import numpy as np
 import sys
+import os
+import json
 
 from IPython.display import clear_output
 
@@ -186,7 +188,7 @@ class ConsoleOutput(Output):
         self._intermediate_line_length = 0
 
     def intermediate(self, line):
-        if not self.muted:
+        if not self.muted and bool(json.loads(os.environ.get('SUPERDSM_INTERMEDIATE_OUTPUT', '1'))):
             _line = ' ' * self.margin + line
             print(self._finish_line(_line), end='\r')
             self._intermediate_line_length = len(_line)
