@@ -9,13 +9,15 @@ jobs:
   compute_seg_masks:
     name: Compute results
     runs-on: self-hosted
+    container:
+       image: ubuntu:22.04
 
     steps:
 
       - name: Checkout
         uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.8.5'
 
