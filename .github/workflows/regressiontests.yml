@@ -7,7 +7,7 @@ on:
 jobs:
 
   regression_tests:
-    name: ${{ matrix.taskdir }}
+    name: Test: ${{ matrix.taskdir }}
     runs-on: self-hosted
     defaults:
       run:
