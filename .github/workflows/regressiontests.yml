@@ -6,12 +6,30 @@ on:
 
 jobs:
 
-  compute_seg_masks:
-    name: Compute results
+  regression_tests:
+    name: ${{ matrix.taskdir }}
     runs-on: self-hosted
     defaults:
       run:
         shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        taskdir:
+          - U2OS/default
+          - U2OS/default/adapted
+          - U2OS/default/adapted/isbi24
+          - NIH3T3/default
+          - NIH3T3/default/adapted
+          - NIH3T3/default/adapted/isbi24
+          - GOWT1-1/default
+          - GOWT1-1/default/adapted
+          - GOWT1-1/default/adapted/isbi24
+          - GOWT1-2/default
+          - GOWT1-2/default/adapted
+          - GOWT1-2/default/adapted/isbi24
+          - BBBC039
+          - BBBC039/isbi24
 
     steps:
 
@@ -35,52 +53,15 @@ jobs:
           python load_data.py
 
       - name: Run SuperDSM
-        run: python -m "superdsm.batch" examples --task-dir "U2OS" --task-dir "NIH3T3" --task-dir "BBBC039" --task-dir "GOWT1-1" --task-dir "GOWT1-2" --run
+        run: python -m "superdsm.batch" examples --task "${{ matrix.taskdir }}" --run
         env:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
           MKL_DEBUG_CPU_TYPE: 5
 
-      - name: Aggregate results
+      - name: Validate results
         run: |
-          rm -rf examples/fibroblast
-          for taskdir in $(cd examples && find . -name 'seg')
-          do
-            mkdir -p "results/$taskdir"
-            mv examples/$taskdir/*.png "results/$taskdir/"
-          done
-
-      - name: Upload results artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: seg_masks
-          path: results
-
-  validate_results:
-    name: Validate results
-    runs-on: ubuntu-latest
-    needs: ['compute_seg_masks']
-    strategy:
-      matrix:
-        taskdir:
-          - U2OS/default
-          - U2OS/default/adapted
-          - U2OS/default/adapted/isbi24
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.8.5' 
-
-      - name: Install dependencies
-        run: pip install -r tests/regression/requirements.txt
-
-      - name: Download results artifact
-        uses: actions/download-artifact@v3
-
-      - name: Run tests
-        run: |
-          mkdir actual_csv
-          python tests/regression/test.py results/${{ matrix.taskdir }}/seg actual_csv tests/regression/expected/${{ matrix.taskdir }}
+          mkdir "actual_csv/${{ matrix.taskdir }}"
+          python tests/regression/test.py \
+            "examples/${{ matrix.taskdir }}/seg" \
+            "actual_csv/${{ matrix.taskdir }}" \
+            "tests/regression/expected/${{ matrix.taskdir }}"
