@@ -1,0 +1,28 @@
+{
+    "runnable": true,
+    "num_cpus": 16,
+    "environ": {
+        "MKL_NUM_THREADS": 2,
+        "OPENBLAS_NUM_THREADS": 2
+    },
+
+    "img_pathpattern": "{ROOTDIR}/../data/BBBC039/IXMtest_%s.tif",
+    "seg_pathpattern": "seg/%s.png",
+    "adj_pathpattern": "adj/%s.png",
+    "log_pathpattern": "log/%s",
+    "cfg_pathpattern": "cfg/%s.json",
+    "overlay_pathpattern": "overlays/%s.png",
+    "file_ids": [
+        "I04_s9_w16A5CC270-8B92-42EE-AA4A-855776F7D46B"
+    ],
+
+    "config": {
+        "AF_scale": 10,
+        "dsm": {
+            "AF_alpha": 0.00033
+        },
+        "global-energy-minimization": {
+            "AF_beta": 1.5
+        }
+    }
+}
