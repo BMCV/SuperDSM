@@ -8,6 +8,7 @@ jobs:
 
   regression_tests:
     name: "Test: ${{ matrix.taskdir }}"
+    timeout-minutes: 1440
     runs-on: self-hosted
     defaults:
       run:
