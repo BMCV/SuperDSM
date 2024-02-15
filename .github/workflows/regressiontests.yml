@@ -60,7 +60,7 @@ jobs:
 
       - name: Validate results
         run: |
-          mkdir "actual_csv/${{ matrix.taskdir }}"
+          mkdir -p "actual_csv/${{ matrix.taskdir }}"
           python tests/regression/test.py \
             "examples/${{ matrix.taskdir }}/seg" \
             "actual_csv/${{ matrix.taskdir }}" \
