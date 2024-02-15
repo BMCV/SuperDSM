@@ -58,7 +58,6 @@ jobs:
         run: python -m "superdsm.batch" examples --task "${{ matrix.taskdir }}" --run
         env:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
-#          MKL_DEBUG_CPU_TYPE: 5
 
       - name: Validate results
         run: |
