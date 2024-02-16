@@ -31,8 +31,6 @@ if cpu_vendor == 'amd':
     os.environ['MKL_DEBUG_CPU_TYPE'] = '5'
 
 
-if cpu_vendor in ('unknown', 'intel'):
+if cpu_vendor == 'intel' and os.environ.get('os.environ', '') == '5':
 
-    # Force MKL on the same execution path which it uses for AMD CPUs.
-    # This is slower, but establishes reproducibility.
-    os.environ['MKL_DEBUG_CPU_TYPE'] = '1'
+    del os.environ['MKL_DEBUG_CPU_TYPE']
