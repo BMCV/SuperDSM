@@ -1,9 +1,0 @@
-{
-    "runnable": true,
-
-    "config": {
-        "global-energy-minimization": {
-            "pruning": "isbi24"
-        }
-    }
-}

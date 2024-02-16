@@ -18,18 +18,16 @@ jobs:
       fail-fast: false
       matrix:
         taskdir:
-          - test
-          - test/isbi24
 #          - U2OS/default
 #          - U2OS/default/adapted
 #          - U2OS/default/adapted/isbi24
 #          - NIH3T3/default
 #          - NIH3T3/default/adapted
 #          - NIH3T3/default/adapted/isbi24
-#          - GOWT1-1/default
+          - GOWT1-1/default
 #          - GOWT1-1/default/adapted
 #          - GOWT1-1/default/adapted/isbi24
-#          - GOWT1-2/default
+          - GOWT1-2/default
 #          - GOWT1-2/default/adapted
 #          - GOWT1-2/default/adapted/isbi24
 #          - BBBC039
