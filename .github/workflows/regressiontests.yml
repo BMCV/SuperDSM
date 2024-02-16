@@ -60,9 +60,17 @@ jobs:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
 
       - name: Validate results
+        id: validation
         run: |
           mkdir -p "actual_csv/${{ matrix.taskdir }}"
           python tests/regression/test.py \
             "examples/${{ matrix.taskdir }}/seg" \
             "actual_csv/${{ matrix.taskdir }}" \
             "tests/regression/expected/${{ matrix.taskdir }}"
+
+      - name: Upload artifact
+        if: failure() && steps.validation.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Results ${{ matrix.taskdir }}
+          path: actual_csv/${{ matrix.taskdir }}/*.csv
