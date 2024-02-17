@@ -1,0 +1,33 @@
+name: Run test suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ['develop']
+
+jobs:
+
+  run_testsuite:
+    timeout-minutes: 1440
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: 'latest'
+          channels: conda-forge, bioconda, defaults
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: superdsm
+          environment-file: superdsm.yml
+
+      - name: Run SuperDSM
+        run: python -m "unittest"
