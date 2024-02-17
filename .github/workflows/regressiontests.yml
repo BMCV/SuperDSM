@@ -18,20 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         taskdir:
-#          - U2OS/default
-#          - U2OS/default/adapted
-#          - U2OS/default/adapted/isbi24
-#          - NIH3T3/default
-#          - NIH3T3/default/adapted
-#          - NIH3T3/default/adapted/isbi24
-#          - GOWT1-1/default
-#          - GOWT1-1/default/adapted
-#          - GOWT1-1/default/adapted/isbi24
-#          - GOWT1-2/default
-#          - GOWT1-2/default/adapted
-#          - GOWT1-2/default/adapted/isbi24
-#          - BBBC039
-          - BBBC039/isbi24
+          - U2OS
+          - NIH3T3
+          - GOWT1-1
+          - GOWT1-2
+          - BBBC039
 
     steps:
 
@@ -54,22 +45,19 @@ jobs:
           python load_data.py
 
       - name: Run SuperDSM
-        run: python -m "superdsm.batch" examples --task "${{ matrix.taskdir }}" --run
+        run: python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
         env:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
 
       - name: Validate results
         id: validation
         run: |
-          mkdir -p "actual_csv/${{ matrix.taskdir }}"
-          python tests/regression/test.py \
-            "examples/${{ matrix.taskdir }}/seg" \
-            "actual_csv/${{ matrix.taskdir }}" \
-            "tests/regression/expected/$(hostname)/${{ matrix.taskdir }}"
+          mkdir "actual_csv"
+          python "tests/regression/validate-${{ matrix.taskdir }}.sh" "actual_csv"
 
       - name: Upload artifact
         if: failure() && steps.validation.outcome != 'success'
         uses: actions/upload-artifact@v3  ## v4 requires GLIBC_2.28 which is not found on host
         with:
           name: Results ${{ matrix.taskdir }}
-          path: actual_csv/${{ matrix.taskdir }}/*.csv
+          path: actual_csv/${{ matrix.taskdir }}
