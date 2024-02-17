@@ -31,10 +31,5 @@ if cpu_vendor == 'amd':
     os.environ['MKL_DEBUG_CPU_TYPE'] = '5'
 
 
-if cpu_vendor == 'intel' and os.environ.get('os.environ', '') == '5':
-
-    del os.environ['MKL_DEBUG_CPU_TYPE']
-
-
 # Set environment variable for future debugging
 os.environ['CPU_VENDOR'] = cpu_vendor
