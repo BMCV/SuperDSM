@@ -48,6 +48,7 @@ sys.stdout.write('\n')
 
 
 if args.update_expected:
+    expected_csv_path.mkdir(parents=True, exist_ok=True)
     for filename in actual_csv_rows_by_filename.keys():
         csv_filename = filename + '.csv'
         shutil.move(str(actual_csv_path / csv_filename), str(expected_csv_path / csv_filename))
