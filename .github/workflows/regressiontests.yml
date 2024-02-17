@@ -45,7 +45,9 @@ jobs:
           python load_data.py
 
       - name: Run SuperDSM
-        run: python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
+        run: |
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}"
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
         env:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
 
