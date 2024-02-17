@@ -6,7 +6,7 @@
         "OPENBLAS_NUM_THREADS": 2
     },
 
-    "img_pathpattern": "{ROOTDIR}/../data/{DIRNAME}/IXMtest_%s.tif",
+    "img_pathpattern": "{ROOTDIR}/../data/BBBC039/IXMtest_%s.tif",
     "seg_pathpattern": "seg/%s.png",
     "adj_pathpattern": "adj/%s.png",
     "log_pathpattern": "log/%s",
