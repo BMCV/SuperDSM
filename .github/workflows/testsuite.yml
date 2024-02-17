@@ -1,4 +1,4 @@
-name: Run test suite
+name: Test suite
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
 jobs:
 
   run_testsuite:
+    name: Test suite
     timeout-minutes: 1440
     runs-on: self-hosted
     defaults:
