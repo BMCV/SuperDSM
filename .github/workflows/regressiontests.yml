@@ -55,7 +55,7 @@ jobs:
         id: validation
         run: |
           mkdir "actual_csv"
-          python "tests/regression/validate-${{ matrix.taskdir }}.sh" "actual_csv"
+          sh "tests/regression/validate-${{ matrix.taskdir }}.sh" "actual_csv"
 
       - name: Upload artifact
         if: failure() && steps.validation.outcome != 'success'
