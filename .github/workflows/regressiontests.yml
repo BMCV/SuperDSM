@@ -18,7 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         taskdir:
-          - test/isbi24
 #          - U2OS/default
 #          - U2OS/default/adapted
 #          - U2OS/default/adapted/isbi24
@@ -32,7 +31,7 @@ jobs:
 #          - GOWT1-2/default/adapted
 #          - GOWT1-2/default/adapted/isbi24
 #          - BBBC039
-#          - BBBC039/isbi24
+          - BBBC039/isbi24
 
     steps:
 
@@ -66,7 +65,7 @@ jobs:
           python tests/regression/test.py \
             "examples/${{ matrix.taskdir }}/seg" \
             "actual_csv/${{ matrix.taskdir }}" \
-            "tests/regression/expected/${{ matrix.taskdir }}"
+            "tests/regression/expected/$(hostname)/${{ matrix.taskdir }}"
 
       - name: Upload artifact
         if: failure() && steps.validation.outcome != 'success'
