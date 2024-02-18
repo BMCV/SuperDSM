@@ -40,6 +40,11 @@ To take advantage of the acceleration provided by MKL on AMD CPUs, the MKL versi
 
 Later versions of MKL do not support ``MKL_DEBUG_CPU_TYPE=5``, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
 
+Contributions:
+""""""""""""""
+
+Contributions should be made against the ``develop`` branch, so that the documentation build on readthedocs.io is triggered, the documentation is built and reviewed (see `here <https://superdsm.readthedocs.io/en/develop/>`_), before ``develop`` is merged into ``master``. This ensures that the ``master`` branch always has an up-to-date documentation.
+
 Publications:
 """""""""""""
 
