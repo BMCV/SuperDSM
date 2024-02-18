@@ -150,6 +150,13 @@ def _write_performance_report(task_path, performance_path, data, overall_perform
             csv_writer.writerow(row)
 
 
+def _write_env_report(env_path):
+    with open(str(env_path), 'w', newline='') as fout:
+        csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for env_key, env_val in os.environ.items():
+            csv_writer.writerow([env_key, env_val])
+
+
 DATA_DILL_GZ_FILENAME = 'data.dill.gz'
 
 
@@ -193,6 +200,7 @@ class Task:
             self.        result_path = path / DATA_DILL_GZ_FILENAME
             self.       timings_path = path / 'timings.csv'
             self.   performance_path = path / 'performance.csv'
+            self.           env_path = path / 'env.csv'
             self.  timings_json_path = path / '.timings.json'
             self.        digest_path = path / '.digest'
             self.    digest_cfg_path = path / '.digest.cfg.json'
@@ -341,6 +349,7 @@ class Task:
                     with self.digest_cfg_path.open('w') as fout:
                         self.config.dump_json(fout)
                     _write_performance_report(self.path, self.performance_path, data, performance)
+                    _write_env_report(self.env_path)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):

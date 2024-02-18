@@ -1,0 +1,71 @@
+name: Regression tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ['develop']
+    paths:
+      - .github/workflows/regressiontests.yml
+      - superdsm
+      - examples
+      - superdsm.yml
+      - tests/regression
+
+jobs:
+
+  regression_tests:
+    name: "Test: ${{ matrix.taskdir }}"
+    timeout-minutes: 1440
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        taskdir:
+          - U2OS
+          - NIH3T3
+          - GOWT1-1
+          - GOWT1-2
+          - BBBC039
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: 'latest'
+          channels: conda-forge, bioconda, defaults
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: superdsm
+          environment-file: superdsm.yml
+
+      - name: Download image data
+        run: |
+          cd examples
+          python load_data.py
+
+      - name: Run SuperDSM
+        run: |
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}"
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
+        env:
+          SUPERDSM_INTERMEDIATE_OUTPUT: false
+
+      - name: Validate results
+        id: validation
+        run: |
+          mkdir "actual_csv"
+          sh "tests/regression/validate-${{ matrix.taskdir }}.sh" "actual_csv"
+
+      - name: Upload artifact
+        if: failure() && steps.validation.outcome != 'success'
+        uses: actions/upload-artifact@v3  ## v4 requires GLIBC_2.28 which is not found on host
+        with:
+          name: Results ${{ matrix.taskdir }}
+          path: actual_csv/${{ matrix.taskdir }}
