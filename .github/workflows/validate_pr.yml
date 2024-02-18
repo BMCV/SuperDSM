@@ -1,0 +1,17 @@
+name: Validate pull request
+
+on:
+  pull_request:
+
+jobs:
+
+  validate_branches:
+    name: "Validate branches"
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - if: github.base_ref == 'master' && github.head_ref != 'develop'
+        run: |
+          echo "Contributions should be made against the develop branch, see README.rst."
+          exit 1
