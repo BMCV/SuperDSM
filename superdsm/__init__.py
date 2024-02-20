@@ -1,3 +1,5 @@
+from . import cpu_setup
+
 from .version import *
 __version__ = VERSION
 
