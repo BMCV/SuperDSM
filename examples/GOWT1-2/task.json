@@ -1,6 +1,5 @@
 {
     "runnable": false,
-    "num_cpus": 16,
     "environ": {
         "MKL_NUM_THREADS": 2,
         "OPENBLAS_NUM_THREADS": 2
