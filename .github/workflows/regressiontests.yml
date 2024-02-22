@@ -56,7 +56,7 @@ jobs:
             python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
         env:
           SUPERDSM_INTERMEDIATE_OUTPUT: false
-          SUPERDSM_NUM_CPUS: 10
+          SUPERDSM_NUM_CPUS: 20
 
       - name: Validate results
         id: validation
