@@ -28,14 +28,42 @@ jobs:
         with:
           interval: 20s
           checks-yaml: |
-            - job: regression_tests
+            - job: 'Test: U2OS'
               paths:
                 - .github/workflows/regressiontests.yml
                 - superdsm/**
                 - examples/**
                 - superdsm.yml
                 - tests/regression
-            - job: run_testsuite
+            - job: 'Test: NIH3T3'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: GOWT1-1'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: GOWT1-2'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: BBBC039'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test suite'
               paths:
                 - .github/workflows/testsuite.yml
                 - superdsm/**
