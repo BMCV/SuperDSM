@@ -16,3 +16,56 @@ jobs:
         run: |
           echo "Contributions should be made against the develop branch, see README.rst."
           exit 1
+
+  validate_conditional_checks:
+    name: Validate conditional checks
+    runs-on: ubuntu-latest
+
+    steps:
+    
+      - uses: blend/require-conditional-status-checks@2022.02.04
+        with:
+          interval: 20s
+          checks-yaml: |
+            - job: 'Test: U2OS'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: NIH3T3'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: GOWT1-1'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: GOWT1-2'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test: BBBC039'
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: 'Test suite'
+              paths:
+                - .github/workflows/testsuite.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/**
