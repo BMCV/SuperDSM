@@ -7,9 +7,6 @@ from . import testsuite
 
 class image(unittest.TestCase):
 
-    def test_fail(self):
-        self.assertTrue(False)
-
     def test_get_pixel_map(self):
         actual1 = superdsm.image.get_pixel_map((5, 5))
         actual2 = superdsm.image.get_pixel_map((5, 5), normalized=True)
