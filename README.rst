@@ -27,7 +27,7 @@ Dependency Version Considerations:
 
 The file *superdsm.yml* specifies the Conda environment required to accurately reproduce the results from our publications. For most of the dependencies (maybe even all), newer versions are also known to work, however, it has been observed that using different versions might yield slightly different results. To enhance consistency, reproducibility, and `FAIRness <https://www.nature.com/articles/s41597-022-01710-x>`_, most dependency versions are thus pinned.
 
-This also concerns BLAS, which is pinned to ``blas==1.0``. As an alternative to using Conda, *requirements.txt* specifies the required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
+This also concerns BLAS, which is pinned to ``blas==1.0``. As an alternative to using Conda, *requirements.txt* specifies a minimal set of required *pip* dependencies with pinned versions. However, to the best of our knowledge, it is not possible to request a specific BLAS version in *pip*, meaning that using *pip* instead of Conda is discouraged.
 
 Note that our Conda package from Bioconda allows different dependency versions, because otherwise it would not be possible to use the package with newer versions of Python. Thus, when using our Conda package, keep in mind that sticking to the versions of the dependencies specified in *superdsm.yml* is recommended.
 
@@ -36,7 +36,7 @@ Performance Considerations:
 
 For full performance on both Intel and AMD CPUs, NumPy with MKL support must be used (instead of OpenBLAS which is often the default, see `details <https://stackoverflow.com/questions/62783262/why-is-numpy-with-ryzen-threadripper-so-much-slower-than-xeon>`_). When using Conda, this can be ensured by adding the dependency ``blas=1.0=mkl`` to the Conda environment (or ``blas=*=mkl`` to allow different versions).
 
-To take advantage of the acceleration provided by MKL on AMD CPUs, the MKL version must be pinned to ``2020.0``. Both specifications are included in the Conda environment specified in *superdsm.yml*. In addition, the environment variable ``MKL_DEBUG_CPU_TYPE=5`` must be set.
+To take advantage of the acceleration provided by MKL on AMD CPUs, the MKL version must be pinned to ``2020.0``. Both specifications are included in the Conda environment specified in *superdsm.yml*. In addition, the environment variable ``MKL_DEBUG_CPU_TYPE=5`` must be set. This happens automatically if the CPU is recognized as an AMD CPU. If automatic recognition of the CPU vendor vails, a warning is displayed when the module is loaded, in which case ``MKL_DEBUG_CPU_TYPE=5`` should be set automatically for AMD GPUs.
 
 Later versions of MKL do not support ``MKL_DEBUG_CPU_TYPE=5``, and previous versions do not offer the required APIs. Unfortunately, it looks like this particular version of MKL has been removed from PyPI (see `available versions <https://pypi.org/project/mkl/#history>`_), so it is not possible to gain the full performance on AMD CPUs using *pip* instead of Conda, and thus the version of MKL is not pinned in *requirements.txt* by default.
 
