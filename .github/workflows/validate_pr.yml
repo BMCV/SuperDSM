@@ -28,14 +28,14 @@ jobs:
         with:
           interval: 20s
           checks-yaml: |
-            - job: regressiontests
+            - job: regression_tests
               paths:
                 - .github/workflows/regressiontests.yml
                 - superdsm/**
                 - examples/**
                 - superdsm.yml
                 - tests/regression
-            - job: testsuite
+            - job: run_testsuite
               paths:
                 - .github/workflows/testsuite.yml
                 - superdsm/**
