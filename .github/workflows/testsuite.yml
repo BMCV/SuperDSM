@@ -4,12 +4,17 @@ on:
   workflow_dispatch:
   pull_request:
     branches: ['develop']
+    paths:
+      - .github/workflows/testsuite.yml
+      - superdsm/**
+      - examples/**
+      - superdsm.yml
+      - tests/**
 
 jobs:
 
   run_testsuite:
     name: Test suite
-    timeout-minutes: 1440
     runs-on: self-hosted
     defaults:
       run:
