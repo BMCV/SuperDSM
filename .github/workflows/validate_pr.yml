@@ -16,3 +16,29 @@ jobs:
         run: |
           echo "Contributions should be made against the develop branch, see README.rst."
           exit 1
+
+  validate_conditional_checks:
+    name: Validate conditional checks
+    runs-on: ubuntu-latest
+
+    steps:
+    
+      - name: Ensure All Conditional Checks Have Passed
+        uses: blend/require-conditional-status-checks@2022.02.04
+        with:
+          interval: 20s
+          checks-yaml: |
+            - job: regressiontests
+              paths:
+                - .github/workflows/regressiontests.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/regression
+            - job: testsuite
+              paths:
+                - .github/workflows/testsuite.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/**
