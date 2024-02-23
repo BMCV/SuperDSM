@@ -6,8 +6,8 @@ on:
     branches: ['develop']
     paths:
       - .github/workflows/regressiontests.yml
-      - superdsm
-      - examples
+      - superdsm/**
+      - examples/**
       - superdsm.yml
       - tests/regression
 
