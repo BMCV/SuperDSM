@@ -2,7 +2,7 @@ import skimage.io, skimage.transform._warps
 import os, warnings
 
 
-def imwrite(filepath, img, shape=None, antialias=False):
+def imsave(filepath, img, shape=None, antialias=False):
     """Writes an image to a file.
 
     :param filepath: The path of the file to be written.

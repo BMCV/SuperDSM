@@ -66,7 +66,7 @@ def validate_image(test, name, img):
     except:
         actual_path = root_dir / 'actual' / name
         actual_path.parent.mkdir(parents=True, exist_ok=True)
-        superdsm.io.imwrite(str(actual_path), img)
+        superdsm.io.imsave(str(actual_path), img)
         raise
 
 
