@@ -2,7 +2,7 @@ from .pipeline import create_default_pipeline
 from .objects import _compute_objects
 from ._aux import mkdir, is_subpath, copy_dict
 from .output import get_output, Text
-from .io import imread, imwrite
+from .io import imread, imsave
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
 from .config import Config
@@ -74,7 +74,7 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
             ymap = render_ymap(data)
             ymap = render_atoms(data, override_img=ymap, border_color=(0,0,0), border_radius=1)
             img  = render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
-            imwrite(adj_filepath, img)
+            imsave(adj_filepath, img)
 
     atomic_stage = pipeline.stages[pipeline.find('c2f-region-analysis')]
     atomic_stage.add_callback('end', write_adjacencies_image)
@@ -86,12 +86,12 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
         if seg_border is None: seg_border = 8
         img_overlay = render_result_over_image(result_data, border_width=seg_border)
         mkdir(pathlib.Path(overlay_filepath).parents[0])
-        imwrite(overlay_filepath, img_overlay)
+        imsave(overlay_filepath, img_overlay)
 
     if seg_filepath is not None:
         seg_result = rasterize_labels(result_data, **rasterize_kwargs)
         mkdir(pathlib.Path(seg_filepath).parents[0])
-        imwrite(seg_filepath, seg_result)
+        imsave(seg_filepath, seg_result)
 
     return result_data, timings
 
