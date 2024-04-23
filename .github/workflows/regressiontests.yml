@@ -10,6 +10,7 @@ on:
       - examples/**
       - superdsm.yml
       - tests/regression
+      - requirements.txt
 
 jobs:
 
