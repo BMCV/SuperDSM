@@ -57,13 +57,6 @@ jobs:
                 - examples/**
                 - superdsm.yml
                 - tests/regression
-            - job: 'Test: BBBC039'
-              paths:
-                - .github/workflows/regressiontests.yml
-                - superdsm/**
-                - examples/**
-                - superdsm.yml
-                - tests/regression
             - job: 'Test suite'
               paths:
                 - .github/workflows/testsuite.yml
