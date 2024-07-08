@@ -20,6 +20,8 @@ jobs:
     defaults:
       run:
         shell: bash -el {0}
+    container:
+      image: ubuntu:20.04
 
     steps:
 
