@@ -31,7 +31,6 @@ jobs:
           - NIH3T3
           - GOWT1-1
           - GOWT1-2
-          - BBBC039
 
     steps:
 
