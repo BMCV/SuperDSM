@@ -17,6 +17,8 @@ jobs:
   run_testsuite:
     name: Test suite
     runs-on: self-hosted
+    container:
+      image: ubuntu:22.04
     defaults:
       run:
         shell: bash -el {0}
