@@ -28,15 +28,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+      - uses: actions/setup-python@v5
         with:
-          miniconda-version: 'latest'
-          channels: conda-forge, bioconda, defaults
-          auto-update-conda: true
-          auto-activate-base: false
-          activate-environment: superdsm
-          environment-file: superdsm.yml
+          python-version: '3.8.5'
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+          
       - name: Run SuperDSM
         run: python -m "unittest"
