@@ -33,7 +33,9 @@ jobs:
           python-version: '3.8.12'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          sudo apt-get install sqlite3 libsqlite3-dev
+          pip install -r requirements.txt
 
       - name: Debug
         run: pip list
