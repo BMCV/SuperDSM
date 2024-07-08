@@ -18,7 +18,7 @@ jobs:
     name: Test suite
     runs-on: self-hosted
     container:
-      image: ubuntu:20.04
+      image: ubuntu:22.04
     defaults:
       run:
         shell: bash -el {0}
@@ -28,11 +28,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.1
         with:
           python-version: '3.8.5'
-        env:
-          PIP_TRUSTED_HOST: "pypi.python.org pypi.org files.pythonhosted.org"
+#        env:
+#          PIP_TRUSTED_HOST: "pypi.python.org pypi.org files.pythonhosted.org"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
