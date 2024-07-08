@@ -18,6 +18,8 @@ jobs:
     name: "Test: ${{ matrix.taskdir }}"
     timeout-minutes: 1440
     runs-on: self-hosted
+    container:
+      image: ubuntu:20.04
     defaults:
       run:
         shell: bash -el {0}
