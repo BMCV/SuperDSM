@@ -34,7 +34,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get install sqlite3 libsqlite3-dev
+          apt-get update
+          apt-get install -y sqlite3 libsqlite3-dev
           pip install -r requirements.txt
 
       - name: Debug
