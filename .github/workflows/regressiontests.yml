@@ -2,15 +2,15 @@ name: Regression tests
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ['develop']
-    paths:
-      - .github/workflows/regressiontests.yml
-      - superdsm/**
-      - examples/**
-      - superdsm.yml
-      - tests/regression
-      - requirements.txt
+#  pull_request:
+#    branches: ['develop']
+#    paths:
+#      - .github/workflows/regressiontests.yml
+#      - superdsm/**
+#      - examples/**
+#      - superdsm.yml
+#      - tests/regression
+#      - requirements.txt
 
 jobs:
 
