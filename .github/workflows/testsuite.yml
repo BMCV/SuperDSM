@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Clear cache
+      - name: Clear cache  # otherwise corrupted packages can be reported sometimes
         run: rm -rf /github/home/conda_pkgs_dir
 
       - name: Setup Miniconda
