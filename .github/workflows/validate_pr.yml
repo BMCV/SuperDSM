@@ -21,6 +21,9 @@ jobs:
     name: Validate conditional checks
     runs-on: ubuntu-latest
     timeout-minutes: 1440
+    runs-on: gpuagrohr-02
+    container:
+      image: ubuntu:22.04
 
     steps:
     

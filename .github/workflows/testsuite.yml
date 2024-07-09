@@ -16,7 +16,7 @@ jobs:
 
   run_testsuite:
     name: Test suite
-    runs-on: self-hosted
+    runs-on: gpuagrohr-01
     container:
       image: ubuntu:22.04
     defaults:
