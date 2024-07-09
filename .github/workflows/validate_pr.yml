@@ -19,7 +19,6 @@ jobs:
 
   validate_conditional_checks:
     name: Validate conditional checks
-    runs-on: ubuntu-latest
     timeout-minutes: 1440
     runs-on: gpuagrohr-02
     container:
