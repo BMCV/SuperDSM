@@ -28,6 +28,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Clear cache
+        run: rm -rf /github/home/conda_pkgs_dir
+
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
