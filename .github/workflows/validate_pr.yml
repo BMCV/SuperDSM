@@ -21,10 +21,15 @@ jobs:
     name: Validate conditional checks
     timeout-minutes: 1440
     runs-on: gpuagrohr-02
-#    container:
-#      image: ubuntu:22.04
+    container:
+      image: ubuntu:22.04
 
     steps:
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates
     
       - uses: blend/require-conditional-status-checks@2022.02.04
         with:
