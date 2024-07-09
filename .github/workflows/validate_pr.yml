@@ -19,10 +19,17 @@ jobs:
 
   validate_conditional_checks:
     name: Validate conditional checks
-    runs-on: ubuntu-latest
     timeout-minutes: 1440
+    runs-on: gpuagrohr-02
+    container:
+      image: ubuntu:22.04
 
     steps:
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates
     
       - uses: blend/require-conditional-status-checks@2022.02.04
         with:
@@ -51,13 +58,6 @@ jobs:
                 - superdsm.yml
                 - tests/regression
             - job: 'Test: GOWT1-2'
-              paths:
-                - .github/workflows/regressiontests.yml
-                - superdsm/**
-                - examples/**
-                - superdsm.yml
-                - tests/regression
-            - job: 'Test: BBBC039'
               paths:
                 - .github/workflows/regressiontests.yml
                 - superdsm/**
