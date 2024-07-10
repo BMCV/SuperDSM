@@ -10,13 +10,16 @@ on:
       - examples/**
       - superdsm.yml
       - tests/regression
+      - requirements.txt
 
 jobs:
 
   regression_tests:
     name: "Test: ${{ matrix.taskdir }}"
     timeout-minutes: 1440
-    runs-on: self-hosted
+    runs-on: gpuagrohr-01
+    container:
+      image: ubuntu:22.04
     defaults:
       run:
         shell: bash -el {0}
@@ -28,12 +31,14 @@ jobs:
           - NIH3T3
           - GOWT1-1
           - GOWT1-2
-          - BBBC039
 
     steps:
 
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Clear cache  # otherwise corrupted packages can be reported sometimes
+        run: rm -rf /github/home/conda_pkgs_dir
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2

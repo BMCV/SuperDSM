@@ -10,12 +10,15 @@ on:
       - examples/**
       - superdsm.yml
       - tests/**
+      - requirements.txt
 
 jobs:
 
   run_testsuite:
     name: Test suite
-    runs-on: self-hosted
+    runs-on: gpuagrohr-01
+    container:
+      image: ubuntu:22.04
     defaults:
       run:
         shell: bash -el {0}
@@ -24,6 +27,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Clear cache  # otherwise corrupted packages can be reported sometimes
+        run: rm -rf /github/home/conda_pkgs_dir
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
