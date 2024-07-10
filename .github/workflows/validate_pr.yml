@@ -26,7 +26,6 @@ jobs:
       - uses: blend/require-conditional-status-checks@2022.02.04
         with:
           interval: 20s
-          timeout: 1440m
           checks-yaml: |
             - job: 'Test: U2OS'
               paths:
