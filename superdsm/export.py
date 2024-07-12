@@ -1,7 +1,7 @@
 from .render import colorize_labels, normalize_image, render_ymap, render_result_over_image, render_atoms, render_adjacencies
 from .batch import Task, _resolve_timings_key
 from .output import get_output
-from .io import imread, imwrite
+from .io import imread, imsave
 
 import numpy as np
 import gzip, dill, pathlib
@@ -93,7 +93,7 @@ if __name__ == '__main__':
             img = imread(im_filepath)
             if args.enhance: img = normalize_image(img)
             outputfile.parents[0].mkdir(parents=True, exist_ok=True)
-            imwrite(str(outputfile), img)
+            imsave(str(outputfile), img)
     elif args.mode in ('seg', 'fgc', 'adj', 'atm'):
         if args.mode in ('fgc', 'adj', 'atm'):
             task.last_stage = 'c2f-region-analysis'
@@ -105,7 +105,7 @@ if __name__ == '__main__':
             ymap_legend = np.vstack([ymap_legend] * 10)
             ymap_legendfile = outdir / f'ymap_legend.png'
             out.write(f'\nWriting legend: {ymap_legendfile}')
-            imwrite(str(ymap_legendfile), ymap_legend)
+            imsave(str(ymap_legendfile), ymap_legend)
         data = task.run(one_shot=True, force=True, evaluation='none', out=out)
         out.write('\nRunning export:')
         for image_id in task.file_ids:
@@ -124,7 +124,7 @@ if __name__ == '__main__':
                 img  = render_adjacencies(dataframe, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             elif args.mode == 'atm':
                 img = render_atoms(dataframe, border_color=(0,1,0), border_radius=border_width // 2, normalize_img=args.enhance)
-            imwrite(str(outputfile), img)
+            imsave(str(outputfile), img)
             out.write(f'  Exported {outputfile}')
         out.write('\n')
     out.write(f'Exported {len(task.file_ids)} files')

@@ -2,7 +2,7 @@ from .pipeline import create_default_pipeline
 from .objects import _compute_objects
 from ._aux import mkdir, is_subpath, copy_dict
 from .output import get_output, Text
-from .io import imread, imwrite
+from .io import imread, imsave
 from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
 from .config import Config
@@ -74,7 +74,7 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
             ymap = render_ymap(data)
             ymap = render_atoms(data, override_img=ymap, border_color=(0,0,0), border_radius=1)
             img  = render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
-            imwrite(adj_filepath, img)
+            imsave(adj_filepath, img)
 
     atomic_stage = pipeline.stages[pipeline.find('c2f-region-analysis')]
     atomic_stage.add_callback('end', write_adjacencies_image)
@@ -86,12 +86,12 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
         if seg_border is None: seg_border = 8
         img_overlay = render_result_over_image(result_data, border_width=seg_border)
         mkdir(pathlib.Path(overlay_filepath).parents[0])
-        imwrite(overlay_filepath, img_overlay)
+        imsave(overlay_filepath, img_overlay)
 
     if seg_filepath is not None:
         seg_result = rasterize_labels(result_data, **rasterize_kwargs)
         mkdir(pathlib.Path(seg_filepath).parents[0])
-        imwrite(seg_filepath, seg_result)
+        imsave(seg_filepath, seg_result)
 
     return result_data, timings
 
@@ -150,6 +150,13 @@ def _write_performance_report(task_path, performance_path, data, overall_perform
             csv_writer.writerow(row)
 
 
+def _write_env_report(env_path):
+    with open(str(env_path), 'w', newline='') as fout:
+        csv_writer = csv.writer(fout, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for env_key, env_val in os.environ.items():
+            csv_writer.writerow([env_key, env_val])
+
+
 DATA_DILL_GZ_FILENAME = 'data.dill.gz'
 
 
@@ -193,6 +200,7 @@ class Task:
             self.        result_path = path / DATA_DILL_GZ_FILENAME
             self.       timings_path = path / 'timings.csv'
             self.   performance_path = path / 'performance.csv'
+            self.           env_path = path / 'env.csv'
             self.  timings_json_path = path / '.timings.json'
             self.        digest_path = path / '.digest'
             self.    digest_cfg_path = path / '.digest.cfg.json'
@@ -250,7 +258,7 @@ class Task:
     def _initialize(self):
         for key, val in self.environ.items():
             os.environ[key] = str(val)
-        ray.init(num_cpus=self.data['num_cpus'], log_to_driver=False, logging_level='error')
+        ray.init(num_cpus=int(os.environ.get('SUPERDSM_NUM_CPUS', 2)), log_to_driver=False, logging_level='error')
         _pipeline = create_default_pipeline()
         return _pipeline
 
@@ -341,6 +349,7 @@ class Task:
                     with self.digest_cfg_path.open('w') as fout:
                         self.config.dump_json(fout)
                     _write_performance_report(self.path, self.performance_path, data, performance)
+                    _write_env_report(self.env_path)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             for obj_name in ('data', 'shallow_data'):

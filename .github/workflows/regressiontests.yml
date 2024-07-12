@@ -1,0 +1,77 @@
+name: Regression tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ['develop']
+    paths:
+      - .github/workflows/regressiontests.yml
+      - superdsm/**
+      - examples/**
+      - superdsm.yml
+      - tests/regression
+      - requirements.txt
+
+jobs:
+
+  regression_tests:
+    name: "Test: ${{ matrix.taskdir }}"
+    timeout-minutes: 1440
+    runs-on: gpuagrohr-01
+    container:
+      image: ubuntu:22.04
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        taskdir:
+          - U2OS
+          - NIH3T3
+          - GOWT1-1
+          - GOWT1-2
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Clear cache  # otherwise corrupted packages can be reported sometimes
+        run: rm -rf /github/home/conda_pkgs_dir
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: 'latest'
+          channels: conda-forge, bioconda, defaults
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: superdsm
+          environment-file: superdsm.yml
+
+      - name: Download image data
+        run: |
+          cd examples
+          python load_data.py
+
+      - name: Run SuperDSM
+        run: |
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}"
+            python -m "superdsm.batch" examples --task-dir "${{ matrix.taskdir }}" --run
+        env:
+          SUPERDSM_INTERMEDIATE_OUTPUT: false
+          SUPERDSM_NUM_CPUS: 20
+
+      - name: Validate results
+        id: validation
+        run: |
+          mkdir "actual_csv"
+          sh "tests/regression/validate-${{ matrix.taskdir }}.sh" "actual_csv"
+
+      - name: Upload artifact
+        if: failure() && steps.validation.outcome != 'success'
+        uses: actions/upload-artifact@v3  ## v4 requires GLIBC_2.28 which is not found on host
+        with:
+          name: Results ${{ matrix.taskdir }}
+          path: actual_csv/${{ matrix.taskdir }}
