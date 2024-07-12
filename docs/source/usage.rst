@@ -73,11 +73,11 @@ The ``seg`` object returned by the :py:meth:`~superdsm.render.render_result_over
 Environment variables
 *********************
 
-**``MKL_DEBUG_CPU_TYPE``**
+MKL_DEBUG_CPU_TYPE
 
     To take advantage of the acceleration provided by MKL on AMD CPUs, the environment variable ``MKL_DEBUG_CPU_TYPE=5`` should be set when using an AMD CPU. This usually happens automatically, unless automatic recognition of the CPU vendor fails (and a warning is shown).
 
-**``SUPERDSM_INTERMEDIATE_OUTPUT``**
+SUPERDSM_INTERMEDIATE_OUTPUT
 
    Set ``SUPERDSM_INTERMEDIATE_OUTPUT=0`` to mute the intermediate console output.
 
