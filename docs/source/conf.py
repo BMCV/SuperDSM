@@ -3,7 +3,7 @@
 # -- Project information
 
 project = 'SuperDSM'
-copyright = '2017-2023 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
+copyright = '2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
 author = 'Leonid Kostrykin'
 
 # -- General configuration
