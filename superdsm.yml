@@ -56,7 +56,7 @@ dependencies:
 - gstreamer=1.14.5=h36ae1b5_2
 - icu=67.1=he1b5a44_0
 - idna=3.6=pyhd8ed1ab_0
-- imagecodecs=2022.8.8=py38hf09e3b1_5
+- imagecodecs=2023.9.18
 - imageio=2.34.0=pyh4b66e23_0
 - importlib-metadata=7.0.1=pyha770c72_0
 - importlib_metadata=7.0.1=hd8ed1ab_0
