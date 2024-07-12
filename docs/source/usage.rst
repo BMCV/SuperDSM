@@ -68,6 +68,19 @@ The pipeline data object ``data`` is a dictionary containing all the intermediat
 
 The ``seg`` object returned by the :py:meth:`~superdsm.render.render_result_over_image` function is an RGB image (represented by a ``numpy.ndarray`` object) which can be visualized directly (e.g., using matplotlib) or saved for later use (e.g., using :py:meth:`~superdsm.io.imwrite`). Use :py:meth:`~superdsm.render.rasterize_labels` to obtain segmentation masks from the pipeline data object.
 
+.. _env_variables:
+
+Environment variables
+*********************
+
+``MKL_DEBUG_CPU_TYPE``
+
+    To take advantage of the acceleration provided by MKL on AMD CPUs, the environment variable ``MKL_DEBUG_CPU_TYPE=5`` should be set when using an AMD CPU. This usually happens automatically, unless automatic recognition of the CPU vendor fails, in which case a warning is displayed.
+
+``SUPERDSM_INTERMEDIATE_OUTPUT``
+
+   Set ``SUPERDSM_INTERMEDIATE_OUTPUT=0`` to mute the intermediate console output.
+
 .. _references:
 
 References
