@@ -81,6 +81,10 @@ SUPERDSM_INTERMEDIATE_OUTPUT
 
    Set ``SUPERDSM_INTERMEDIATE_OUTPUT=0`` to mute the intermediate console output.
 
+SUPERDSM_NUM_CPUS
+
+   Set ``SUPERDSM_NUM_CPUS=8`` to use 8 CPU cores in batch processing. Defaults to 2. Ignored when used interactively.
+
 .. _references:
 
 References
