@@ -1,2 +1,3 @@
 sphinx-autorun>=1.1.1
 sphinx-rtd-theme
+typing-extensions
