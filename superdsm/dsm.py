@@ -259,10 +259,9 @@ class Energy:
     :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
     :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega` (represented as a binary mask and passed as a parameter).
-    :param hessian_sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the Hessian.
     """
 
-    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, hessian_sparsity_tol=0):
+    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory):
         self.roi = roi
         self.p   = None
 
@@ -277,9 +276,6 @@ class Energy:
 
         assert alpha >= 0, 'alpha must be positive'
         self.alpha = alpha
-
-        assert hessian_sparsity_tol >= 0, 'hessian_sparsity_tol must be positive'
-        self.hessian_sparsity_tol = hessian_sparsity_tol
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.q = _compute_polynomial_derivatives(self.x)
@@ -367,13 +363,6 @@ class Energy:
             assert np.allclose(0, g[g < 0])
             g[g < 0] = 0
             H += sparse_diag(np.concatenate([np.zeros(6), g]))
-            if self.hessian_sparsity_tol > 0:
-                H = H.tocoo()
-                H_mask = (np.abs(H.data) >= self.hessian_sparsity_tol)
-                H_mask = np.logical_or(H_mask, H.row == H.col)
-                H.data = H.data[H_mask]
-                H.row  = H.row [H_mask]
-                H.col  = H.col [H_mask]
         else:
             H = D1 @ D1.T
         return H
