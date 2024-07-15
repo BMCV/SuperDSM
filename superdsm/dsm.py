@@ -259,11 +259,10 @@ class Energy:
     :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
     :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega` (represented as a binary mask and passed as a parameter).
-    :param sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the gradient.
     :param hessian_sparsity_tol: Absolute values below this threshold will be treated as zeros for computation of the Hessian.
     """
 
-    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, sparsity_tol=0, hessian_sparsity_tol=0):
+    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory, hessian_sparsity_tol=0):
         self.roi = roi
         self.p   = None
 
@@ -278,9 +277,6 @@ class Energy:
 
         assert alpha >= 0, 'alpha must be positive'
         self.alpha = alpha
-
-        assert sparsity_tol >= 0, 'sparsity_tol must be positive'
-        self.sparsity_tol = sparsity_tol
 
         assert hessian_sparsity_tol >= 0, 'hessian_sparsity_tol must be positive'
         self.hessian_sparsity_tol = hessian_sparsity_tol
@@ -343,7 +339,6 @@ class Energy:
         self._update_theta()
         term1 = -self.y * self.theta
         grad = np.asarray([term1 * q for q in self.q]) @ self.w
-        term1[abs(term1) < self.sparsity_tol] = 0
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
             grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
@@ -360,7 +355,6 @@ class Energy:
         self._update_maps(params)
         self._update_theta()
         kappa = self.theta - np.square(self.theta)
-        kappa[kappa < self.sparsity_tol] = 0
         pixelmask = (kappa != 0)
         term4 = np.sqrt(kappa[pixelmask] * self.w[pixelmask])[None, :]
         D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask] * term4
