@@ -15,7 +15,7 @@ import queue, contextlib, math, hashlib
 def _get_next_seed(region, where, score_func, connectivity=4):
     if   connectivity == 4: footprint = morph.disk(1)
     elif connectivity == 8: footprint = np.ones((3,3))
-    else: raise ValeError(f'unknown connectivity: {connectivity}')
+    else: raise ValueError(f'unknown connectivity: {connectivity}')
     mask  = np.logical_and(region.mask, where)
     image = region.intensities
     image_max = ndi.maximum_filter(image, footprint=footprint)
