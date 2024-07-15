@@ -59,8 +59,8 @@ class Image:
     """This class facilitates the work with images, image masks, and image regions.
     """
 
-    def __init__(self, intensities=None, edges=None, mask=None, full_mask=None, offset=(0,0)):
-        assert intensities.shape == edges.shape, f'{intensities.shape}, {edges.shape}'
+    def __init__(self, intensities, edges=None, mask=None, full_mask=None, offset=(0,0)):
+        assert edges is None or intensities.shape == edges.shape, f'{intensities.shape}, {edges.shape}'
         self.intensities = intensities
         self.edges       = edges
         self.mask        = mask if mask is not None else np.ones(intensities.shape, bool)
@@ -69,7 +69,7 @@ class Image:
 
     @property
     def shape(self):
-        assert self.intensities.shape == self.edges.shape
+        assert self.edges is None or self.intensities.shape == self.edges.shape
         return self.intensities.shape
 
     def shrink_mask(self, mask):
@@ -90,7 +90,7 @@ class Image:
             _bbox = bbox(mask)
             return Image(
                 self.intensities[_bbox[1]],
-                self.edges[_bbox[1]],
+                None if self.edges is None else self.edges[_bbox[1]],
                 mask[_bbox[1]],
                 full_mask=mask,
                 offset=tuple(_bbox[0][:,0]),
@@ -99,7 +99,7 @@ class Image:
             return Image(self.intensities, self.edges, mask)
     
     @staticmethod
-    def create_from_arrays(intensities, edges, mask=None):
+    def create_from_arrays(intensities, edges=None, mask=None):
         """Creates an instance from image intensities, edges, and a mask. 
         """
         assert mask is None or (isinstance(mask, np.ndarray) and mask.dtype == bool)
