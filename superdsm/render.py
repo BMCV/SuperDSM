@@ -7,6 +7,7 @@ from skimage import morphology, segmentation
 from scipy   import ndimage
 
 import skimage.draw
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
@@ -125,7 +126,7 @@ def render_ymap(data, clim=None, cmap='bwr'):
     z = np.full((1, y.shape[1]), clim[0])
     z[0, -1] = clim[1]
     y = np.concatenate((z, y), axis=0)
-    if isinstance(cmap, str): cmap = plt.cm.get_cmap(cmap)
+    if isinstance(cmap, str): cmap = mpl.colormaps.get_cmap(cmap)
     y  = y.clip(*clim)
     y -= y.min()
     y /= y.max()
