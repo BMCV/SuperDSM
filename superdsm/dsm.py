@@ -258,10 +258,11 @@ class Energy:
     :param roi: An image region represented by an instance of the :py:class:`~superdsm.image.Image` class.
     :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
+    :param mu: TODO
     :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega` (represented as a binary mask and passed as a parameter).
     """
 
-    def __init__(self, roi, epsilon, alpha, smooth_matrix_factory):
+    def __init__(self, roi, epsilon, alpha, mu, smooth_matrix_factory):
         self.roi = roi
         self.p   = None
 
@@ -270,12 +271,16 @@ class Energy:
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = np.ones(roi.mask.sum(), 'uint8')
         self.y = roi.intensities[roi.mask]
+        self.z = None if roi.edges is None else roi.edges[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
         self.epsilon = epsilon
 
         assert alpha >= 0, 'alpha must be positive'
         self.alpha = alpha
+
+        assert mu >= 0, 'mu must be positive'
+        self.mu = mu
 
         # pre-compute common terms occuring in the computation of the derivatives
         self.q = _compute_polynomial_derivatives(self.x)

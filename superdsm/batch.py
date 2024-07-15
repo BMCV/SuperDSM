@@ -3,7 +3,7 @@ from .objects import _compute_objects
 from ._aux import mkdir, is_subpath, copy_dict
 from .output import get_output, Text
 from .io import imread, imsave
-from .render import rasterize_labels, render_ymap, render_atoms, render_adjacencies, render_result_over_image
+from .render import rasterize_labels, render_ymap, render_zmap, render_atoms, render_adjacencies, render_result_over_image
 from .automation import create_config
 from .config import Config
 from .globalenergymin import PerformanceReport
@@ -38,10 +38,11 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, cfg_filepath, cfg, first_stage, last_stage, rasterize_kwargs, out=None):
+def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath, seg_border, log_filepath, adj_filepath, zmap_filepath, cfg_filepath, cfg, first_stage, last_stage, rasterize_kwargs, out=None):
     if     seg_filepath is not None: mkdir(pathlib.Path(    seg_filepath).parents[0])
     if     adj_filepath is not None: mkdir(pathlib.Path(    adj_filepath).parents[0])
     if     log_filepath is not None: mkdir(pathlib.Path(    log_filepath).parents[0])
+    if    zmap_filepath is not None: mkdir(pathlib.Path(   zmap_filepath).parents[0])
     if     cfg_filepath is not None: mkdir(pathlib.Path(    cfg_filepath).parents[0])
     if overlay_filepath is not None: mkdir(pathlib.Path(overlay_filepath).parents[0])
 
@@ -76,10 +77,19 @@ def __process_file(pipeline, data, img_filepath, overlay_filepath, seg_filepath,
             img  = render_adjacencies(data, override_img=ymap, edge_color=(0,1,0), endpoint_color=(0,1,0))
             imsave(adj_filepath, img)
 
-    atomic_stage = pipeline.stages[pipeline.find('c2f-region-analysis')]
-    atomic_stage.add_callback('end', write_adjacencies_image)
+    def write_zmap_image(name, data):
+        if zmap_filepath is not None:
+            zmap = render_zmap(data)
+            imsave(zmap_filepath, zmap)
+
+    preprocessing = pipeline.stages[pipeline.find('preprocess')]
+    atomic_stage  = pipeline.stages[pipeline.find('c2f-region-analysis')]
+
+    preprocessing.add_callback('end', write_zmap_image)
+    atomic_stage. add_callback('end', write_adjacencies_image)
     result_data, _, _timings = pipeline.process_image(g_raw, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
-    atomic_stage.remove_callback('end', write_adjacencies_image)
+    preprocessing.remove_callback('end', write_zmap_image)
+    atomic_stage. remove_callback('end', write_adjacencies_image)
     timings.update(_timings)
 
     if overlay_filepath is not None:
@@ -194,6 +204,7 @@ class Task:
 
             self.    seg_pathpattern = concat(path, self.data.entries.get(    'seg_pathpattern', None))
             self.    adj_pathpattern = concat(path, self.data.entries.get(    'adj_pathpattern', None))
+            self.   zmap_pathpattern = concat(path, self.data.entries.get(   'zmap_pathpattern', None))
             self.    log_pathpattern = concat(path, self.data.entries.get(    'log_pathpattern', None))
             self.    cfg_pathpattern = concat(path, self.data.entries.get(    'cfg_pathpattern', None))
             self.overlay_pathpattern = concat(path, self.data.entries.get('overlay_pathpattern', None))
@@ -311,10 +322,11 @@ class Task:
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {img_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict(    img_filepath = img_filepath,
-                                  seg_filepath = _resolve_pathpattern(self.seg_pathpattern    , file_id),
-                                  adj_filepath = _resolve_pathpattern(self.adj_pathpattern    , file_id),
-                                  log_filepath = _resolve_pathpattern(self.log_pathpattern    , file_id),
-                                  cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern    , file_id),
+                                  seg_filepath = _resolve_pathpattern(self. seg_pathpattern   , file_id),
+                                  adj_filepath = _resolve_pathpattern(self. adj_pathpattern   , file_id),
+                                 zmap_filepath = _resolve_pathpattern(self.zmap_pathpattern   , file_id),
+                                  log_filepath = _resolve_pathpattern(self. log_pathpattern   , file_id),
+                                  cfg_filepath = _resolve_pathpattern(self. cfg_pathpattern   , file_id),
                               overlay_filepath = _resolve_pathpattern(self.overlay_pathpattern, file_id),
                               rasterize_kwargs = dict(merge_overlap_threshold=self.merge_threshold, dilate=self.dilate),
                                     seg_border = self.seg_border,

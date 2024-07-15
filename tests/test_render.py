@@ -44,6 +44,10 @@ class render(unittest.TestCase):
         img = superdsm.render.render_ymap(self.data)
         testsuite.validate_image(self, 'render.render_ymap/bbbc033-z28.png', img)
 
+    def test_render_zmap(self):
+        img = superdsm.render.render_zmap(self.data)
+        testsuite.validate_image(self, 'render.render_zmap/bbbc033-z28.png', img)
+
     def test_normalize_image(self):
         img = superdsm.render.normalize_image(self.data['g_raw'])
         testsuite.validate_image(self, 'render.normalize_image/bbbc033-z28.png', img)

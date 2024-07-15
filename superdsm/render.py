@@ -123,9 +123,9 @@ def render_ymap(data, clim=None, cmap='bwr'):
     """
     y = data['y'] if isinstance(data, dict) else data
     if clim is None: clim = (-y.std(), +y.std())
-    z = np.full((1, y.shape[1]), clim[0])
-    z[0, -1] = clim[1]
-    y = np.concatenate((z, y), axis=0)
+    h = np.full((1, y.shape[1]), clim[0])
+    h[0, -1] = clim[1]
+    y = np.concatenate((h, y), axis=0)
     if isinstance(cmap, str): cmap = mpl.colormaps.get_cmap(cmap)
     y  = y.clip(*clim)
     y -= y.min()
@@ -133,6 +133,41 @@ def render_ymap(data, clim=None, cmap='bwr'):
     ymap = cmap(y)[1:]
     if ymap.ndim == 3 and ymap.shape[2] == 4: ymap = ymap[:,:,:3]
     return ymap
+
+
+def render_zmap(data, clim=None, cmap='gray'):
+    """Returns a visualization of the edge map (see :py:ref:`pipeline_theory_cvxprog`).
+
+    :param data: The pipeline data object.
+    :param clim: Tuple of the structure ``(cmin, cmax)``, where ``cmin`` and ``cmax`` are used for intensity clipping. The limits ``cmin`` and ``cmax`` are chosen automatically if ``clim`` is set to ``None``.
+    :param cmap: Name of the color map to use for encoding the edge intensities (see `the list <https://matplotlib.org/stable/tutorials/colors/colormaps.html>`_).
+    :return: An object of type ``numpy.ndarray`` corresponding to an RGB image of the edge intensities.
+
+    .. hlist::
+       :columns: 2
+
+       - .. figure:: bbbc033-z28.png
+            :width: 100%
+
+            Original image (BBBC033).
+
+       - .. figure:: ../../tests/expected/render.render_zmap/bbbc033-z28.png
+            :width: 100%
+
+            Result of using :py:meth:`~.render_zmap`.
+    """
+    z = data['z'] if isinstance(data, dict) else data
+    if clim is None: clim = (0, z.max())
+    h = np.full((1, z.shape[1]), clim[0])
+    h[0, -1] = clim[1]
+    z = np.concatenate((h, z), axis=0)
+    if isinstance(cmap, str): cmap = mpl.colormaps.get_cmap(cmap)
+    z  = z.clip(*clim)
+    z -= z.min()
+    z /= z.max()
+    zmap = cmap(z)[1:]
+    if zmap.ndim == 3 and zmap.shape[2] == 4: zmap = zmap[:,:,:3]
+    return zmap
 
 
 def normalize_image(img, spread=1, ret_minmax=False):
