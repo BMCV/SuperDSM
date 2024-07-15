@@ -23,7 +23,7 @@ class Preprocessing(Stage):
         The scale of the Gaussian filter :math:`\\mathcal G_\\sigma`, which is used to determine the intensity offsets :math:`\\tau_x` (see :ref:`pipeline_theory_cvxprog`). Defaults to :math:`40`, or to ``AF_sigma2 × scale`` if configured automatically (and ``AF_sigma2`` defaults to 1).
 
     ``preprocess/sigma3``
-        The scale of the Gaussian filter used for computation of the gradient magnitude. Defaults to :math:`4`, or to ``AF_sigma3 × scale`` if configured automatically (and ``AF_sigma3`` defaults to 0.1).
+        The scale of the Gaussian filter used for computation of the edge map. Defaults to :math:`4`, or to ``AF_sigma3 × scale`` if configured automatically (and ``AF_sigma3`` defaults to 0.1).
 
     ``preprocess/offset_clip``
         Corresponds to :math:`\\tau_\\text{max}` in Supplemental Material 1. Defaults to :math:`3`.
@@ -66,7 +66,8 @@ class Preprocessing(Stage):
             offset_combined = np.max([offset_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
         y = ndi.gaussian_filter(g_raw, sigma1) - offset_combined
-        z = ndi.gaussian_gradient_magnitude(g_raw, sigma3)
+        z = ndi.gaussian_laplace(g_raw, sigma3)
+        z[z < 0] = 0
         
         return {
             'y': y,
