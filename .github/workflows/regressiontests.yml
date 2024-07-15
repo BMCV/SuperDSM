@@ -14,24 +14,9 @@ on:
 
 jobs:
 
-  debug:
-    name: Debug
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-
-      - name: Debug
-        run: |
-          echo ${{ github.event.action }}
-          echo ${{ github.event.pull_request.draft }}
-          echo ${{ github.event.action != 'pull_request' }}
-          echo ${{ github.event.pull_request.draft == false }}
-
   regression_tests:
     name: "Test: ${{ matrix.taskdir }}"
-    if: ${{ github.event.action != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event.action != 'synchronize' || github.event.pull_request.draft == false }}
     timeout-minutes: 1440
     runs-on: gpuagrohr-01
     container:
