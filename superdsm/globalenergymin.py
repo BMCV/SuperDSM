@@ -137,7 +137,7 @@ class GlobalEnergyMinimization(Stage):
                                                        outputs = ['y_img', 'cover', 'objects', 'performance'])
 
     def process(self, input_data, cfg, out, log_root_dir):
-        y_img             = Image.create_from_array(input_data['y'], normalize=False, mask=input_data['y_mask'])
+        y_img             = Image.create_from_arrays(input_data['y'], mask=input_data['y_mask'])
         atoms             = input_data['atoms']
         adjacencies       = input_data['adjacencies']
         pruning           = cfg.get(          'pruning', 'exact')

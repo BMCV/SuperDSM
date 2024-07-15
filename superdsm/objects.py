@@ -124,7 +124,7 @@ class Object(BaseObject):
            >>> region.mask
         """
         region = y.get_region(self.get_mask(atoms))
-        region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.model <= 0) <= background_margin)
+        region.mask = np.logical_and(region.mask, ndi.distance_transform_edt(y.intensities <= 0) <= background_margin)
         return region
 
     def set(self, state):
@@ -177,11 +177,11 @@ def extract_foreground_fragment(fg_mask):
 def _compute_object(y, atoms, x_map, object, dsm_cfg, smooth_mat_allocation_lock):
     cp_kwargs = copy_dict(dsm_cfg)
     region = object.get_cvxprog_region(y, atoms, cp_kwargs.pop('background_margin'))
-    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.model > 0, region.mask).sum()', 'cp_kwargs'):
+    for infoline in ('y.mask.sum()', 'region.mask.sum()', 'np.logical_and(region.intensities > 0, region.mask).sum()', 'cp_kwargs'):
         print(f'{infoline}: {eval(infoline)}')
 
     # Skip regions whose foreground is only a single pixel (this is just noise)
-    if (region.model[region.mask] > 0).sum() == 1:
+    if (region.intensities[region.mask] > 0).sum() == 1:
         object.fg_offset   = np.zeros(2, int)
         object.fg_fragment = np.zeros((1, 1), bool)
         object.energy      = 0.
@@ -285,7 +285,7 @@ _compute_objects._DEBUG = False
 
 
 def _estimate_initialization(region):
-    fg = region.model.copy()
+    fg = region.intensities.copy()
     fg[~region.mask] = 0
     fg = (fg > 0)
     roi_xmap = region.get_map()
@@ -379,7 +379,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
     J = Energy(region, epsilon, alpha, smooth_matrix_factory)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
-    print(f'region: {str(region.model.shape)}, offset: {str(region.offset)}')
+    print(f'region: {str(region.shape)}, offset: {str(region.offset)}')
     status = None
     if callable(init):
         params = init(J.smooth_mat.shape[1])

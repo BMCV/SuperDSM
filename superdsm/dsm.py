@@ -119,7 +119,7 @@ class DeformableShapeModel:
         :return: The transformed deformable shape model.
         """
         assert pad >= 0 and isinstance(pad, int)
-        g_max_coord, roi_max_coord = 2 * pad + np.array(g.model.shape) - 1., np.array(roi.model.shape) - 1.
+        g_max_coord, roi_max_coord = 2 * pad + np.array(g.shape) - 1., np.array(roi.shape) - 1.
         G = np.diag(1. / roi_max_coord)
         v = -G.dot(np.add(roi.offset, pad))
         A = G.dot(self.A).dot(G)
@@ -269,7 +269,7 @@ class Energy:
 
         self.x = self.roi.get_map()[:, roi.mask]
         self.w = np.ones(roi.mask.sum(), 'uint8')
-        self.y = roi.model[roi.mask]
+        self.y = roi.intensities[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
         self.epsilon = epsilon

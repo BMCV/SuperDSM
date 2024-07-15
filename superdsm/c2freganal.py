@@ -17,7 +17,7 @@ def _get_next_seed(region, where, score_func, connectivity=4):
     elif connectivity == 8: footprint = np.ones((3,3))
     else: raise ValeError(f'unknown connectivity: {connectivity}')
     mask  = np.logical_and(region.mask, where)
-    image = region.model
+    image = region.intensities
     image_max = ndi.maximum_filter(image, footprint=footprint)
     max_mask  = np.logical_and(image_max == image, mask)
     if max_mask.any():
@@ -30,11 +30,11 @@ def _get_next_seed(region, where, score_func, connectivity=4):
 
 
 def _watershed_split(region, *markers):
-    markers_map = np.zeros(region.model.shape, int)
+    markers_map = np.zeros(region.intensities.shape, int)
     for marker_label, marker in enumerate(markers, start=1):
         assert markers_map[marker] == 0
         markers_map[marker] = marker_label
-    watershed = segm.watershed(region.model.max() - region.model.clip(0, np.inf), markers=markers_map, mask=region.mask)
+    watershed = segm.watershed(region.intensities.max() - region.intensities.clip(0, np.inf), markers=markers_map, mask=region.mask)
     return [watershed == marker_label for marker_label in range(1, len(markers) + 1)]
 
 
@@ -57,7 +57,7 @@ def _hash_mask(mask):
 
 def _get_cached_normalized_energy_computer(y, cluster):
     cache = dict()
-    cp_buffer = Image(model=y.model, mask=np.zeros(cluster.full_mask.shape, bool))
+    cp_buffer = Image(intensities=y.intensities, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_normalized_energy(obj, region, atoms_map, dsm_cfg):
         cp_kwargs = copy_dict(dsm_cfg)
         cp_kwargs.pop('smooth_mat_max_allocations', None)
@@ -65,7 +65,7 @@ def _get_cached_normalized_energy_computer(y, cluster):
         cp_region_hash = _hash_mask(cp_region.mask)
         cache_hit = cache.get(cp_region_hash, None)
         if cache_hit is None:
-            if (cp_region.model[cp_region.mask] > 0).all() or (cp_region.model[cp_region.mask] < 0).all():
+            if (cp_region.intensities[cp_region.mask] > 0).all() or (cp_region.intensities[cp_region.mask] < 0).all():
                 energy = None
             else:
                 cp_buffer.mask[cluster.full_mask] = cp_region.mask[cluster.mask]
@@ -126,10 +126,10 @@ class C2F_RegionAnalysis(Stage):
         dsm_cfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')
-        y = Image.create_from_array(input_data['y'], normalize=False)
-        fg_mask = (y.model > 0)
+        y = Image.create_from_arrays(input_data['y'])
+        fg_mask = (y.intensities > 0)
         fg_bd   = np.logical_xor(fg_mask, morph.binary_erosion(fg_mask, morph.disk(1)))
-        y_mask  = np.ones(y.model.shape, bool)
+        y_mask  = np.ones(y.shape, bool)
         cluster_markers = ndi.label(fg_mask)[0]
         for cluster_marker_label in np.unique(cluster_markers):
             cluster_marker = (cluster_markers == cluster_marker_label)
@@ -142,7 +142,7 @@ class C2F_RegionAnalysis(Stage):
         out.write(f'Extracted {cluster_markers.max()} cluster markers')
         
         clusters  = segm.watershed(ndi.distance_transform_edt(cluster_markers == 0), markers=cluster_markers)
-        atoms_map = np.full(y.model.shape, 0)
+        atoms_map = np.full(y.shape, 0)
         atom_candidate_by_label = {}
         
         y_id = ray.put(y)
@@ -196,7 +196,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_ener
     masked_cluster = cluster.get_region(cluster.shrink_mask(y_mask))
     root_candidate = Object()
     root_candidate.footprint = frozenset([1])
-    root_candidate.seed = _get_next_seed(masked_cluster, cluster.model > 0, lambda loc: cluster.model[loc].max(), seed_connectivity)
+    root_candidate.seed = _get_next_seed(masked_cluster, cluster.intensities > 0, lambda loc: cluster.intensities[loc].max(), seed_connectivity)
     atoms_map = cluster.mask.astype(int) * list(root_candidate.footprint)[0]
     compute_normalized_energy = _get_cached_normalized_energy_computer(y, cluster)
 
@@ -220,7 +220,7 @@ def _process_cluster_impl(clusters, cluster_label, y, y_mask, max_atom_norm_ener
         c1 = Object()
         c2 = Object()
         c1.seed = c0.seed
-        c2.seed = _get_next_seed(masked_cluster, np.all((cluster.model > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
+        c2.seed = _get_next_seed(masked_cluster, np.all((cluster.intensities > 0, c0_mask, seed_distances >= 1), axis=0), lambda loc: seed_distances[loc].max(), seed_connectivity)
         assert not np.logical_and(c1.seed, c2.seed).any()
         if c2.seed is None:
             leaf_candidates.append(c0)

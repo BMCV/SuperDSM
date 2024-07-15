@@ -71,7 +71,7 @@ class objects(unittest.TestCase):
                              [ True,  True,  True, False, False],
                              [ True,  True,  True, False, False]])
         np.testing.assert_allclose(region.mask, expected)
-        np.testing.assert_allclose(region.model, y_data)
+        np.testing.assert_allclose(region.intensities, y_data)
 
 
 if __name__ == '__main__':

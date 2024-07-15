@@ -59,11 +59,18 @@ class Image:
     """This class facilitates the work with images, image masks, and image regions.
     """
 
-    def __init__(self, model=None, mask=None, full_mask=None, offset=(0,0)):
-        self.model     = model
-        self.mask      = mask if mask is not None else np.ones(model.shape, bool)
-        self.full_mask = full_mask if full_mask is not None else self.mask
-        self.offset    = offset
+    def __init__(self, intensities=None, edges=None, mask=None, full_mask=None, offset=(0,0)):
+        assert intensities.shape == edges.shape, f'{intensities.shape}, {edges.shape}'
+        self.intensities = intensities
+        self.edges       = edges
+        self.mask        = mask if mask is not None else np.ones(intensities.shape, bool)
+        self.full_mask   = full_mask if full_mask is not None else self.mask
+        self.offset      = offset
+
+    @property
+    def shape(self):
+        assert self.intensities.shape == self.edges.shape
+        return self.intensities.shape
 
     def shrink_mask(self, mask):
         """Reduces a mask so it can be used to access this image.
@@ -81,17 +88,22 @@ class Image:
         mask = np.logical_and(self.mask, mask)
         if shrink:
             _bbox = bbox(mask)
-            return Image(self.model[_bbox[1]], mask[_bbox[1]], full_mask=mask, offset=tuple(_bbox[0][:,0]))
+            return Image(
+                self.intensities[_bbox[1]],
+                self.edges[_bbox[1]],
+                mask[_bbox[1]],
+                full_mask=mask,
+                offset=tuple(_bbox[0][:,0]),
+            )
         else:
-            return Image(self.model, mask)
+            return Image(self.intensities, self.edges, mask)
     
     @staticmethod
-    def create_from_array(img, mask=None, normalize=True):
-        """Creates an instance from an image and a mask. 
+    def create_from_arrays(intensities, edges, mask=None):
+        """Creates an instance from image intensities, edges, and a mask. 
         """
         assert mask is None or (isinstance(mask, np.ndarray) and mask.dtype == bool)
-        if normalize: img = normalize_image(img)
-        return Image(model=img, mask=mask)
+        return Image(intensities=intensities, edges=edges, mask=mask)
 
     def get_map(self, normalized=True, pad=0):
         """Returns two 2D arrays corresponding to the pixel coordinates.
@@ -99,4 +111,4 @@ class Image:
         See :py:meth:`~.get_pixel_map` for details.
         """
         assert pad >= 0 and isinstance(pad, int)
-        return get_pixel_map(np.add(self.model.shape, 2 * pad), normalized)
+        return get_pixel_map(np.add(self.shape, 2 * pad), normalized)
