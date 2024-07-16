@@ -312,7 +312,7 @@ class Energy:
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
-        objective1 = np.inner(self.w.flat, phi.flat)
+        objective1 = phi.sum()
         if self.smooth_mat.shape[1] > 0:
             objective2  = self.alpha * self.term2.sum()
             objective2 -= self.alpha * sqrt(self.epsilon) * len(self.term2)
