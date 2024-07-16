@@ -312,7 +312,7 @@ class Energy:
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
-        objective1 = np.inner(self.w.flat, phi.flat)
+        objective1 = phi.sum()
         if self.smooth_mat.shape[1] > 0:
             objective2  = self.alpha * self.term2.sum()
             objective2 -= self.alpha * sqrt(self.epsilon) * len(self.term2)
@@ -334,7 +334,7 @@ class Energy:
         self._update_maps(params)
         self._update_theta()
         term1 = -self.y * self.theta
-        grad = np.asarray([term1 * q for q in self.q]) @ self.w
+        grad = np.sum([term1 * q for q in self.q]) @ self.w
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
             grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
