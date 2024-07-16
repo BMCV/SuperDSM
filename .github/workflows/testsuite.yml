@@ -1,16 +1,16 @@
-name: Test suite 
+name: Test suite
 
 on:
   workflow_dispatch:
   pull_request:
     branches: ['develop']
     paths:
-      - .github/workflows/testsuite.yml
-      - superdsm/**
-      - examples/**
-      - superdsm.yml
-      - tests/**
-      - requirements.txt
+      - '.github/workflows/testsuite.yml'
+      - 'superdsm/**'
+      - 'examples/**'
+      - 'superdsm.yml'
+      - 'tests/**'
+      - 'requirements.txt'
 
 jobs:
 
