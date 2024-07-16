@@ -268,7 +268,6 @@ class Energy:
         self.smooth_mat = smooth_matrix_factory.get(roi.mask)
 
         self.x = self.roi.get_map()[:, roi.mask]
-        self.w = np.ones(roi.mask.sum(), 'uint8')
         self.y = roi.model[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
