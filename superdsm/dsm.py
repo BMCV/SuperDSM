@@ -337,8 +337,9 @@ class Energy:
         grad = np.sum([term1 * q for q in self.q], axis=1)
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
-            grad2  = (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+            #grad2  = (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
             #grad2  = self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)
+            grad2  = self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)
             assert np.allclose(
                 (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1),
                 self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)
