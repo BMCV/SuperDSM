@@ -352,7 +352,7 @@ class Energy:
         self._update_theta()
         kappa = self.theta - np.square(self.theta)
         pixelmask = (kappa != 0)
-        term4 = np.sqrt(kappa[pixelmask].sum())[None, :]
+        term4 = np.sqrt(kappa[pixelmask])[None, :]
         D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask] * term4
         D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T.multiply(term4).tocsr()
         if self.smooth_mat.shape[1] > 0:
