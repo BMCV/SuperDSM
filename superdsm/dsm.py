@@ -345,6 +345,7 @@ class Energy:
                 atol=0,
                 rtol=0,
             )
+            assert (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1).dtype == self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1).dtype
             grad2 += self.alpha * (params.ξ / self.term2)
             grad   = np.concatenate([grad, grad2])
         return grad
