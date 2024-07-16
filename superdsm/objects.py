@@ -358,7 +358,7 @@ def _compute_elliptical_solution(J_elliptical, CP_params):
     return solution_array
 
 
-def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, sparsity_tol=0, hessian_sparsity_tol=0, init=None, cachesize=0, cachetest=None, cp_timeout=None):
+def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaussian_shape_multiplier, smooth_mat_allocation_lock, smooth_mat_dtype, init=None, cachesize=0, cachetest=None, cp_timeout=None):
     """Fits a deformable shape model to the intensities of an image region.
     
     Performs convex programming in an image region :math:`X` to determine the value of the set energy function :math:`\\nu(X)` and the optimal parameters :math:`\\theta` and :math:`\\xi` (see :ref:`pipeline_theory_cvxprog` and :ref:`pipeline_theory_jointsegandclustersplit`).
@@ -376,7 +376,7 @@ def cvxprog(region, scale, epsilon, alpha, smooth_amount, smooth_subsample, gaus
     """
     _print_heading('initializing')
     smooth_matrix_factory = SmoothMatrixFactory(smooth_amount, gaussian_shape_multiplier, smooth_subsample, smooth_mat_allocation_lock, smooth_mat_dtype)
-    J = Energy(region, epsilon, alpha, smooth_matrix_factory, sparsity_tol, hessian_sparsity_tol)
+    J = Energy(region, epsilon, alpha, smooth_matrix_factory)
     CP_params = {'cachesize': cachesize, 'cachetest': cachetest, 'scale': scale / J.smooth_mat.shape[0], 'timeout': cp_timeout}
     print(f'scale: {CP_params["scale"]:g}')
     print(f'region: {str(region.model.shape)}, offset: {str(region.offset)}')
