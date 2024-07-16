@@ -333,17 +333,22 @@ class Energy:
         params = DeformableShapeModel.get_model(params)
         self._update_maps(params)
         self._update_theta()
+
+        # Compute the gradient for the polynomial parameters.
         term1 = -self.y * self.theta
         grad = np.sum([term1 * q for q in self.q], axis=1)
-        term1_sparse = coo_matrix(term1).transpose(copy=False)
+
+        # If deformations are activated, extend the gradient by the derivatives for the deformation parameters. 
         if self.smooth_mat.shape[1] > 0:
-            grad2  = (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
-            #grad2  = self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)
-            assert False
-            assert ((np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1) == self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)).all()
-            assert (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1).dtype == self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1).dtype
+            term1_sparse = coo_matrix(term1).transpose(copy=False)
+
+            # The next line performs column-wise sumation, but when paraphrased as `self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)`,
+            # the test suite fails due to deviating results. This is probably due to some minor numerical differences.
+            grad2 = (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+
             grad2 += self.alpha * (params.ξ / self.term2)
-            grad   = np.concatenate([grad, grad2])
+            grad = np.concatenate([grad, grad2])
+
         return grad
     
     def hessian(self, params):
