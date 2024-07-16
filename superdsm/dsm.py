@@ -344,7 +344,7 @@ class Energy:
 
             # The next line performs column-wise sumation, but when paraphrased as `self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)`,
             # the test suite fails due to deviating results. This is probably due to some minor numerical differences.
-            grad2 = (np.ones((1, np.prod(self.w.shape))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+            grad2 = (np.ones((1, len(self.y))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
 
             grad2 += self.alpha * (params.ξ / self.term2)
             grad = np.concatenate([grad, grad2])
