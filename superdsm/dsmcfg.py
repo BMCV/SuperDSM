@@ -6,7 +6,6 @@ import numpy as np
 DSM_CONFIG_DEFAULTS = {
     'cachesize': 1,
     'cachetest': None,
-    'sparsity_tol': 0,
     'init': 'elliptical',
     'smooth_amount': 10,
     'epsilon': 1.0,
@@ -36,9 +35,6 @@ class DSM_Config(Stage):
 
     ``dsm/cachetest``
         The test function to be used for cache testing. If ``None``, then ``numpy.array_equal`` will be used. Using other functions like ``numpy.allclose`` has shown to introduce numerical instabilities. Defaults to ``None``.
-
-    ``dsm/sparsity_tol``
-        Absolute values below this threshold will be treated as zeros during optimization. Defaults to 0.
 
     ``dsm/init``
         Either a function or a string. If this is function, then it will be called to determine the initialization, and the dimension of the vector :math:`\\xi` will be passed as a parameter. If this is a string, then the initialization corresponds to the result of convex programming using elliptical models (if set to ``elliptical``, see Supplemental Material 6 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`) or a zeros vector of is used (otherwise). Defaults to ``elliptical``.
