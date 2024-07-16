@@ -31,7 +31,24 @@ jobs:
           apt-get update
           apt-get install -y ca-certificates
     
-      - uses: blend/require-conditional-status-checks@2022.02.04
+      - name: Wait for test suite
+        uses: blend/require-conditional-status-checks@2022.02.04
+        if: ${{ github.event.action == 'synchronize' && github.event.pull_request.draft == true }}
+        with:
+          interval: 20s
+          timeout: 1440m
+          checks-yaml: |
+            - job: 'Test suite'
+              paths:
+                - .github/workflows/testsuite.yml
+                - superdsm/**
+                - examples/**
+                - superdsm.yml
+                - tests/**
+    
+      - name: Wait for test suite and regression tests
+        uses: blend/require-conditional-status-checks@2022.02.04
+        if: ${{ github.event.action != 'synchronize' || github.event.pull_request.draft == false }}
         with:
           interval: 20s
           timeout: 1440m
