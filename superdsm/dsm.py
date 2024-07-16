@@ -334,7 +334,7 @@ class Energy:
         self._update_maps(params)
         self._update_theta()
         term1 = -self.y * self.theta
-        grad = np.asarray([term1 * q for q in self.q]) @ self.w
+        grad = np.sum([term1 * q for q in self.q], axis=1)
         term1_sparse = coo_matrix(term1).transpose(copy=False)
         if self.smooth_mat.shape[1] > 0:
             grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
