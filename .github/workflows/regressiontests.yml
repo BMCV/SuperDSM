@@ -16,6 +16,7 @@ jobs:
 
   regression_tests:
     name: "Test: ${{ matrix.taskdir }}"
+    if: ${{ github.event.action != 'synchronize' || github.event.pull_request.draft == false }}
     timeout-minutes: 1440
     runs-on: gpuagrohr-01
     container:
