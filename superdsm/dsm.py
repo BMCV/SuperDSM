@@ -250,6 +250,13 @@ def _compute_polynomial_derivatives(x_map):
     return derivatives
 
 
+def _expand_scalar(value, slen):
+    if type(value) in (np.ndarray, list):
+        return value
+    else:
+        return np.array([value] * slen)
+
+
 class Energy:
     """Represents the convex energy function :math:`\\psi` for deformable shape models.
 
@@ -371,7 +378,7 @@ class Energy:
         # Add the EFT derivatives, if EFT is activated.
         if self.mu > 0:
             η = (self.z ** 2) * self.s / np.sqrt((self.z * self.s) ** 2 + self.epsilon)
-            eft_grad = np.array([η @ q for q in self.q])
+            eft_grad = np.array([η @ _expand_scalar(q, len(η)) for q in self.q])
             if self.smooth_mat.shape[1] > 0:
                 eft_grad_deformations = η.reshape(1, -1) @ self.smooth_mat
                 eft_grad = np.concatenate([eft_grad, eft_grad_deformations])
@@ -406,7 +413,7 @@ class Energy:
         # Compute and att the Hessian of the EFT, if EFT is activated.
         if self.mu > 0:
             h_nomin = (self.z ** 2) * self.epsilon
-            h_denom = np.pow((self.z * self.s) ** 2 + self.epsilon, 1.5)
+            h_denom = np.power((self.z * self.s) ** 2 + self.epsilon, 1.5)
             h  = h_nomin / h_denom
             R  = sparse_block([[np.array(self.q).T, self.smooth_mat]])
             H += R.T @ sparse_diag(h) @ R
