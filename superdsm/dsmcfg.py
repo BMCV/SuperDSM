@@ -10,7 +10,7 @@ DSM_CONFIG_DEFAULTS = {
     'smooth_amount': 10,
     'epsilon': 1.0,
     'alpha': 0.5,
-    'mu': 1.0,
+    'mu': 0,
     'scale': 1000,
     'smooth_subsample': 20,
     'gaussian_shape_multiplier': 2,
