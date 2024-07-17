@@ -410,14 +410,14 @@ class Energy:
         else:
             H = D1 @ D1.T
 
-        # Compute and att the Hessian of the EFT, if EFT is activated.
+        # Compute and the Hessian of the EFT, if EFT is activated.
         if self.mu > 0:
             h_nomin = (self.z ** 2) * self.epsilon
             h_denom = np.power((self.z * self.s) ** 2 + self.epsilon, 1.5)
             h  = h_nomin / h_denom
             Q  = np.array([_expand_scalar(q, len(h)) for q in self.q])
             R  = sparse_block([[Q.T, self.smooth_mat]])
-            H += R.T @ sparse_diag(h) @ R
+            H += _fast_dot(_fast_dot(R.T, sparse_diag(h)), R)
 
         # Compose the full Hessian.
         return H
