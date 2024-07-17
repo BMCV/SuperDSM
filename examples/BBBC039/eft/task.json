@@ -1,13 +1,15 @@
 {
     "runnable": true,
 
+    "zmap_pathpattern": "zmap/%s.png",
+
     "file_ids": [
         "A02_s1_w1051DAA7C-7042-435F-99F0-1E847D9B42CB"
     ],
 
     "config": {
         "dsm": {
-            "mu": 1
+            "mu": 1e-2
         },
         "global-energy-minimization": {
             "pruning": "isbi24"
