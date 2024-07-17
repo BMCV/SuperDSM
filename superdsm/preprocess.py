@@ -68,6 +68,7 @@ class Preprocessing(Stage):
         y = ndi.gaussian_filter(g_raw, sigma1) - offset_combined
         z = ndi.gaussian_laplace(g_raw, sigma3)
         z[z < 0] = 0
+        z /= z.max()
         
         return {
             'y': y,
