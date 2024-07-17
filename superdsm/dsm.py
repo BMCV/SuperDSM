@@ -288,7 +288,7 @@ class Energy:
         if self.p is not None and all(self.p.array == params.array): return
         self.s = params.s(self.x, self.smooth_mat)
         self.p     = params
-        self.t     = self.y * s
+        self.t     = self.y * self.s
         self.theta = None  # invalidate
         
         valid_t_mask = (self.t >= -np.log(np.finfo(self.t.dtype).max))
