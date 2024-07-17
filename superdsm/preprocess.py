@@ -66,9 +66,9 @@ class Preprocessing(Stage):
             offset_combined = np.max([offset_combined, np.full(g_raw.shape, g_raw.mean())], axis=0)
 
         y = ndi.gaussian_filter(g_raw, sigma1) - offset_combined
-        z = ndi.gaussian_laplace(g_raw, sigma3)
-        z[z < 0] = 0
-        z /= z.max()
+        z = ndi.gaussian_gradient_magnitude(g_raw, sigma3)
+        z[y < 0] = 0
+        z -= z.mean()
         
         return {
             'y': y,
