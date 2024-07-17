@@ -268,7 +268,6 @@ class Energy:
         self.smooth_mat = smooth_matrix_factory.get(roi.mask)
 
         self.x = self.roi.get_map()[:, roi.mask]
-        self.w = np.ones(roi.mask.sum(), 'uint8')
         self.y = roi.model[roi.mask]
 
         assert epsilon > 0, 'epsilon must be strictly positive'
@@ -312,7 +311,7 @@ class Energy:
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
-        objective1 = np.inner(self.w.flat, phi.flat)
+        objective1 = phi.sum()
         if self.smooth_mat.shape[1] > 0:
             objective2  = self.alpha * self.term2.sum()
             objective2 -= self.alpha * sqrt(self.epsilon) * len(self.term2)
@@ -333,13 +332,22 @@ class Energy:
         params = DeformableShapeModel.get_model(params)
         self._update_maps(params)
         self._update_theta()
+
+        # Compute the gradient for the polynomial parameters.
         term1 = -self.y * self.theta
-        grad = np.asarray([term1 * q for q in self.q]) @ self.w
-        term1_sparse = coo_matrix(term1).transpose(copy=False)
+        grad = np.sum([term1 * q for q in self.q], axis=1)
+
+        # If deformations are activated, extend the gradient by the derivatives for the deformation parameters. 
         if self.smooth_mat.shape[1] > 0:
-            grad2  = (self.w.reshape(-1)[None, :] @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+            term1_sparse = coo_matrix(term1).transpose(copy=False)
+
+            # The next line performs column-wise sumation, but when paraphrased as `self.smooth_mat.multiply(term1_sparse).sum(axis=0).reshape(-1)`,
+            # the test suite fails due to deviating results. This is probably due to some minor numerical differences.
+            grad2 = (np.ones((1, len(self.y))) @ self.smooth_mat.multiply(term1_sparse)).reshape(-1)
+
             grad2 += self.alpha * (params.ξ / self.term2)
-            grad   = np.concatenate([grad, grad2])
+            grad = np.concatenate([grad, grad2])
+
         return grad
     
     def hessian(self, params):
@@ -352,7 +360,7 @@ class Energy:
         self._update_theta()
         kappa = self.theta - np.square(self.theta)
         pixelmask = (kappa != 0)
-        term4 = np.sqrt(kappa[pixelmask] * self.w[pixelmask])[None, :]
+        term4 = np.sqrt(kappa[pixelmask])[None, :]
         D1 = np.asarray([-self.y * qi for qi in self.q])[:, pixelmask] * term4
         D2 = self.smooth_mat[pixelmask].multiply(-self.y[pixelmask, None]).T.multiply(term4).tocsr()
         if self.smooth_mat.shape[1] > 0:
