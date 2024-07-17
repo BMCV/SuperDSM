@@ -380,7 +380,7 @@ class Energy:
             η = (self.z ** 2) * self.s / np.sqrt((self.z * self.s) ** 2 + self.epsilon)
             eft_grad = np.array([η @ _expand_scalar(q, len(η)) for q in self.q])
             if self.smooth_mat.shape[1] > 0:
-                eft_grad_deformations = _fast_dot(η.reshape(1, -1), self.smooth_mat)
+                eft_grad_deformations = _fast_dot(η.reshape(1, -1), self.smooth_mat).reshape(-1)
                 eft_grad = np.concatenate([eft_grad, eft_grad_deformations])
             grad += self.mu * eft_grad
 
