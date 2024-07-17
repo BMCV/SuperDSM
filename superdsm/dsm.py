@@ -256,7 +256,7 @@ class Energy:
     Instances of this class can be used as functions (e.g., ``energy(params)`` computes the value :math:`\\psi_\\omega(\\theta, \\xi)` of the convex energy function :math:`\\psi` so that ``params[:6]`` corresponds to the polynomial parameters :math:`\\theta` and ``params[6:]`` corresponds to the deformation parameters :math:`\\xi`).
 
     :param roi: An image region represented by an instance of the :py:class:`~superdsm.image.Image` class.
-    :param epsilon: Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
+    :param epsilon: TODO Corresponds to the constant :math:`\\epsilon` which is used for the smooth approximation of the regularization term :math:`\\|\\xi\\|_1 \\approx \\mathbb 1^\\top_\\Omega \\sqrt{\\xi^2 + \\epsilon} - \\sqrt{\\epsilon} \\cdot \\#\\Omega` (see Supplemental Material 2 of :ref:`Kostrykin and Rohr, TPAMI 2023 <references>`).
     :param alpha: Governs the regularization of the deformations and corresponds to :math:`\\alpha` described in :ref:`pipeline_theory_cvxprog`. Increasing this value leads to a smoother segmentation result.
     :param mu: TODO
     :param smooth_matrix_factory: An object with a ``get`` method which yields the matrix :math:`\\tilde G_\\omega` for any image region :math:`\\omega` (represented as a binary mask and passed as a parameter).
@@ -286,10 +286,10 @@ class Energy:
     
     def _update_maps(self, params):
         if self.p is not None and all(self.p.array == params.array): return
-        s = params.s(self.x, self.smooth_mat)
+        self.s = params.s(self.x, self.smooth_mat)
         self.p     = params
         self.t     = self.y * s
-        self.theta = None # invalidate
+        self.theta = None  # invalidate
         
         valid_t_mask = (self.t >= -np.log(np.finfo(self.t.dtype).max))
         self.h = np.full(self.t.shape, np.nan)
@@ -312,11 +312,15 @@ class Energy:
         """
         params = DeformableShapeModel.get_model(params)
         self._update_maps(params)
+
+        # Compute the logistic loss function.
         valid_h_mask = ~np.isnan(self.h)
         phi = np.zeros_like(self.t)
         phi[ valid_h_mask] = np.log(1 + self.h[valid_h_mask])
         phi[~valid_h_mask] = -self.t[~valid_h_mask]
         objective1 = phi.sum()
+
+        # Compute the deformation regularization term.
         if self.smooth_mat.shape[1] > 0:
             objective2  = self.alpha * self.term2.sum()
             objective2 -= self.alpha * sqrt(self.epsilon) * len(self.term2)
@@ -327,7 +331,17 @@ class Energy:
                 assert objective2 >= 0
         else:
             objective2 = 0
-        return objective1 + objective2
+
+        # Compute the edge fitting term (EFT).
+        if self.mu > 0:
+            objective3  = np.sqrt((self.z * self.s) ** 2 + self.epsilon).sum()
+            objective3 -= np.sqrt(self.epsilon) * len(self.z)
+            objective3 *= self.mu
+        else:
+            objective3 = 0
+
+        # Compose the energy value.
+        return objective1 + objective2 + objective3
     
     def grad(self, params):
         """Computes the gradient vector :math:`\\nabla \\psi_\\omega(\\theta, \\xi)`.
@@ -352,6 +366,15 @@ class Energy:
 
             grad2 += self.alpha * (params.ξ / self.term2)
             grad = np.concatenate([grad, grad2])
+
+        # Add the EFT derivatives, if EFT is activated.
+        if self.mu > 0:
+            η = (self.z ** 2) * self.s / np.sqrt((self.z * self.s) ** 2 + self.epsilon)
+            eft_grad = np.array([η @ q for q in self.q])
+            if self.smooth_mat.shape[1] > 0:
+                eft_grad_deformations = η.reshape(1, -1) @ self.smooth_mat
+                eft_grad = np.concatenate([eft_grad, eft_grad_deformations])
+            grad += self.mu * eft_grad
 
         return grad
     
@@ -378,6 +401,16 @@ class Energy:
             H += sparse_diag(np.concatenate([np.zeros(6), g]))
         else:
             H = D1 @ D1.T
+
+        # Compute and att the Hessian of the EFT, if EFT is activated.
+        if self.mu > 0:
+            h_nomin = (self.z ** 2) * self.epsilon
+            h_denom = np.pow((self.z * self.s) ** 2 + self.epsilon, 1.5)
+            h  = h_nomin / h_denom
+            R  = sparse_block([[np.array(self.q).T, self.smooth_mat]])
+            H += R.T @ sparse_diag(h) @ R
+
+        # Compose the full Hessian.
         return H
 
 
