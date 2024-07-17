@@ -135,7 +135,7 @@ def render_ymap(data, clim=None, cmap='bwr'):
     return ymap
 
 
-def render_zmap(data, clim=None, cmap='gray'):
+def render_zmap(data, clim=None, cmap='plasma'):
     """Returns a visualization of the edge map (see :py:ref:`pipeline_theory_cvxprog`).
 
     :param data: The pipeline data object.
