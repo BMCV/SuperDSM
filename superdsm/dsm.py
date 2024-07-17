@@ -415,7 +415,8 @@ class Energy:
             h_nomin = (self.z ** 2) * self.epsilon
             h_denom = np.power((self.z * self.s) ** 2 + self.epsilon, 1.5)
             h  = h_nomin / h_denom
-            R  = sparse_block([[np.array(self.q).T, self.smooth_mat]])
+            Q  = np.array([_expand_scalar(q, len(h)) for q in self.q])
+            R  = sparse_block([[Q.T, self.smooth_mat]])
             H += R.T @ sparse_diag(h) @ R
 
         # Compose the full Hessian.
