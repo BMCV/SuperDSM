@@ -112,7 +112,7 @@ class C2F_RegionAnalysis(Stage):
 
     def __init__(self):
         super(C2F_RegionAnalysis, self).__init__('c2f-region-analysis',
-                                                 inputs  = ['y', 'dsm_cfg'],
+                                                 inputs  = ['y', 'z', 'dsm_cfg'],
                                                  outputs = ['y_mask', 'atoms', 'adjacencies', 'seeds', 'clusters'])
 
     def process(self, input_data, cfg, out, log_root_dir):
@@ -126,7 +126,7 @@ class C2F_RegionAnalysis(Stage):
         dsm_cfg['smooth_amount'] = np.inf
         
         out.intermediate(f'Analyzing cluster markers...')
-        y = Image.create_from_arrays(input_data['y'])
+        y = Image.create_from_arrays(input_data['y'], input_data['z'])
         fg_mask = (y.intensities > 0)
         fg_bd   = np.logical_xor(fg_mask, morph.binary_erosion(fg_mask, morph.disk(1)))
         y_mask  = np.ones(y.shape, bool)
