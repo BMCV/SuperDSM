@@ -279,6 +279,7 @@ class Energy:
         self.alpha = alpha
 
         assert mu >= 0, 'mu must be positive'
+        assert mu == 0 or self.z is not None
         self.mu = mu
 
         # pre-compute common terms occuring in the computation of the derivatives
