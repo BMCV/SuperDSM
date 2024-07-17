@@ -133,7 +133,7 @@ class GlobalEnergyMinimization(Stage):
 
     def __init__(self):
         super(GlobalEnergyMinimization, self).__init__('global-energy-minimization',
-                                                       inputs  = ['y', 'y_mask', 'atoms', 'adjacencies', 'dsm_cfg'],
+                                                       inputs  = ['y', 'z', 'y_mask', 'atoms', 'adjacencies', 'dsm_cfg'],
                                                        outputs = ['y_img', 'cover', 'objects', 'performance'])
 
     def process(self, input_data, cfg, out, log_root_dir):
