@@ -84,7 +84,7 @@ class DeformableShapeModel:
         return np.array([self.a[0], self.a[2], self.a[2], self.a[1]]).reshape((2, 2))
     
     def s(self, x, smooth_mat):
-        """Computes the deformable surface :math:`S_\omega(\\theta, \\xi)` as described in :ref:`pipeline_theory_dsm`.
+        """Computes the deformable surface :math:`S_\\omega(\\theta, \\xi)` as described in :ref:`pipeline_theory_dsm`.
 
         :param x: Either a list of coordinates of those image points for which the values of the deformable surface are to be computed, or a stack of two 2D arrays corresponding to the pixel coordinates.
         """
