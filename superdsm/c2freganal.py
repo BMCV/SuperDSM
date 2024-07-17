@@ -57,7 +57,7 @@ def _hash_mask(mask):
 
 def _get_cached_normalized_energy_computer(y, cluster):
     cache = dict()
-    cp_buffer = Image(intensities=y.intensities, mask=np.zeros(cluster.full_mask.shape, bool))
+    cp_buffer = Image(intensities=y.intensities, edges=y.edges, mask=np.zeros(cluster.full_mask.shape, bool))
     def compute_normalized_energy(obj, region, atoms_map, dsm_cfg):
         cp_kwargs = copy_dict(dsm_cfg)
         cp_kwargs.pop('smooth_mat_max_allocations', None)
