@@ -9,7 +9,7 @@ class pipeline(unittest.TestCase):
 
     @testsuite.without_resource_warnings
     def setUp(self):
-        ray.init(num_cpus=4, log_to_driver=False, logging_level=ray.logging.ERROR)
+        ray.init(num_cpus=4, log_to_driver=False, logging_level='error')
         self.pipeline = superdsm.pipeline.create_default_pipeline()
 
     @testsuite.without_resource_warnings
