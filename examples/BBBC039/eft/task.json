@@ -2,6 +2,7 @@
     "runnable": true,
 
     "zmap_pathpattern": "zmap/%s.png",
+    "seg_border": 4,
 
     "file_ids": [
         "A02_s1_w1051DAA7C-7042-435F-99F0-1E847D9B42CB"
@@ -13,6 +14,9 @@
         },
         "global-energy-minimization": {
             "pruning": "isbi24"
+        },
+        "postprocess": {
+            "max_norm_energy": 0.5
         }
     }
 }
