@@ -124,6 +124,7 @@ class C2F_RegionAnalysis(Stage):
 
         dsm_cfg = copy_dict(input_data['dsm_cfg'])
         dsm_cfg['smooth_amount'] = np.inf
+        dsm_cfg['mu'] = cfg.get('override_mu', dsm_cfg['mu'])
         
         out.intermediate(f'Analyzing cluster markers...')
         y = Image.create_from_arrays(input_data['y'], input_data['z'])
