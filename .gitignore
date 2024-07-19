@@ -2,6 +2,7 @@
 /build
 *.swp
 .DS_Store
+._.DS_Store
 /examples/**/*.csv
 /examples/**/*.gz
 /examples/**/.*.json
@@ -11,6 +12,7 @@
 /examples/**/log
 /examples/**/cfg
 /examples/**/overlays
+/examples/**/zmap
 /examples/data
 /tests/data
 /tests/actual
