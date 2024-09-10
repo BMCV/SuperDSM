@@ -35,6 +35,9 @@ jobs:
 
     steps:
 
+      - name: Debug
+        run: echo "${{ github.event.action }}"
+
       - name: Checkout
         uses: actions/checkout@v2
 
